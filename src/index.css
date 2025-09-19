@@ -1,0 +1,34 @@
+/* Base normalize + our modern theme */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+@import url('./styles/theme.css');
+
+:root {
+  font-family: Poppins, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #0f172a;
+  background-color: #f5f7fa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: #1677ff; text-decoration: none; }
+a:hover { color: #0958d9; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  display: block;
+}
+
+button {
+  border-radius: 10px;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+button:hover { transform: translateY(-1px); }

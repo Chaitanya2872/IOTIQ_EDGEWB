@@ -1,0 +1,297 @@
+{
+  "info": {
+    "name": "BMS Inventory Management API",
+    "description": "Complete API collection for Bristol Myers Squibb Inventory System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8085/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/categories"
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/categories",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Housekeeping\",\n  \"categoryDescription\": \"Cleaning and maintenance supplies\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/categories/1",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Housekeeping Updated\",\n  \"categoryDescription\": \"Updated description\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/categories/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "item": [
+        {
+          "name": "Get All Items",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/items"
+          }
+        },
+        {
+          "name": "Get Item by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/items/1"
+          }
+        },
+        {
+          "name": "Create Item",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/items",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemName\": \"Hand Sanitizer\",\n  \"itemDescription\": \"500ml alcohol-based sanitizer\",\n  \"currentQuantity\": 50,\n  \"oldStockQuantity\": 45,\n  \"maxStockLevel\": 200,\n  \"minStockLevel\": 10,\n  \"unitOfMeasurement\": \"bottles\",\n  \"unitPrice\": 135.50,\n  \"expiryDate\": \"2025-12-31\",\n  \"categoryId\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Item",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/items/1",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemName\": \"Hand Sanitizer Updated\",\n  \"itemDescription\": \"Updated description\",\n  \"currentQuantity\": 75,\n  \"maxStockLevel\": 250,\n  \"minStockLevel\": 15,\n  \"unitOfMeasurement\": \"bottles\",\n  \"unitPrice\": 145.00,\n  \"categoryId\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Search Items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/items/search?q=sanitizer",
+              "host": ["{{base_url}}"],
+              "path": ["items", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "sanitizer"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Low Stock Items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/items/low-stock?threshold=15",
+              "host": ["{{base_url}}"],
+              "path": ["items", "low-stock"],
+              "query": [
+                {
+                  "key": "threshold",
+                  "value": "15"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Expiring Items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/items/expiring?days=30",
+              "host": ["{{base_url}}"],
+              "path": ["items", "expiring"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Expired Items",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/items/expired"
+          }
+        },
+        {
+          "name": "Record Consumption",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/items/1/consume",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 5,\n  \"department\": \"Floor 2 - Restroom\",\n  \"notes\": \"Daily cleaning supplies\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Record Receipt",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/items/1/receive",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 100,\n  \"unitPrice\": 140.00,\n  \"referenceNumber\": \"PO-2025-001\",\n  \"supplier\": \"ABC Suppliers Ltd\",\n  \"notes\": \"Monthly restock\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Item",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/items/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/analytics/dashboard"
+          }
+        },
+        {
+          "name": "Get Stock Alerts",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/analytics/stock-alerts"
+          }
+        },
+        {
+          "name": "Get Consumption Trends",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/analytics/consumption-trends"
+          }
+        },
+        {
+          "name": "Get Top Consumers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/analytics/top-consumers"
+          }
+        },
+        {
+          "name": "Get Inventory Value",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/analytics/inventory-value"
+          }
+        },
+        {
+          "name": "Get Turnover Ratio",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/analytics/turnover-ratio"
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Upload",
+      "item": [
+        {
+          "name": "Upload CSV/Excel",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/upload/items",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/file.csv"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Upload Template",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/upload/template"
+          }
+        }
+      ]
+    }
+  ]
+}

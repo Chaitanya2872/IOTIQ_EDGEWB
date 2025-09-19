@@ -1,0 +1,343 @@
+/* Royal Golden & Light World Map Component Styles */
+.world-map-container {
+  background: linear-gradient(135deg, #fafafa, #f5f5f5, #ffffff) !important;
+  position: relative;
+}
+
+.world-map-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at 80% 70%, rgba(244, 208, 63, 0.06) 0%, transparent 60%),
+    radial-gradient(circle at 40% 80%, rgba(212, 175, 55, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Royal Golden Map Layer Styling */
+.royal-golden-map-layer {
+  filter: hue-rotate(15deg) saturate(1.3) brightness(0.9) contrast(1.4) !important;
+  transition: filter 0.3s ease !important;
+}
+
+/* Royal Golden Popup Styling */
+.leaflet-popup-content-wrapper {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+  color: #d4af37 !important;
+  border-radius: 12px !important;
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.5),
+    0 5px 15px rgba(212, 175, 55, 0.3),
+    inset 0 1px 0 rgba(212, 175, 55, 0.2) !important;
+  border: 2px solid #d4af37 !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
+}
+
+.leaflet-popup-content-wrapper:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 
+    0 20px 45px rgba(0, 0, 0, 0.6),
+    0 8px 20px rgba(212, 175, 55, 0.4) !important;
+}
+
+.leaflet-popup-tip {
+  background: linear-gradient(135deg, #1a1a1a, #2d2d2d) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5) !important;
+  border: 2px solid #d4af37 !important;
+}
+
+/* Royal Golden Zoom Control Styling */
+.leaflet-control-zoom {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 250, 0.9) 100%) !important;
+  border-radius: 12px !important;
+  border: 2px solid #d4af37 !important;
+  box-shadow: 
+    0 8px 25px rgba(212, 175, 55, 0.15),
+    0 4px 12px rgba(212, 175, 55, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  overflow: hidden !important;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
+}
+
+.leaflet-control-zoom:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 
+    0 12px 35px rgba(212, 175, 55, 0.2),
+    0 6px 15px rgba(212, 175, 55, 0.15) !important;
+}
+
+.leaflet-control-zoom a {
+  background: transparent !important;
+  color: #b8941f !important;
+  border: none !important;
+  font-weight: bold !important;
+  font-size: 18px !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 30px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.leaflet-control-zoom a::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: -100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent) !important;
+  transition: left 0.5s ease !important;
+}
+
+.leaflet-control-zoom a:hover::before {
+  left: 100% !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(212, 175, 55, 0.15) !important;
+  color: #d4af37 !important;
+  transform: scale(1.05) !important;
+}
+
+.leaflet-control-zoom a:active {
+  transform: scale(0.98) !important;
+  background: rgba(212, 175, 55, 0.25) !important;
+}
+
+/* Royal Attribution Styling */
+.leaflet-control-attribution {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 250, 0.9) 100%) !important;
+  color: #b8941f !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  border: 1px solid #d4af37 !important;
+  box-shadow: 
+    0 4px 12px rgba(212, 175, 55, 0.1),
+    0 2px 6px rgba(212, 175, 55, 0.05) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  padding: 4px 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.leaflet-control-attribution:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 
+    0 6px 16px rgba(212, 175, 55, 0.15),
+    0 3px 8px rgba(212, 175, 55, 0.1) !important;
+}
+
+.leaflet-control-attribution a {
+  color: #d4af37 !important;
+  text-decoration: none !important;
+  transition: color 0.2s ease !important;
+}
+
+.leaflet-control-attribution a:hover {
+  color: #b8941f !important;
+  text-shadow: 0 0 8px rgba(212, 175, 55, 0.3) !important;
+}
+
+/* Royal Golden Marker Styles */
+.modern-marker-container {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 3px 6px rgba(212, 175, 55, 0.4));
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  animation: royal-pulse-ring 2s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+  z-index: 1;
+  opacity: 0;
+}
+
+.modern-dot {
+  position: relative;
+  z-index: 10;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  border-radius: 50%;
+}
+
+.modern-dot:hover {
+  transform: scale(1.3);
+  filter: brightness(1.2) drop-shadow(0 6px 12px rgba(212, 175, 55, 0.6));
+}
+
+@keyframes royal-pulse-ring {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* Simple marker transitions */
+.modern-marker {
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  position: relative;
+}
+
+.modern-marker:hover {
+  z-index: 1000 !important;
+  filter: drop-shadow(0 6px 15px rgba(212, 175, 55, 0.5));
+}
+
+/* Royal Tooltip Styling */
+.leaflet-tooltip {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+  color: #d4af37 !important;
+  border: 1px solid #d4af37 !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  padding: 6px 10px !important;
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.4),
+    0 3px 10px rgba(212, 175, 55, 0.2) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
+}
+
+.leaflet-tooltip:hover {
+  transform: translateY(-1px) scale(1.02) !important;
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(212, 175, 55, 0.3) !important;
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: #1a1a1a !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
+}
+
+.leaflet-tooltip-bottom:before {
+  border-bottom-color: #1a1a1a !important;
+  filter: drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.3)) !important;
+}
+
+.leaflet-tooltip-left:before {
+  border-left-color: #1a1a1a !important;
+  filter: drop-shadow(2px 0 4px rgba(0, 0, 0, 0.3)) !important;
+}
+
+.leaflet-tooltip-right:before {
+  border-right-color: #1a1a1a !important;
+  filter: drop-shadow(-2px 0 4px rgba(0, 0, 0, 0.3)) !important;
+}
+
+/* Royal Popup Close Button */
+.leaflet-popup-close-button {
+  color: #f4d03f !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
+  width: 24px !important;
+  height: 24px !important;
+  line-height: 22px !important;
+  background: rgba(212, 175, 55, 0.2) !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(212, 175, 55, 0.5) !important;
+  transition: all 0.2s ease !important;
+}
+
+.leaflet-popup-close-button:hover {
+  background: rgba(212, 175, 55, 0.4) !important;
+  transform: scale(1.1) !important;
+  color: #d4af37 !important;
+  border-color: #d4af37 !important;
+}
+
+/* Smooth loading animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.modern-marker-container {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+/* Hover effects for panels */
+.modern-panel {
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.modern-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px rgba(212, 175, 55, 0.18),
+    0 6px 20px rgba(212, 175, 55, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Responsive enhancements */
+@media (max-width: 768px) {
+  .modern-dot:hover {
+    transform: scale(1.15) !important;
+  }
+  
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px !important;
+    font-size: 14px !important;
+  }
+  
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 20px !important;
+  }
+}

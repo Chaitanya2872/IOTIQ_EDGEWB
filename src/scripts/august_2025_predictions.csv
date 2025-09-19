@@ -1,0 +1,201 @@
+item_code,category,aug_2025_bin1,aug_2025_bin2,aug_2025_total,sep_2025_predicted_received,avg_historical_bin1,avg_historical_bin2,avg_historical_total,latest_sih,bin1_vs_avg,bin2_vs_avg,total_vs_avg,bin1_trend,bin2_trend,has_august_history,data_points,data_consistency,confidence_score,predicted_aug_cost
+Red Cups 250ml (25),Pantry,14781,13700,28481,28314,6600,11065,17665,26425,8181,2635,10816,increasing,increasing,Yes,5,53,60,4115522
+Water Cups-210ml (100),Pantry,13571,8610,22181,45317,16440,21495,37935,292,-2868,-12885,-15754,decreasing,decreasing,Yes,13,30,64,3205152
+Horlicks,Pantry,2877,2267,5144,5119,3844,2843,6687,3656,-967,-576,-1543,increasing,decreasing,No,7,62,64,743344
+Water Cups-150ml,Pantry,2534,2273,4807,0,1567,2434,4001,8200,968,-162,806,decreasing,increasing,Yes,6,39,56,694611
+Boost,Pantry,2412,1852,4264,4767,3609,2422,6031,6263,-1197,-570,-1767,increasing,decreasing,No,7,54,62,616162
+Brown Cups (50),Pantry,1677,1677,3354,0,97,132,229,3650,1580,1545,3125,increasing,increasing,No,2,44,44,484649
+Sanitory Pads,HK Consumables,668,551,1219,953,248,284,532,1303,420,267,687,increasing,increasing,No,3,35,44,8536
+T-Rolls,Toiletries,596,591,1187,821,810,935,1745,301,-214,-344,-558,increasing,decreasing,Yes,17,60,74,23013
+Water bottle 20 letters,Pantry,461,538,999,1497,470,454,924,50,-9,84,75,increasing,decreasing,No,3,97,66,144412
+Milk,Pantry,459,474,933,2359,908,988,1896,117,-449,-514,-963,increasing,decreasing,Yes,6,96,79,134890
+Bio Degradable Covers-Small (36*48) Black,HK Consumables,727,28,756,190,20,18,39,286,707,10,717,increasing,increasing,No,4,53,53,133791
+Bio Degradable Covers-Medium (24*36),HK Consumables,414,203,618,200,112,42,154,12,302,161,464,increasing,increasing,No,2,36,42,109362
+Coral blue,Pantry,167,446,613,0,1,2,2,4,166,444,610,decreasing,increasing,No,2,80,51,2362729
+Green Tea -100 sachets,Pantry,335,268,603,5,184,184,368,200,151,85,236,increasing,increasing,Yes,6,0,48,87196
+Masqito Bats,Pantry,157,422,579,3,2,1,2,1,155,422,577,decreasing,increasing,Yes,3,80,63,110021
+Nose Mask,HK Consumables,213,330,542,400,94,158,253,1015,119,171,290,decreasing,increasing,No,5,38,48,2571
+Face Mask,HK Consumables,226,265,491,462,760,294,1054,1300,-534,-29,-563,increasing,increasing,Yes,12,0,62,2329
+Bio Degradable Covers-medium (17*21) Black,HK Consumables,333,130,463,230,76,75,151,45,257,55,312,increasing,increasing,No,2,24,40,54633
+White cup 210ml,Pantry,225,187,412,813,503,304,807,34,-279,-117,-396,increasing,decreasing,No,5,79,64,59500
+500ml-Water Bottles,Pantry,236,163,399,308,161,238,398,744,75,-74,1,decreasing,increasing,Yes,10,8,56,57667
+Lemon tea Powder (premix),Pantry,174,226,399,0,172,15,188,0,1,211,212,increasing,decreasing,No,2,80,55,57692
+Assam Tea-100 sachets,Pantry,68,242,310,90,46,29,75,8,23,213,235,increasing,decreasing,Yes,17,0,64,63543
+M-Fold Tissue (40/box),Toiletries,154,138,292,637,455,364,819,3,-301,-226,-527,decreasing,decreasing,Yes,18,35,69,14425
+SVVA  250 ML  WATER BOTTLES,Pantry,168,122,289,584,228,325,553,386,-61,-203,-264,decreasing,decreasing,No,7,0,48,41803
+Moroccan Mint-25 sachets,Pantry,99,178,277,98,56,32,89,119,43,145,188,increasing,decreasing,Yes,17,0,62,37782
+Diet Cokes-300ml,Pantry,136,110,245,146,74,54,128,50,62,55,118,increasing,increasing,Yes,13,13,65,35460
+Elaichi Tea - 100 Sachets/Box,Pantry,128,109,237,23,6,4,10,32,122,105,226,increasing,decreasing,Yes,17,0,62,59657
+Sanitary Napkins,Toiletries,85,139,225,634,198,210,408,27,-113,-71,-184,decreasing,decreasing,Yes,14,4,63,2494
+Wooden Spoons,Pantry,48,158,205,137,46,40,86,6,2,118,120,increasing,increasing,No,8,0,49,29637
+Lemon Tea- 100 Sachets,Pantry,73,127,200,42,301,592,892,50,-228,-465,-693,decreasing,decreasing,Yes,14,0,58,28860
+Brown Cups 250ml,Pantry,132,57,189,3080,2300,1541,3841,544,-2168,-1484,-3652,decreasing,decreasing,Yes,7,0,50,27274
+HRT  Roll,Pantry,80,87,167,396,144,144,287,80,-64,-56,-120,increasing,increasing,No,7,45,57,36801
+Rock Salt,Pantry,45,115,160,25,10,6,16,41,35,109,143,decreasing,decreasing,Yes,7,12,56,3906
+Perrier Bottles,Pantry,59,98,157,0,6,2,8,9,53,97,149,decreasing,decreasing,No,3,47,46,22674
+Laundry Basket,Pantry,78,75,152,10,0,1,1,6,78,74,151,stable,decreasing,No,2,0,39,44753
+Caution Board-Wet Floor,Pantry,49,99,147,3,2,2,3,2,47,97,144,decreasing,increasing,No,10,3,53,53316
+Ginger Tea -100Scahets,Pantry,71,73,144,21,7,8,15,37,64,65,129,decreasing,decreasing,Yes,17,0,62,36302
+Green Tea Tulasi-25 sachets,Pantry,87,51,138,60,32,21,53,16,55,30,85,increasing,decreasing,Yes,17,0,62,19933
+Masala Tea - 100Scahets,Pantry,79,59,138,623,138,138,276,47,-60,-79,-138,decreasing,decreasing,Yes,16,0,58,34763
+Caution Board-Cleaning in progress,Pantry,67,66,134,15,0,5,5,0,67,61,129,stable,decreasing,No,2,0,39,19335
+Tomato Soup,Pantry,64,67,132,1480,52,521,572,73,12,-453,-441,increasing,decreasing,No,7,0,48,19014
+Black Cups 250ml,Pantry,63,66,129,1314,426,480,906,60,-363,-414,-777,decreasing,decreasing,No,9,0,58,18639
+Kaapi Tablets,Pantry,63,67,129,8,0,2,2,2,63,64,127,stable,decreasing,No,2,0,39,18668
+Biodegradable Covers-Big (35*45) Black(40),HK Consumables,66,62,128,534,256,196,451,41,-189,-134,-323,increasing,decreasing,Yes,14,50,75,6992
+Bisleri Glass Bottles 300ml,Pantry,35,90,125,114,58,20,78,118,-23,70,47,decreasing,increasing,No,6,37,49,18022
+Urinal Screens,Pantry,45,79,125,57,36,25,60,70,10,55,64,decreasing,decreasing,Yes,17,55,73,12447
+Plunger,Pantry,53,70,124,0,0,2,2,14,53,68,122,stable,decreasing,No,2,0,39,4031
+Premium Tissue,Toiletries,82,34,115,154,142,6,148,352,-61,28,-33,increasing,decreasing,No,10,0,53,5691
+Badam pawder,Pantry,47,65,112,117,66,56,122,58,-18,9,-9,decreasing,decreasing,No,7,0,48,16256
+Chocolate powder,Pantry,45,66,111,156,833,727,1560,52,-789,-661,-1449,decreasing,decreasing,No,6,0,46,11647
+Red velvet Aroma,Pantry,79,32,110,26,4,6,10,12,74,26,100,increasing,decreasing,No,7,31,54,25660
+Ginger Black,Pantry,55,53,108,0,1,5,6,0,54,48,102,increasing,decreasing,No,3,2,37,15607
+Sugar free- 100 Sachets,Pantry,65,42,107,30,15,8,23,27,49,35,84,increasing,decreasing,Yes,17,0,62,14688
+Air Freshner,Pantry,33,73,106,0,5,6,12,1,28,67,95,decreasing,stable,Yes,18,25,67,10093
+Wooden Forks,Pantry,37,68,105,10,19,37,56,60,18,31,49,decreasing,decreasing,No,8,0,49,15181
+Green Tea CCD-25 sachets,Pantry,40,61,101,45,30,20,50,66,10,41,51,increasing,decreasing,No,10,0,53,12699
+Gum shoes,Pantry,49,49,98,8,1,2,3,10,48,48,96,increasing,decreasing,No,5,48,54,20680
+Lemon Tea- 25 Sachets/Box,Pantry,32,66,97,72,9,19,28,82,22,47,69,decreasing,decreasing,No,3,10,43,14070
+kitchen aprons,Pantry,30,63,93,3,2,1,4,8,28,61,90,decreasing,decreasing,No,8,30,51,5371
+Coffee Beans,Pantry,29,62,91,30,25,27,52,27,5,35,39,increasing,decreasing,Yes,6,79,72,13209
+Thinner,Pantry,40,49,89,3,1,1,2,4,39,48,87,stable,decreasing,Yes,12,33,69,11070
+Small green pad,HK Consumables,48,37,85,133,34,33,67,254,13,5,18,decreasing,decreasing,No,3,84,62,1604
+Glass Applicator,Pantry,46,36,82,8,4,2,5,7,42,34,77,increasing,decreasing,Yes,10,61,68,15916
+Honey,Pantry,48,31,80,154,57,118,175,32,-9,-87,-95,increasing,decreasing,No,8,0,49,11495
+Bio Degradable Covers-Big (30*45),HK Consumables,54,25,79,0,17,26,42,15,37,0,37,increasing,increasing,No,2,24,40,14052
+Hair Nets,Pantry,44,32,76,232,90,111,201,34,-46,-78,-124,decreasing,decreasing,No,7,2,48,3822
+"Scotch brite , 3m small",Pantry,33,42,75,59,44,24,67,31,-11,18,8,increasing,decreasing,No,8,62,67,555
+MF-Red,Pantry,21,53,74,17,6,6,12,34,15,47,62,decreasing,increasing,Yes,16,7,63,10733
+Facial Tissues,Toiletries,44,25,70,0,27,13,40,0,17,12,30,increasing,increasing,No,2,30,41,3761
+Big squeezer,HK Consumables,47,22,69,30,0,11,12,32,47,11,58,increasing,increasing,Yes,2,52,52,9496
+MF-Yellow,Pantry,19,46,65,33,9,6,14,22,10,40,50,decreasing,increasing,Yes,16,15,65,9387
+Stirrers (500nos),Pantry,41,24,65,72,34,26,60,24,7,-2,5,increasing,decreasing,No,11,0,57,8075
+Himalayan Bottel,Pantry,39,23,63,75,8,33,41,0,32,-10,22,increasing,decreasing,No,6,0,42,9068
+"Scotch brite , 3m big",HK Consumables,29,32,60,51,28,29,58,239,0,2,3,increasing,increasing,No,3,66,56,446
+Spray Guns,Pantry,33,27,60,20,8,8,16,27,25,19,44,decreasing,decreasing,Yes,17,21,66,2647
+Coffee Beans-Highland,Pantry,34,25,59,63,20,21,41,3,14,3,18,increasing,decreasing,No,10,71,72,8522
+MF-Blue,Pantry,20,38,59,52,23,15,38,51,-3,23,21,increasing,decreasing,Yes,17,22,66,7064
+Yellow Sponge,Pantry,31,27,58,56,20,14,34,24,11,12,24,increasing,decreasing,No,5,68,59,550
+BR302,HK Chemicals,30,27,57,72,28,27,55,45,2,0,2,increasing,decreasing,Yes,15,63,77,16955
+Soft tissues,Toiletries,29,26,55,318,321,270,591,9,-292,-244,-536,decreasing,decreasing,Yes,15,38,69,2713
+Coffee Beans-Espresso,Pantry,31,22,53,57,16,13,30,4,15,9,23,increasing,increasing,No,11,34,61,7618
+BR 303,Pantry,32,20,52,97,26,22,48,10,6,-1,5,increasing,decreasing,Yes,14,60,74,7118
+Green Scrubber,HK Consumables,32,20,52,17,34,28,62,55,-2,-8,-10,increasing,increasing,No,3,31,43,974
+Coffee Beans-Monsoon mist,Pantry,30,22,51,43,20,15,35,32,10,6,16,decreasing,decreasing,No,10,49,63,7403
+MF-White,Pantry,27,23,50,67,18,19,37,9,9,4,13,increasing,decreasing,Yes,15,57,73,6027
+Small green covers,HK Consumables,33,17,50,0,11,8,18,0,22,10,32,decreasing,decreasing,Yes,4,1,45,9708
+Nylon Scrubber,HK Consumables,25,24,49,42,25,17,42,27,-1,7,6,increasing,decreasing,Yes,18,54,73,205
+Urinal Cake,Pantry,26,22,48,50,8,13,20,18,19,9,27,increasing,decreasing,No,4,40,51,564
+R5,HK Chemicals,43,4,47,12,6,4,9,0,37,1,38,increasing,decreasing,Yes,15,30,64,8203
+Hand Wash-Rose Aqua OR BR 802,HK Consumables,26,18,44,75,11,20,30,204,15,-2,13,increasing,increasing,No,2,52,47,29662
+Hand wash  BR 802,Toiletries,18,25,43,48,42,28,71,45,-25,-3,-28,increasing,increasing,Yes,14,46,71,18860
+Medium  steel dustbin,HK Consumables,38,4,43,0,6,2,8,0,33,2,35,decreasing,increasing,No,2,75,50,5138
+D7,HK Consumables,38,4,42,0,6,5,11,7,32,-1,31,increasing,increasing,No,12,35,59,10754
+MF-Green,Pantry,25,17,42,73,14,19,33,0,11,-2,9,decreasing,decreasing,Yes,17,41,70,5021
+Neutrile Gloves,HK Consumables,20,22,42,56,26,20,46,5,-6,2,-4,increasing,decreasing,No,7,71,64,33283
+T-brush,HK Consumables,38,5,42,20,6,0,6,9,32,5,37,increasing,stable,No,2,91,66,5123
+Weat Mop Refills,HK Consumables,22,21,42,54,23,28,50,34,-1,-7,-8,increasing,decreasing,Yes,13,64,71,3236
+Mop Cloth,HK Consumables,22,17,39,28,19,14,34,13,3,3,5,increasing,increasing,No,2,30,41,675
+Aroma Oil,Pantry,21,16,38,38,11,11,22,5,10,5,16,increasing,increasing,Yes,17,60,77,58497
+R1,HK Chemicals,19,18,37,39,16,12,28,0,3,6,9,increasing,decreasing,Yes,15,47,67,7564
+R6,HK Chemicals,20,17,36,22,14,22,35,0,6,-5,1,decreasing,decreasing,Yes,14,57,75,4593
+Hand wash liquid,HK Chemicals,19,14,32,43,10,35,45,10,9,-21,-13,increasing,increasing,No,2,67,49,19170
+R2,HK Chemicals,17,14,31,16,12,14,27,0,4,0,5,increasing,decreasing,Yes,15,50,71,5195
+Sponge,HK Consumables,16,14,30,33,14,14,28,8,2,0,2,decreasing,decreasing,Yes,12,55,69,280
+OC- 6 Toilet Bowl cleaner,HK Chemicals,16,13,28,55,14,26,40,30,2,-14,-12,decreasing,decreasing,No,4,38,50,47860
+Dusters-Q-Max,HK Consumables,15,13,27,31,14,12,27,0,0,1,1,decreasing,decreasing,No,3,69,57,605
+Rubber Hand Gloves Red,HK Consumables,15,12,27,11,16,9,24,26,0,3,3,increasing,decreasing,Yes,16,12,64,2326
+TR 103,HK Consumables,15,12,27,20,6,6,12,3,9,6,15,decreasing,increasing,No,2,88,53,35131
+OC T- 500 carpet shampoo,Toiletries,14,13,26,20,15,5,20,10,-1,8,6,increasing,decreasing,No,2,50,49,1296
+OC-12 Multipurpose Cleaner,HK Chemicals,14,11,25,42,9,13,22,113,5,-2,4,decreasing,decreasing,No,4,36,50,120361
+R3,HK Chemicals,14,10,25,9,7,6,14,0,7,4,11,increasing,decreasing,Yes,15,39,66,5059
+Water bottles cleaning brush,Pantry,11,13,25,5,2,2,4,1,9,11,20,stable,increasing,Yes,6,12,54,1047
+Bio Degradable Covers-Big (19*29) Black,HK Consumables,15,9,24,0,10,22,32,0,4,-12,-8,increasing,decreasing,No,3,11,39,2835
+Biodegradable Covers - Small (19*21) black(30),HK Consumables,13,11,24,57,38,33,71,6,-25,-22,-47,increasing,decreasing,Yes,12,65,80,1060
+Dry Mop Refills,HK Consumables,13,11,24,55,14,8,22,2,-1,3,2,decreasing,decreasing,No,8,0,45,8898
+Safety Goggles,HK Consumables,17,8,24,17,4,12,17,15,12,-5,8,increasing,increasing,No,5,37,48,1398
+OC-3 Glass Cleaner,HK Chemicals,13,10,23,35,8,12,20,32,5,-2,3,stable,decreasing,No,3,59,53,60293
+Suma drain,HK Chemicals,15,6,22,2,1,8,9,10,14,-1,13,decreasing,decreasing,Yes,11,28,66,3013
+Lime Away,HK Chemicals,12,9,21,43,10,8,18,110,2,1,3,decreasing,decreasing,No,4,38,50,163017
+Check cloth blue,HK Consumables,12,8,20,15,9,8,17,16,3,0,3,increasing,decreasing,Yes,17,21,66,208
+White cover,HK Consumables,12,8,20,0,2,30,33,14,10,-23,-13,increasing,decreasing,No,2,15,38,2422
+Pril dishwash 125ml,HK Chemicals,10,10,19,25,17,18,35,53,-7,-9,-16,increasing,increasing,Yes,14,45,72,329
+WC Brush,HK Consumables,10,9,19,4,13,4,17,20,-3,6,2,decreasing,decreasing,No,10,0,49,652
+Jumbo Duster,HK Consumables,11,6,18,7,8,9,18,15,3,-3,0,increasing,increasing,No,4,29,44,1283
+Rinse Dry,HK Consumables,10,8,18,70,5,5,10,145,5,3,8,increasing,decreasing,No,2,100,55,201651
+AirSure Room freshner,HK Consumables,9,7,16,23,9,6,16,0,0,1,0,decreasing,decreasing,No,2,13,38,1499
+OC-7 Floor Cleaner,HK Chemicals,8,8,16,40,8,5,13,5,0,3,3,decreasing,stable,No,3,6,42,69462
+Caddy Kits Red,HK Consumables,11,4,15,0,4,5,9,11,7,-1,6,decreasing,increasing,No,5,25,45,3624
+Squeeze emoty bottle R6,HK Chemicals,8,7,15,11,7,6,14,10,0,0,1,increasing,increasing,No,6,38,50,690
+Feather Duster,HK Consumables,8,6,14,8,10,5,16,10,-2,1,-1,increasing,stable,No,6,56,57,1026
+Suma Scale D5.2,HK Chemicals,8,6,14,13,7,5,12,0,0,1,2,decreasing,increasing,No,9,45,56,3584
+Emeral Plus,HK Consumables,8,5,13,7,4,4,8,21,3,1,4,increasing,increasing,No,2,47,45,5661
+Hand Mop Cloth,HK Consumables,7,5,13,0,7,4,11,26,0,1,2,increasing,decreasing,No,7,18,51,222
+"Key board brrush 1""",HK Consumables,8,6,13,5,2,4,6,23,6,2,7,increasing,stable,Yes,9,31,59,211
+Small hand squeezer,HK Consumables,8,5,13,10,9,2,12,15,-1,3,2,decreasing,decreasing,No,2,9,37,1256
+Tarpaline sheet,HK Consumables,8,5,13,0,7,2,9,6,1,3,4,increasing,decreasing,No,2,44,44,17584
+Wet Mop Refill(white),HK Consumables,9,4,13,0,2,8,10,0,7,-4,3,decreasing,decreasing,No,3,17,44,984
+Glass Kit,HK Consumables,7,4,12,4,6,6,12,10,1,-1,0,increasing,decreasing,No,4,76,54,1396
+Key Board Brush-1inch,HK Consumables,8,4,12,7,6,4,10,14,2,0,1,decreasing,increasing,No,3,59,49,184
+R9,HK Chemicals,8,4,12,3,5,8,13,35,3,-4,0,increasing,decreasing,No,9,39,55,2085
+Bio Degradable Covers - Small (17*19),HK Consumables,7,4,11,0,6,4,10,0,1,0,1,decreasing,decreasing,No,2,20,39,1329
+Naphthalene balls 500gm,HK Consumables,6,5,11,0,2,2,4,0,4,3,7,stable,stable,Yes,8,58,63,1015
+R7,HK Chemicals,6,5,11,1,3,4,8,20,3,1,4,increasing,decreasing,Yes,13,24,67,1142
+Rubber Hand Gloves Yellow,HK Consumables,5,6,11,13,5,6,11,46,0,0,0,decreasing,increasing,No,4,22,47,958
+Squeezer Rode,HK Consumables,5,6,11,20,2,2,4,32,3,4,7,increasing,decreasing,Yes,2,100,61,1281
+Floor squeezer big,HK Consumables,5,5,10,11,5,6,11,14,1,-1,-1,increasing,decreasing,No,9,39,59,1384
+Suma multi D2,HK Chemicals,5,5,10,11,0,4,4,15,5,0,5,stable,increasing,No,2,89,66,1024
+Check cloth red,HK Consumables,5,4,9,0,1,6,7,3,4,-2,2,decreasing,decreasing,No,6,0,46,97
+Cobweb Stick refills,HK Consumables,5,4,9,0,3,3,6,0,2,1,3,stable,increasing,No,3,70,51,734
+Hand Squeezer,HK Consumables,5,4,9,6,4,5,9,15,1,-1,0,decreasing,decreasing,No,7,19,52,217
+Mugs 1ltr,HK Consumables,5,4,9,3,3,3,6,22,2,1,3,decreasing,increasing,No,4,65,52,266
+OC- 9,HK Chemicals,5,4,9,0,5,0,5,25,0,4,4,decreasing,stable,No,2,0,39,39451
+R4,HK Chemicals,5,4,9,3,3,3,6,35,2,1,3,increasing,decreasing,No,9,46,56,2875
+Squeezer Rod,HK Consumables,5,4,9,4,3,3,6,44,2,1,3,decreasing,stable,No,5,42,49,519
+Wet Mop Rod Red,HK Consumables,5,4,9,12,2,4,6,12,2,0,3,increasing,decreasing,No,9,8,53,1172
+35 cm glass squeezer,HK Consumables,4,4,8,4,4,3,7,13,0,0,1,decreasing,decreasing,No,3,49,47,1556
+Big squzeer,HK Consumables,4,4,8,5,4,0,4,19,0,4,3,decreasing,stable,No,2,44,50,1088
+Bucket Big,HK Consumables,4,3,8,4,1,1,2,10,3,2,5,increasing,increasing,No,5,38,48,983
+Caddy Kits Blue,HK Consumables,4,4,8,0,1,0,2,23,3,3,6,increasing,decreasing,No,2,67,49,1840
+Cobweb brush,HK Consumables,5,4,8,7,2,3,6,3,2,1,3,decreasing,increasing,No,8,22,54,691
+Cobweb stick rod,HK Consumables,4,3,8,6,1,3,4,6,3,0,3,increasing,increasing,No,6,47,51,931
+Cotton Gloves,HK Consumables,4,3,8,0,2,2,4,12,3,1,4,stable,stable,No,13,3,57,78
+Disposable hand gloves,HK Consumables,4,4,8,0,3,3,5,28,2,1,3,increasing,decreasing,No,5,20,44,379
+Dry Mop Set,HK Consumables,4,4,8,0,3,3,6,2,1,0,2,increasing,decreasing,No,12,45,61,2967
+Dust Pan,HK Consumables,4,3,8,2,2,3,6,4,2,0,2,decreasing,decreasing,No,9,13,50,229
+Emural Plus,HK Chemicals,5,4,8,11,4,3,7,2,1,0,1,decreasing,decreasing,No,9,35,58,2003
+Floor squeezer small,HK Consumables,4,3,8,4,2,2,3,12,2,2,4,increasing,decreasing,No,4,30,45,723
+Jambo Duster,HK Consumables,5,3,8,10,4,9,13,38,1,-6,-5,decreasing,decreasing,Yes,8,31,58,597
+MF-Dry Mop Set,HK Consumables,4,4,8,5,5,1,6,0,-1,3,2,decreasing,decreasing,No,2,17,39,11953
+Mop Winger Trolley,HK Consumables,4,3,8,0,1,1,2,0,3,2,6,decreasing,increasing,No,4,65,52,11508
+Mugs,HK Consumables,4,4,8,7,0,0,1,8,4,3,7,increasing,decreasing,No,2,100,55,943
+OC-5,HK Chemicals,5,3,8,9,1,2,3,0,4,1,5,decreasing,increasing,No,4,0,43,68127
+Patti Blade,HK Consumables,4,4,8,7,3,3,6,11,1,1,2,increasing,decreasing,No,12,34,59,80
+Safety Helmet,HK Consumables,4,4,8,4,3,1,5,3,1,2,3,decreasing,increasing,No,6,56,53,1588
+Shoe polish liquid,HK Chemicals,4,3,8,3,0,2,2,6,4,2,6,stable,decreasing,No,6,27,51,5640
+Single disk green pad,HK Consumables,4,3,8,0,0,1,1,6,4,3,7,stable,stable,No,3,100,57,2861
+TR103,HK Chemicals,5,3,8,1,6,5,11,0,-1,-2,-3,increasing,stable,Yes,14,31,64,2117
+Telescopic Rod,HK Consumables,4,3,8,0,0,1,2,4,4,2,6,decreasing,stable,No,2,67,49,4366
+Tissu box key,HK Consumables,5,4,8,11,5,1,6,0,0,2,2,decreasing,increasing,No,3,0,37,398
+Wet Mop Rod Green,HK Consumables,5,3,8,7,1,2,4,6,3,1,4,stable,increasing,No,4,35,46,1038
+Emeral,HK Consumables,3,3,7,8,5,4,9,28,-2,-1,-2,decreasing,decreasing,Yes,6,46,58,2496
+Hand Sanitizer,HK Chemicals,4,3,7,9,6,2,8,34,-2,1,-1,increasing,decreasing,Yes,6,55,59,1508
+TR 101,HK Consumables,4,3,7,2,3,4,6,10,1,0,1,increasing,decreasing,Yes,14,52,68,1555
+Glass wiping Rubber,HK Consumables,3,2,5,1,3,3,6,7,0,-1,0,increasing,stable,Yes,9,31,59,479
+Ross DSC 402,HK Consumables,3,2,5,8,5,8,12,0,-1,-6,-7,increasing,increasing,Yes,6,18,52,5056
+Safety Gogooles,HK Consumables,3,2,5,5,0,8,8,20,3,-6,-3,stable,increasing,Yes,9,12,58,297
+Stirrers,Pantry,2,3,5,8,11,411,422,21,-9,-408,-417,increasing,decreasing,Yes,5,0,46,735
+Bucket Small,HK Consumables,2,2,4,5,1,2,3,7,1,0,2,increasing,decreasing,Yes,9,25,58,564
+Glass cleaning Kit Rubber,HK Consumables,2,2,4,3,2,2,4,8,0,0,-1,increasing,stable,Yes,13,49,68,945
+Single disk white pad,HK Consumables,2,2,4,2,1,1,3,14,1,0,1,increasing,increasing,Yes,9,27,58,1312
+Biodegradable Covers-Medium (24*36)-Green,HK Consumables,2,2,3,3,18,32,50,33,-16,-30,-47,increasing,increasing,Yes,13,0,58,553
+Carpet Brush,HK Consumables,2,1,3,2,2,2,4,12,0,-1,-1,increasing,stable,Yes,14,25,67,155
+Wet Mop Rod Blue,HK Consumables,2,1,3,0,3,3,6,7,-1,-2,-3,increasing,decreasing,Yes,9,12,59,355
+Wet Mop Rod yellow,HK Consumables,2,2,3,0,4,1,5,8,-2,0,-2,decreasing,increasing,Yes,4,45,54,437
+Brown Sugar- 200 Sachets,Pantry,1,1,2,15,17,19,36,29,-16,-18,-34,increasing,increasing,Yes,17,0,64,267
+Hand Pump,HK Consumables,1,1,2,1,3,1,4,8,-2,0,-2,decreasing,increasing,Yes,7,2,50,69
+Jagerry Powder 200 Sachets,Pantry,1,1,2,35,11,55,66,0,-10,-54,-64,decreasing,decreasing,Yes,17,0,62,506
+White Sugar -200packets,Pantry,1,1,2,45,50,32,82,44,-49,-32,-81,increasing,decreasing,Yes,17,0,63,209
+Rubber Hand Gloves Blue,HK Consumables,0,0,1,8,2,5,8,20,-2,-5,-7,decreasing,increasing,Yes,8,0,55,50
+Tool  Holder,HK Consumables,1,1,1,0,9,0,10,16,-8,0,-8,decreasing,decreasing,Yes,2,11,43,123
