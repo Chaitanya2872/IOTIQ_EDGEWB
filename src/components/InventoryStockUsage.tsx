@@ -10,7 +10,7 @@ import {
   Activity, Zap, AlertTriangle, ShoppingCart, Package2, TrendingUp, Users,
   Upload, AlertCircle, CheckCircle, Info, X, ChevronLeft, ChevronRight,
   BarChart3, PieChart as PieChartIcon, Sun, Snowflake, CloudRain, Sparkles,
-  DollarSign, Eye, Package, Clock, TrendingDown, Shield, Layers, Leaf, Cloud
+  DollarSign, Eye, Package, Clock, TrendingDown, Shield, Layers, Leaf, Cloud, Split
 } from 'lucide-react';
 import { 
   useAnalytics, 
@@ -80,11 +80,10 @@ interface StockLevel {
   itemName: string;
   itemCode: string;
   category: string;
-
   openingStock: number;
   receivedStock: number;
   closingStock: number;
-
+  consumedStock: number;
   minLevel: number;
   maxLevel: number;
   reorderLevel: number;
@@ -95,7 +94,6 @@ interface StockLevel {
   unitOfMeasurement: string;
   lastUpdated: string;
 }
-
 
 interface FootfallRecord {
   date: string;
@@ -109,6 +107,8 @@ interface ConsumptionDataPoint {
   [key: string]: any;
   employeeCount?: number;
   visitorCount?: number;
+  avgEmployees?: number; // For weekly/monthly aggregations
+  avgVisitors?: number;  // For weekly/monthly aggregations
 }
 
 interface SeasonalData {
@@ -166,7 +166,8 @@ const ModernTooltip: React.FC<any> = ({ active, payload, label }) => {
           </div>
         ))}
         
-        {payload[0]?.payload?.employeeCount && (
+        {/* Show employee/visitor data for all periods */}
+        {(payload[0]?.payload?.employeeCount || payload[0]?.payload?.totalEmployees || payload[0]?.payload?.avgEmployees) && (
           <div style={{ 
             borderTop: `1px solid ${COLORS.light}`, 
             marginTop: '6px', 
@@ -175,7 +176,20 @@ const ModernTooltip: React.FC<any> = ({ active, payload, label }) => {
             color: COLORS.primary
           }}>
             <Users style={{ width: '10px', height: '10px', display: 'inline', marginRight: '3px' }} />
-            Employees: {payload[0].payload.employeeCount}
+            {payload[0].payload.totalEmployees ? 
+              `Total Employees: ${payload[0].payload.totalEmployees.toLocaleString()}` :
+              payload[0].payload.avgEmployees ? 
+              `Avg Employees/Day: ${Math.round(payload[0].payload.avgEmployees)}` :
+              `Employees: ${payload[0].payload.employeeCount}`
+            }
+            {(payload[0].payload.visitorCount || payload[0].payload.totalVisitors) && (
+              <span style={{ marginLeft: '8px' }}>
+                {payload[0].payload.totalVisitors ? 
+                  `Total Visitors: ${payload[0].payload.totalVisitors.toLocaleString()}` :
+                  `Visitors: ${payload[0].payload.visitorCount}`
+                }
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -203,17 +217,16 @@ const Card: React.FC<{
   );
 };
 
-// Seasonal Cost Analysis Component
+// Seasonal Cost Analysis Component (unchanged)
 const SeasonalCostAnalysis: React.FC<{
   consumptionData: ConsumptionTrendsResponse | null;
   dateRange: { start: string; end: string };
   categories: Category[];
-  items: Item[]; // ADD THIS PROP
+  items: Item[];
 }> = ({ consumptionData, dateRange, categories, items }) => {
   const [seasonalData, setSeasonalData] = useState<SeasonalData[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<string | null>(null);
 
-  // Get season from date
   const getSeason = (dateStr: string): string => {
     const date = new Date(dateStr);
     const month = date.getMonth() + 1;
@@ -224,7 +237,6 @@ const SeasonalCostAnalysis: React.FC<{
     return 'winter';
   };
 
-  // Process seasonal data with REAL costs
   useEffect(() => {
     if (!consumptionData?.data) return;
 
@@ -236,7 +248,6 @@ const SeasonalCostAnalysis: React.FC<{
       categoryCosts: Map<string, number>;
     }>();
 
-    // Initialize seasons
     ['spring', 'summer', 'fall', 'winter'].forEach(season => {
       seasonalMap.set(season, {
         totalCost: 0,
@@ -247,7 +258,6 @@ const SeasonalCostAnalysis: React.FC<{
       });
     });
 
-    // Build a map of average unit prices per category
     const categoryPrices = new Map<string, number>();
     categories.forEach(cat => {
       const categoryItems = items.filter(item => item.categoryId === cat.id);
@@ -257,15 +267,12 @@ const SeasonalCostAnalysis: React.FC<{
       }
     });
 
-    // Process consumption data with REAL cost calculation
     consumptionData.data.forEach(categoryData => {
       const categoryName = categoryData.category || categoryData.categoryName || 'Unknown';
       const categoryId = categoryData.categoryId;
       
-      // Get average price for this category
       let avgUnitPrice = categoryPrices.get(categoryName) || 10;
       
-      // Try to get more accurate price from actual items
       if (categoryId) {
         const categoryItems = items.filter(item => item.categoryId === categoryId);
         if (categoryItems.length > 0) {
@@ -282,24 +289,19 @@ const SeasonalCostAnalysis: React.FC<{
         
         const consumptionQty = Number(point.consumption) || 0;
         
-        // Calculate REAL cost
         let actualCost = 0;
         
         if (point.cost && point.cost > 0) {
-          // Use actual cost from backend if available
           actualCost = Number(point.cost);
         } else if (point.totalCost && point.totalCost > 0) {
-          // Use totalCost if available
           actualCost = Number(point.totalCost);
         } else {
-          // Calculate cost using average unit price
           actualCost = consumptionQty * avgUnitPrice;
         }
         
         seasonData.totalCost += actualCost;
         seasonData.totalConsumption += consumptionQty;
         
-        // Track unique items
         if (point.items && Array.isArray(point.items)) {
           point.items.forEach((item: any) => {
             seasonData.itemCount.add(item.itemName || item.itemId || 'Unknown');
@@ -308,13 +310,11 @@ const SeasonalCostAnalysis: React.FC<{
           seasonData.itemCount.add(categoryName);
         }
         
-        // Track category consumption
         seasonData.categories.set(
           categoryName,
           (seasonData.categories.get(categoryName) || 0) + consumptionQty
         );
         
-        // Track category costs
         seasonData.categoryCosts.set(
           categoryName,
           (seasonData.categoryCosts.get(categoryName) || 0) + actualCost
@@ -322,13 +322,10 @@ const SeasonalCostAnalysis: React.FC<{
       });
     });
 
-    // Calculate overall average for variance comparison
     const totalCostAllSeasons = Array.from(seasonalMap.values()).reduce((sum, s) => sum + s.totalCost, 0);
     const avgCostPerSeason = totalCostAllSeasons / 4;
 
-    // Convert to array with calculated variance
     const processedData: SeasonalData[] = Array.from(seasonalMap.entries()).map(([season, data]) => {
-      // Find top category by cost (not just quantity)
       let topCategory = 'None';
       let maxCost = 0;
       data.categoryCosts.forEach((cost, category) => {
@@ -338,14 +335,10 @@ const SeasonalCostAnalysis: React.FC<{
         }
       });
 
-      // Calculate average cost per item
       const avgCost = data.itemCount.size > 0 ? data.totalCost / data.itemCount.size : 0;
-
-      // Calculate real variance
       const variance = avgCostPerSeason > 0 ? 
         ((data.totalCost - avgCostPerSeason) / avgCostPerSeason) * 100 : 0;
 
-      // Get season icon and color
       const seasonIcons = {
         spring: <Leaf style={{ width: '14px', height: '14px' }} />,
         summer: <Sun style={{ width: '14px', height: '14px' }} />,
@@ -359,16 +352,14 @@ const SeasonalCostAnalysis: React.FC<{
         avgCost: Math.round(avgCost),
         itemCount: data.itemCount.size,
         topCategory,
-        variance: Math.round(variance * 10) / 10, // Round to 1 decimal
+        variance: Math.round(variance * 10) / 10,
         icon: seasonIcons[season as keyof typeof seasonIcons],
         color: SEASONAL_COLORS[season as keyof typeof SEASONAL_COLORS]
       };
     });
 
     setSeasonalData(processedData);
-    
-    console.log('Seasonal data processed:', processedData);
-  }, [consumptionData, items, categories]); // Add items and categories as dependencies
+  }, [consumptionData, items, categories]);
 
   return (
     <Card>
@@ -379,7 +370,6 @@ const SeasonalCostAnalysis: React.FC<{
         </h3>
       </div>
 
-      {/* Season Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
         {seasonalData.map(season => (
           <div
@@ -420,7 +410,6 @@ const SeasonalCostAnalysis: React.FC<{
         ))}
       </div>
 
-      {/* Seasonal Comparison Chart */}
       <div style={{ marginBottom: '20px' }}>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={seasonalData}>
@@ -442,7 +431,6 @@ const SeasonalCostAnalysis: React.FC<{
         </ResponsiveContainer>
       </div>
 
-      {/* Seasonal Radar Chart */}
       <div>
         <h4 style={{ fontSize: '12px', fontWeight: '500', marginBottom: '12px', color: COLORS.dark }}>
           Category Distribution by Season
@@ -471,7 +459,6 @@ const SeasonalCostAnalysis: React.FC<{
         </ResponsiveContainer>
       </div>
 
-      {/* Selected Season Details */}
       {selectedSeason && (
         <div style={{
           marginTop: '16px',
@@ -495,7 +482,6 @@ const SeasonalCostAnalysis: React.FC<{
     </Card>
   );
 };
-
 
 // Core Inventory Stock Table Component
 const CoreInventoryTable: React.FC<{ 
@@ -521,64 +507,51 @@ const CoreInventoryTable: React.FC<{
     }
   };
 
-  // Generate stock levels from items
-useEffect(() => {
-  if (items && items.length > 0) {
-    const levels: StockLevel[] = items.map(item => {
-      const category = categories.find(c => c.id === item.category?.id || item.categoryId);
+  useEffect(() => {
+    if (items && items.length > 0) {
+      const levels: StockLevel[] = items.map(item => {
+        const category = categories.find(c => c.id === item.category?.id || item.categoryId);
 
-      // Opening stock from backend (or fallback to oldStockQuantity)
-      const openingStock = Number(item.openingStock ?? item.oldStockQuantity ?? 0);
+        const openingStock = Number(item.openingStock ?? item.oldStockQuantity ?? 0);
+        const closingStock = Number(item.closingStock ?? item.currentQuantity ?? 0);
 
-      // Closing stock (SIH) from backend
-      const closingStock = Number(item.closingStock ?? item.currentQuantity ?? 0);
+        let receivedStock = 0;
+        if (item.openingStock !== undefined && item.closingStock !== undefined) {
+          receivedStock = closingStock - openingStock;
+          if (receivedStock < 0) receivedStock = 0;
+        }
 
-      // Received stock = closing - opening (fallback: 0 if negative)
-      let receivedStock = 0;
-      if (item.openingStock !== undefined && item.closingStock !== undefined) {
-        receivedStock = closingStock - openingStock;
-        if (receivedStock < 0) receivedStock = 0;
-      }
+        const consumedStock = openingStock + receivedStock - closingStock;
+        const dailyConsumption = consumedStock > 0 ? consumedStock / 30 : (item.avgDailyConsumption ?? 1);
+        const coverageDays = item.coverageDays ?? (
+          dailyConsumption > 0 ? Math.floor(closingStock / dailyConsumption) : 0
+        );
 
-      // Consumed stock = opening + received - closing
-      const consumedStock = openingStock + receivedStock - closingStock;
+        return {
+          id: item.id,
+          itemName: item.itemName,
+          itemCode: item.itemCode || `ITM${String(item.id).padStart(4, '0')}`,
+          category: category?.categoryName || 'Unknown',
+          openingStock,
+          receivedStock,
+          consumedStock,
+          closingStock,
+          minLevel: Number(item.minStockLevel) || 0,
+          maxLevel: Number(item.maxStockLevel) || 0,
+          reorderLevel: Number(item.reorderLevel ?? Math.floor((Number(item.minStockLevel) || 10) * 1.5)),
+          coverageDays,
+          stockValue: item.totalValue ?? closingStock * (item.unitPrice || 0),
+          status: item.stockAlertLevel || 'SAFE',
+          unitPrice: item.unitPrice || 0,
+          unitOfMeasurement: item.unitOfMeasurement || 'units',
+          lastUpdated: item.updated_at ?? new Date().toISOString()
+        };
+      });
 
-      // Coverage days = closing / daily consumption (fallback: backend avgDailyConsumption)
-      const dailyConsumption = consumedStock > 0 ? consumedStock / 30 : (item.avgDailyConsumption ?? 1);
-      const coverageDays = item.coverageDays ?? (
-        dailyConsumption > 0 ? Math.floor(closingStock / dailyConsumption) : 0
-      );
+      setStockLevels(levels);
+    }
+  }, [items, categories]);
 
-      return {
-        id: item.id,
-        itemName: item.itemName,
-        itemCode: item.itemCode || `ITM${String(item.id).padStart(4, '0')}`,
-        category: category?.categoryName || 'Unknown',
-
-        openingStock,
-        receivedStock,
-        consumedStock,   // ✅ Added
-        closingStock,
-
-        minLevel: Number(item.minStockLevel) || 0,
-        maxLevel: Number(item.maxStockLevel) || 0,
-        reorderLevel: Number(item.reorderLevel ?? Math.floor((Number(item.minStockLevel) || 10) * 1.5)),
-
-        coverageDays,
-        stockValue: item.totalValue ?? closingStock * (item.unitPrice || 0),
-        status: item.stockAlertLevel || 'SAFE',
-        unitPrice: item.unitPrice || 0,
-        unitOfMeasurement: item.unitOfMeasurement || 'units',
-        lastUpdated: item.updated_at ?? new Date().toISOString()
-      };
-    });
-
-    setStockLevels(levels);
-  }
-}, [items, categories]);
-
-
-  // Filter logic
   useEffect(() => {
     let filtered = [...stockLevels];
 
@@ -632,7 +605,6 @@ useEffect(() => {
           </button>
         </div>
 
-        {/* Filters */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
           <input
             type="text"
@@ -685,57 +657,52 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Table */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
           <thead>
-  <tr style={{ backgroundColor: cardBackgrounds.neutral, borderBottom: `2px solid ${COLORS.light}` }}>
-    <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark }}>Date</th>
-    <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark }}>Item Code</th>
-    <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark }}>Item Name</th>
-    <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark }}>Category</th>
-    <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Opening Stock</th>
-    <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Received Stock</th>
-    <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Consumed Stock</th>
-    <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Closing Stock</th>
-    <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>SIH</th>
-    <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Unit Price</th>
-    <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Inventory Value</th>
-    <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Coverage Days</th>
-    <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Stock Alert Risk</th>
-  </tr>
-</thead>
-
-         <tbody>
-  {filteredLevels.map(item => (
-    <tr key={item.id}>
-      <td>{item.lastUpdated?.slice(0,10) || '-'}</td>
-      <td>{item.itemCode}</td>
-      <td>{item.itemName}</td>
-      <td>{item.category}</td>
-      <td style={{ textAlign: 'center' }}>{item.openingStock}</td>
-      <td style={{ textAlign: 'center' }}>{item.receivedStock}</td>
-      <td style={{ textAlign: 'center' }}>{item.consumedStock}</td>   {/* ✅ NEW */}
-      <td style={{ textAlign: 'center' }}>{item.closingStock} {item.unitOfMeasurement}</td>
-      <td style={{ textAlign: 'center' }}>${item.unitPrice.toFixed(2)}</td>
-      <td style={{ textAlign: 'center' }}>${item.stockValue.toLocaleString()}</td>
-      <td style={{ textAlign: 'center' }}>{item.coverageDays} days</td>
-      <td style={{ textAlign: 'center' }}>
-        <span style={{
-          padding: '2px 6px',
-          borderRadius: '4px',
-          fontSize: '10px',
-          backgroundColor: getStatusColor(item.status) + '20',
-          color: getStatusColor(item.status)
-        }}>
-          {item.status}
-        </span>
-      </td>
-    </tr>
-  ))}
-</tbody>
-
-
+            <tr style={{ backgroundColor: cardBackgrounds.neutral, borderBottom: `2px solid ${COLORS.light}` }}>
+              <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark }}>Date</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark }}>Item Code</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark }}>Item Name</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark }}>Category</th>
+              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Opening Stock</th>
+              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Received Stock</th>
+              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Consumed Stock</th>
+              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Closing Stock (SIH)</th>
+              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Unit Price</th>
+              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Inventory Value</th>
+              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Coverage Days</th>
+              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark }}>Stock Alert Risk</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredLevels.map(item => (
+              <tr key={item.id} style={{ borderBottom: `1px solid ${COLORS.light}` }}>
+                <td style={{ padding: '6px' }}>{item.lastUpdated?.slice(0,10) || '-'}</td>
+                <td style={{ padding: '6px' }}>{item.itemCode}</td>
+                <td style={{ padding: '6px' }}>{item.itemName}</td>
+                <td style={{ padding: '6px' }}>{item.category}</td>
+                <td style={{ padding: '6px', textAlign: 'center' }}>{item.openingStock}</td>
+                <td style={{ padding: '6px', textAlign: 'center' }}>{item.receivedStock}</td>
+                <td style={{ padding: '6px', textAlign: 'center' }}>{item.consumedStock}</td>
+                <td style={{ padding: '6px', textAlign: 'center' }}>{item.closingStock} {item.unitOfMeasurement}</td>
+                <td style={{ padding: '6px', textAlign: 'center' }}>${item.unitPrice.toFixed(2)}</td>
+                <td style={{ padding: '6px', textAlign: 'center' }}>${item.stockValue.toLocaleString()}</td>
+                <td style={{ padding: '6px', textAlign: 'center' }}>{item.coverageDays} days</td>
+                <td style={{ padding: '6px', textAlign: 'center' }}>
+                  <span style={{
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    backgroundColor: getStatusColor(item.status) + '20',
+                    color: getStatusColor(item.status)
+                  }}>
+                    {item.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
     </Card>
@@ -751,14 +718,20 @@ const InventoryStockUsage: React.FC = () => {
   const enhancedAnalytics = useEnhancedAnalytics();
   
   // State
-  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'bimonthly'>('daily');
+  const [monthlyBin, setMonthlyBin] = useState<'full' | 'bin1' | 'bin2'>('full');
   const [consumptionData, setConsumptionData] = useState<ConsumptionTrendsResponse | null>(null);
   const [footfallData, setFootfallData] = useState<FootfallRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'consumption' | 'inventory' | 'budget' | 'seasonal'>('overview');
   
-  // FIXED: Dynamic date configuration based on actual data
+  // NEW: Filter and view states
+  const [selectedConsumptionCategory, setSelectedConsumptionCategory] = useState<number | null>(null);
+  const [selectedConsumptionItem, setSelectedConsumptionItem] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'quantity' | 'price'>('quantity');
+  const [visibleCategories, setVisibleCategories] = useState<number[]>([]);
+  
   const [dateConfig, setDateConfig] = useState({
     current: new Date().toISOString().slice(0, 10),
     yearStart: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10),
@@ -771,324 +744,444 @@ const InventoryStockUsage: React.FC = () => {
     end: '2025-07-31'
   });
 
-  // FIXED: Fetch actual data range and update date configuration
- const fetchDataRange = async () => {
-  try {
-    console.log('Fetching actual data range from backend...');
-    
-    // First try to get the actual data range from consumption records
-    const trendsResponse = await AnalyticsAPI.consumptionTrends(
-      'monthly', 
-      'category',
-      undefined,
-      undefined,
-      undefined
-    );
-    
-    if (trendsResponse && trendsResponse.actualDataRange) {
-      // Parse the actual data range from the response
-      const rangeMatch = trendsResponse.actualDataRange.match(/(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/);
-      if (rangeMatch) {
-        const [, minDate, maxDate] = rangeMatch;
-        
+  // Helper function to toggle category visibility
+  const toggleCategoryVisibility = (categoryId: number) => {
+    setVisibleCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+  };
+
+  // Initialize visible categories when categories are loaded
+  useEffect(() => {
+    if (categories.length > 0 && visibleCategories.length === 0) {
+      // Show all categories by default, ensuring HK Chemicals is included
+      setVisibleCategories(categories.map(cat => cat.id));
+    }
+  }, [categories]);
+
+  // FIXED: Helper function to aggregate footfall data by week
+  const aggregateFootfallByWeek = (footfallRecords: FootfallRecord[]) => {
+    const weeklyMap = new Map<string, { 
+      employees: number[], 
+      visitors: number[], 
+      startDate: string 
+    }>();
+
+    footfallRecords.forEach(record => {
+      const date = new Date(record.date);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+      const weekKey = weekStart.toISOString().slice(0, 10);
+      
+      if (!weeklyMap.has(weekKey)) {
+        weeklyMap.set(weekKey, {
+          employees: [],
+          visitors: [],
+          startDate: weekKey
+        });
+      }
+      
+      const week = weeklyMap.get(weekKey)!;
+      week.employees.push(record.employeeCount);
+      week.visitors.push(record.visitorCount);
+    });
+
+    const weeklyData = new Map<string, { totalEmployees: number, totalVisitors: number, avgEmployees: number, avgVisitors: number }>();
+    weeklyMap.forEach((data, weekKey) => {
+      const totalEmployees = data.employees.reduce((a, b) => a + b, 0);
+      const totalVisitors = data.visitors.reduce((a, b) => a + b, 0);
+      const avgEmployees = totalEmployees / data.employees.length;
+      const avgVisitors = totalVisitors / data.visitors.length;
+      
+      weeklyData.set(`Week of ${weekKey}`, {
+        totalEmployees: totalEmployees,
+        totalVisitors: totalVisitors,
+        avgEmployees: Math.round(avgEmployees),
+        avgVisitors: Math.round(avgVisitors)
+      });
+    });
+
+    return weeklyData;
+  };
+
+  // FIXED: Helper function to aggregate footfall data by month - NOW WITH TOTALS
+  const aggregateFootfallByMonth = (footfallRecords: FootfallRecord[], binMode?: 'bin1' | 'bin2' | 'full') => {
+    const monthlyMap = new Map<string, { 
+      employees: number[], 
+      visitors: number[] 
+    }>();
+
+    footfallRecords.forEach(record => {
+      const date = new Date(record.date);
+      const day = date.getDate();
+      
+      // Filter by bin if needed
+      if (binMode === 'bin1' && day > 15) return;
+      if (binMode === 'bin2' && day <= 15) return;
+      
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+      
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, {
+          employees: [],
+          visitors: []
+        });
+      }
+      
+      const month = monthlyMap.get(monthKey)!;
+      month.employees.push(record.employeeCount);
+      month.visitors.push(record.visitorCount);
+    });
+
+    const monthlyData = new Map<string, { totalEmployees: number, totalVisitors: number, avgEmployees: number, avgVisitors: number }>();
+    monthlyMap.forEach((data, monthKey) => {
+      const totalEmployees = data.employees.reduce((a, b) => a + b, 0);
+      const totalVisitors = data.visitors.reduce((a, b) => a + b, 0);
+      const avgEmployees = totalEmployees / data.employees.length;
+      const avgVisitors = totalVisitors / data.visitors.length;
+      
+      // Add bin suffix if in bin mode
+      const displayKey = binMode && binMode !== 'full' ? 
+        `${monthKey} (${binMode === 'bin1' ? 'Days 1-15' : 'Days 16-31'})` : 
+        monthKey;
+      
+      monthlyData.set(displayKey, {
+        totalEmployees: totalEmployees,
+        totalVisitors: totalVisitors,
+        avgEmployees: Math.round(avgEmployees),
+        avgVisitors: Math.round(avgVisitors)
+      });
+    });
+
+    return monthlyData;
+  };
+
+  const fetchDataRange = async () => {
+    try {
+      console.log('Fetching actual data range from backend...');
+      
+      const trendsResponse = await AnalyticsAPI.consumptionTrends(
+        'monthly', 
+        'category',
+        undefined,
+        undefined,
+        undefined
+      );
+      
+      if (trendsResponse && trendsResponse.actualDataRange) {
+        const rangeMatch = trendsResponse.actualDataRange.match(/(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/);
+        if (rangeMatch) {
+          const [, minDate, maxDate] = rangeMatch;
+          
+          setDateConfig({
+            current: maxDate,
+            yearStart: minDate.slice(0, 4) + '-01-01',
+            defaultStart: minDate,
+            defaultEnd: maxDate
+          });
+
+          setDateRange({
+            start: minDate,
+            end: maxDate
+          });
+          
+          console.log('✅ Data range initialized from backend:', { minDate, maxDate });
+          return { success: true, minDate, maxDate };
+        }
+      }
+      
+      const dataRangeResponse = await AnalyticsAPI.dataRange();
+      
+      if (dataRangeResponse && dataRangeResponse.minDate && dataRangeResponse.maxDate) {
         setDateConfig({
-          current: maxDate,
-          yearStart: minDate.slice(0, 4) + '-01-01',
-          defaultStart: minDate,
-          defaultEnd: maxDate
+          current: dataRangeResponse.maxDate,
+          yearStart: dataRangeResponse.minDate.slice(0, 4) + '-01-01',
+          defaultStart: dataRangeResponse.minDate,
+          defaultEnd: dataRangeResponse.maxDate
         });
 
         setDateRange({
-          start: minDate,
-          end: maxDate
+          start: dataRangeResponse.minDate,
+          end: dataRangeResponse.maxDate
         });
         
-        console.log('✅ Data range initialized from backend:', { minDate, maxDate });
-        return { success: true, minDate, maxDate };
+        console.log('✅ Data range from fallback endpoint:', dataRangeResponse);
+        return { success: true, ...dataRangeResponse };
       }
-    }
-    
-    // Fallback: try the data range endpoint
-    const dataRangeResponse = await AnalyticsAPI.dataRange();
-    
-    if (dataRangeResponse && dataRangeResponse.minDate && dataRangeResponse.maxDate) {
-      setDateConfig({
-        current: dataRangeResponse.maxDate,
-        yearStart: dataRangeResponse.minDate.slice(0, 4) + '-01-01',
-        defaultStart: dataRangeResponse.minDate,
-        defaultEnd: dataRangeResponse.maxDate
-      });
-
-      setDateRange({
-        start: dataRangeResponse.minDate,
-        end: dataRangeResponse.maxDate
-      });
       
-      console.log('✅ Data range from fallback endpoint:', dataRangeResponse);
-      return { success: true, ...dataRangeResponse };
-    }
-    
-    // If both fail, use sensible defaults but show warning
-    console.warn('⚠️ Could not fetch data range, using defaults');
-    return { success: false };
-    
-  } catch (error) {
-    console.error('❌ Error fetching data range:', error);
-    setError('Could not determine data range. Using default dates.');
-    return { success: false };
-  }
-};
-
-  // Fetch footfall data with proper date range
-  const fetchFootfallData = async () => {
-  try {
-    console.log('Fetching footfall data for range:', dateRange);
-    
-    if (!dateRange.start || !dateRange.end) {
-      console.log('Date range not set, skipping footfall fetch');
-      return { success: false, message: 'Date range not initialized' };
-    }
-    
-    const response = await FootfallAPI.list(
-      dateRange.start, 
-      dateRange.end, 
-      undefined, 
-      0, 
-      500
-    );
-    
-    if (response.success && response.data) {
-      const footfallRecords: FootfallRecord[] = response.data.map(record => ({
-        date: record.date,
-        employeeCount: record.employeeCount || 0,
-        visitorCount: record.visitorCount || 0,
-        totalFootfall: record.totalFootfall || (record.employeeCount + record.visitorCount)
-      }));
+      console.warn('⚠️ Could not fetch data range, using defaults');
+      return { success: false };
       
-      setFootfallData(footfallRecords);
-      console.log(`✅ Loaded ${footfallRecords.length} footfall records`);
-      return { success: true, count: footfallRecords.length };
-    } else {
-      // Don't generate sample data - show actual error
-      console.warn('⚠️ No footfall data available');
-      setFootfallData([]);
-      return { success: false, message: 'No footfall data available' };
-    }
-  } catch (error: any) {
-    console.error('❌ Footfall fetch error:', error);
-    setFootfallData([]); // Set empty array instead of sample data
-    
-    // Provide user-friendly error message
-    if (error.message.includes('Cannot connect')) {
-      setError('Cannot connect to server. Please check if the backend is running.');
-    } else if (error.message.includes('404')) {
-      setError('Footfall data endpoint not found. Please check backend configuration.');
-    } else {
-      setError('Could not load footfall data. Some charts may be incomplete.');
-    }
-    
-    return { success: false, error: error.message };
-  }
-};
-
-  // FIXED: Fetch consumption data with proper date parameters
-  const fetchConsumptionData = async () => {
-  try {
-    console.log('Fetching consumption trends:', {
-      period,
-      dateRange,
-      groupBy: 'category'
-    });
-    
-    if (!dateRange.start || !dateRange.end) {
-      console.warn('Date range not set for consumption data');
+    } catch (error) {
+      console.error('❌ Error fetching data range:', error);
+      setError('Could not determine data range. Using default dates.');
       return { success: false };
     }
-    
-    const data = await AnalyticsAPI.consumptionTrends(
-      period, 
-      'category', 
-      undefined,
-      dateRange.start,
-      dateRange.end
-    );
-    
-    if (data && data.data && data.data.length > 0) {
-      setConsumptionData(data);
-      console.log(`✅ Consumption data loaded: ${data.data.length} categories`);
-      
-      // Update actual date range if provided
-      if (data.actualDataRange) {
-        console.log('Actual data range from consumption:', data.actualDataRange);
-      }
-      
-      return { success: true, count: data.data.length };
-    } else {
-      console.warn('⚠️ No consumption data returned');
-      setConsumptionData(null);
-      setError('No consumption data available for the selected period.');
-      return { success: false, message: 'No data available' };
-    }
-  } catch (error: any) {
-    console.error('❌ Consumption data error:', error);
-    setConsumptionData(null); // Don't use sample data
-    
-    if (error.message.includes('500')) {
-      setError('Server error loading consumption data. Please check backend logs.');
-    } else {
-      setError('Could not load consumption trends.');
-    }
-    
-    return { success: false, error: error.message };
-  }
-};
-
-  // Generate sample data points for testing
-  const generateSampleDataPoints = () => {
-    const points = [];
-    const start = new Date(dateRange.start);
-    const end = new Date(dateRange.end);
-    
-    if (period === 'daily') {
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        points.push({
-          date: d.toISOString().slice(0, 10),
-          consumption: Math.random() * 100 + 20
-        });
-      }
-    } else if (period === 'weekly') {
-      const weeks = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
-      for (let w = 0; w < weeks; w++) {
-        const weekStart = new Date(start);
-        weekStart.setDate(weekStart.getDate() + w * 7);
-        points.push({
-          week: `Week ${w + 1}`,
-          weekStart: weekStart.toISOString().slice(0, 10),
-          consumption: Math.random() * 500 + 100
-        });
-      }
-    } else {
-      // Monthly
-      const current = new Date(start);
-      while (current <= end) {
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        points.push({
-          month: `${monthNames[current.getMonth()]} ${current.getFullYear()}`,
-          date: current.toISOString().slice(0, 10),
-          consumption: Math.random() * 2000 + 500
-        });
-        current.setMonth(current.getMonth() + 1);
-      }
-    }
-    
-    return points;
   };
 
-  // Process chart data
- // Replace the processChartData function's date key logic:
-const processChartData = (): ConsumptionDataPoint[] => {
-  if (!consumptionData?.data || consumptionData.data.length === 0) {
-    console.log('No consumption data to process');
-    return [];
-  }
-
-  const processed: ConsumptionDataPoint[] = [];
-  const dateMap = new Map<string, ConsumptionDataPoint>();
-
-  try {
-    // Process consumption data
-    consumptionData.data.forEach(item => {
-      if (!item.dataPoints || item.dataPoints.length === 0) {
-        console.warn(`No data points for category: ${item.category || 'Unknown'}`);
-        return;
+  const fetchFootfallData = async () => {
+    try {
+      console.log('Fetching footfall data for range:', dateRange);
+      
+      if (!dateRange.start || !dateRange.end) {
+        console.log('Date range not set, skipping footfall fetch');
+        return { success: false, message: 'Date range not initialized' };
       }
-
-      item.dataPoints.forEach((point: any) => {
-        let dateKey = '';
+      
+      const response = await FootfallAPI.list(
+        dateRange.start, 
+        dateRange.end, 
+        undefined, 
+        0, 
+        500
+      );
+      
+      if (response.success && response.data) {
+        const footfallRecords: FootfallRecord[] = response.data.map(record => ({
+          date: record.date,
+          employeeCount: record.employeeCount || 0,
+          visitorCount: record.visitorCount || 0,
+          totalFootfall: record.totalFootfall || (record.employeeCount + record.visitorCount)
+        }));
         
-        // FIX: Use the correct field names from backend
-        if (period === 'daily') {
-          // Backend sends startDate for daily data
-          dateKey = point.startDate || point.date || point.periodLabel || '';
-        } else if (period === 'weekly') {
-          // Backend sends periodLabel like "Week of 2025-01-01"
-          dateKey = point.periodLabel || point.startDate || '';
-        } else if (period === 'monthly') {
-          // Backend sends periodLabel like "Jan 2025"
-          dateKey = point.periodLabel || point.startDate || '';
-        }
+        setFootfallData(footfallRecords);
+        console.log(`✅ Loaded ${footfallRecords.length} footfall records`);
+        return { success: true, count: footfallRecords.length };
+      } else {
+        console.warn('⚠️ No footfall data available');
+        setFootfallData([]);
+        return { success: false, message: 'No footfall data available' };
+      }
+    } catch (error: any) {
+      console.error('❌ Footfall fetch error:', error);
+      setFootfallData([]);
+      
+      if (error.message.includes('Cannot connect')) {
+        setError('Cannot connect to server. Please check if the backend is running.');
+      } else if (error.message.includes('404')) {
+        setError('Footfall data endpoint not found. Please check backend configuration.');
+      } else {
+        setError('Could not load footfall data. Some charts may be incomplete.');
+      }
+      
+      return { success: false, error: error.message };
+    }
+  };
 
-        if (!dateKey) {
-          console.warn('Skipping data point with no date key:', point);
+  const fetchConsumptionData = async () => {
+    try {
+      // Adjust period for bimonthly
+      const actualPeriod = period === 'bimonthly' ? 'monthly' : period;
+      
+      console.log('Fetching consumption trends:', {
+        period: actualPeriod,
+        dateRange,
+        groupBy: 'category'
+      });
+      
+      if (!dateRange.start || !dateRange.end) {
+        console.warn('Date range not set for consumption data');
+        return { success: false };
+      }
+      
+      const data = await AnalyticsAPI.consumptionTrends(
+        actualPeriod, 
+        'category', 
+        undefined,
+        dateRange.start,
+        dateRange.end
+      );
+      
+      if (data && data.data && data.data.length > 0) {
+        setConsumptionData(data);
+        console.log(`✅ Consumption data loaded: ${data.data.length} categories`);
+        
+        if (data.actualDataRange) {
+          console.log('Actual data range from consumption:', data.actualDataRange);
+        }
+        
+        return { success: true, count: data.data.length };
+      } else {
+        console.warn('⚠️ No consumption data returned');
+        setConsumptionData(null);
+        setError('No consumption data available for the selected period.');
+        return { success: false, message: 'No data available' };
+      }
+    } catch (error: any) {
+      console.error('❌ Consumption data error:', error);
+      setConsumptionData(null);
+      
+      if (error.message.includes('500')) {
+        setError('Server error loading consumption data. Please check backend logs.');
+      } else {
+        setError('Could not load consumption trends.');
+      }
+      
+      return { success: false, error: error.message };
+    }
+  };
+
+  // ENHANCED: Process chart data with weekly/monthly footfall aggregation
+  const processChartData = (): ConsumptionDataPoint[] => {
+    if (!consumptionData?.data || consumptionData.data.length === 0) {
+      console.log('No consumption data to process');
+      return [];
+    }
+
+    const processed: ConsumptionDataPoint[] = [];
+    const dateMap = new Map<string, ConsumptionDataPoint>();
+
+    try {
+      // Process consumption data - ENSURE ALL CATEGORIES ARE INCLUDED
+      consumptionData.data.forEach(item => {
+        const categoryName = item.category || item.categoryName || 'Unknown';
+        
+        // Log to ensure HK Chemicals is being processed
+        if (categoryName.toLowerCase().includes('chemical') || categoryName.toLowerCase().includes('hk')) {
+          console.log(`Processing HK Chemicals category: ${categoryName}`);
+        }
+        
+        if (!item.dataPoints || item.dataPoints.length === 0) {
+          console.warn(`No data points for category: ${categoryName}`);
           return;
         }
 
-        if (!dateMap.has(dateKey)) {
-          dateMap.set(dateKey, { date: dateKey });
-        }
-        
-        const dataPoint = dateMap.get(dateKey)!;
-        const categoryName = item.category || item.categoryName || 'Unknown';
-        
-        // Use consumption AND cost if available
-        const consumptionValue = Number(point.consumption) || 0;
-        const costValue = Number(point.cost) || 0;
-        
-        dataPoint[categoryName] = Math.round(consumptionValue * 100) / 100;
-        if (costValue > 0) {
-          dataPoint[`${categoryName}_cost`] = Math.round(costValue * 100) / 100;
-        }
-      });
-    });
+        item.dataPoints.forEach((point: any) => {
+          let dateKey = '';
+          
+          if (period === 'daily') {
+            dateKey = point.startDate || point.date || point.periodLabel || '';
+          } else if (period === 'weekly') {
+            dateKey = point.periodLabel || point.startDate || '';
+          } else if (period === 'monthly' || period === 'bimonthly') {
+            dateKey = point.periodLabel || point.startDate || '';
+            
+            // Filter for bi-monthly bins
+            if (period === 'bimonthly' && monthlyBin !== 'full') {
+              const date = new Date(point.startDate || point.date);
+              const day = date.getDate();
+              
+              if (monthlyBin === 'bin1' && day > 15) return;
+              if (monthlyBin === 'bin2' && day <= 15) return;
+              
+              // Add bin indicator to the key
+              dateKey = `${dateKey} (${monthlyBin === 'bin1' ? 'Days 1-15' : 'Days 16-31'})`;
+            }
+          }
 
-    // FIX: Match footfall dates with consumption dates properly
-    if (footfallData && footfallData.length > 0 && period === 'daily') {
-      dateMap.forEach((dataPoint, dateKey) => {
-        // Extract the actual date from the key (it might be in format "2025-01-01")
-        const footfall = footfallData.find(f => {
-          return f.date === dateKey || f.date === dateKey.split(' ')[0];
+          if (!dateKey) {
+            console.warn('Skipping data point with no date key:', point);
+            return;
+          }
+
+          if (!dateMap.has(dateKey)) {
+            dateMap.set(dateKey, { date: dateKey });
+          }
+          
+          const dataPoint = dateMap.get(dateKey)!;
+          
+          const consumptionValue = Number(point.consumption) || 0;
+          const costValue = Number(point.cost) || 0;
+          
+          // Accumulate values if category already exists (for aggregated periods)
+          dataPoint[categoryName] = (dataPoint[categoryName] || 0) + Math.round(consumptionValue * 100) / 100;
+          
+          if (costValue > 0) {
+            dataPoint[`${categoryName}_cost`] = (dataPoint[`${categoryName}_cost`] || 0) + Math.round(costValue * 100) / 100;
+          }
         });
-        
-        if (footfall) {
-          dataPoint.employeeCount = footfall.employeeCount;
-          dataPoint.visitorCount = footfall.visitorCount;
-        }
       });
+
+      // ENHANCED: Add aggregated footfall data based on period
+      if (footfallData && footfallData.length > 0) {
+        if (period === 'daily') {
+          // For daily, match directly
+          dateMap.forEach((dataPoint, dateKey) => {
+            const footfall = footfallData.find(f => {
+              return f.date === dateKey || f.date === dateKey.split(' ')[0];
+            });
+            
+            if (footfall) {
+              dataPoint.employeeCount = footfall.employeeCount;
+              dataPoint.visitorCount = footfall.visitorCount;
+            }
+          });
+        } else if (period === 'weekly') {
+          // Aggregate footfall by week
+          const weeklyFootfall = aggregateFootfallByWeek(footfallData);
+          
+          dateMap.forEach((dataPoint, dateKey) => {
+            const weekData = weeklyFootfall.get(dateKey);
+            if (weekData) {
+              dataPoint.totalEmployees = weekData.totalEmployees;
+              dataPoint.totalVisitors = weekData.totalVisitors;
+              dataPoint.avgEmployees = weekData.avgEmployees;
+              dataPoint.avgVisitors = weekData.avgVisitors;
+            }
+          });
+        } else if (period === 'monthly' || period === 'bimonthly') {
+          // Aggregate footfall by month (with optional bin filtering)
+          const binMode = period === 'bimonthly' ? monthlyBin : 'full';
+          const monthlyFootfall = aggregateFootfallByMonth(footfallData, binMode);
+          
+          dateMap.forEach((dataPoint, dateKey) => {
+            const monthData = monthlyFootfall.get(dateKey);
+            if (monthData) {
+              dataPoint.totalEmployees = monthData.totalEmployees;
+              dataPoint.totalVisitors = monthData.totalVisitors;
+              dataPoint.avgEmployees = monthData.avgEmployees;
+              dataPoint.avgVisitors = monthData.avgVisitors;
+            }
+          });
+        }
+      }
+
+      // Convert to array and sort
+      dateMap.forEach(dataPoint => {
+        processed.push(dataPoint);
+      });
+
+      // Sort by date
+      processed.sort((a, b) => {
+        const extractDate = (str: string) => {
+          if (str.includes('Week of')) {
+            return str.split('Week of ')[1];
+          }
+          if (str.match(/^[A-Za-z]+ \d{4}/)) {
+            return new Date(str.split(' (')[0] + ' 01').toISOString();
+          }
+          return str;
+        };
+        
+        const dateA = extractDate(a.date);
+        const dateB = extractDate(b.date);
+        
+        return dateA.localeCompare(dateB);
+      });
+
+      console.log(`Processed ${processed.length} chart data points with footfall aggregation`);
+      
+      // Log categories found in the data
+      if (processed.length > 0) {
+        const categoriesFound = new Set<string>();
+        Object.keys(processed[0]).forEach(key => {
+          if (key !== 'date' && !key.includes('_cost') && !key.includes('Employee') && !key.includes('Visitor')) {
+            categoriesFound.add(key);
+          }
+        });
+        console.log('Categories found in chart data:', Array.from(categoriesFound));
+      }
+    } catch (error) {
+      console.error('Error processing chart data:', error);
     }
 
-    // Convert to array and sort
-    dateMap.forEach(dataPoint => {
-      processed.push(dataPoint);
-    });
-
-    // Sort by date
-    processed.sort((a, b) => {
-      // Extract dates for proper sorting
-      const extractDate = (str: string) => {
-        // Handle "Week of 2025-01-01" format
-        if (str.includes('Week of')) {
-          return str.split('Week of ')[1];
-        }
-        // Handle "Jan 2025" format
-        if (str.match(/^[A-Za-z]+ \d{4}$/)) {
-          return new Date(str + ' 01').toISOString();
-        }
-        return str;
-      };
-      
-      const dateA = extractDate(a.date);
-      const dateB = extractDate(b.date);
-      
-      return dateA.localeCompare(dateB);
-    });
-
-    console.log(`Processed ${processed.length} chart data points`);
-  } catch (error) {
-    console.error('Error processing chart data:', error);
-  }
-
-  return processed;
-};
+    return processed;
+  };
 
   // Process cost distribution
   const processCostDistribution = () => {
@@ -1101,7 +1194,6 @@ const processChartData = (): ConsumptionDataPoint[] => {
       }));
     }
     
-    // Sample data if not available
     return categories.slice(0, 5).map((cat, index) => ({
       name: cat.categoryName,
       value: Math.random() * 10000 + 1000,
@@ -1111,100 +1203,91 @@ const processChartData = (): ConsumptionDataPoint[] => {
   };
 
   // Load all data
- const loadAllData = async () => {
-  setLoading(true);
-  setError(null);
-  
-  const results = {
-    dataRange: false,
-    dashboard: false,
-    categories: false,
-    items: false,
-    consumption: false,
-    footfall: false,
-    enhanced: false
-  };
-  
-  try {
-    console.log('🔄 Starting full data load...');
+  const loadAllData = async () => {
+    setLoading(true);
+    setError(null);
     
-    // Step 1: Get data range first (critical)
-    const rangeResult = await fetchDataRange();
-    results.dataRange = rangeResult.success;
+    const results = {
+      dataRange: false,
+      dashboard: false,
+      categories: false,
+      items: false,
+      consumption: false,
+      footfall: false,
+      enhanced: false
+    };
     
-    if (!rangeResult.success) {
-      console.warn('Using default date range as backend range fetch failed');
-      // Continue with defaults already set
-    }
-    
-    // Step 2: Load basic data in parallel
-    const basicPromises = [
-      refreshDashboard().then(() => { results.dashboard = true; }).catch(e => {
-        console.error('Dashboard error:', e);
-        return false;
-      }),
-      refreshCategories().then(() => { results.categories = true; }).catch(e => {
-        console.error('Categories error:', e);
-        return false;
-      }),
-      refreshItems().then(() => { results.items = true; }).catch(e => {
-        console.error('Items error:', e);
-        return false;
-      })
-    ];
-    
-    await Promise.allSettled(basicPromises);
-    
-    // Step 3: Load consumption and footfall data (depends on date range)
-    const dataPromises = [
-      fetchConsumptionData().then(r => { results.consumption = r.success; }),
-      fetchFootfallData().then(r => { results.footfall = r.success; })
-    ];
-    
-    await Promise.allSettled(dataPromises);
-    
-    // Step 4: Load enhanced analytics (optional, don't fail if these fail)
     try {
-      await enhancedAnalytics.refreshAll(period, dateRange.start, dateRange.end);
-      results.enhanced = true;
-    } catch (e) {
-      console.warn('Enhanced analytics failed (non-critical):', e);
-    }
-    
-    // Report results
-    const successCount = Object.values(results).filter(r => r).length;
-    const totalCount = Object.keys(results).length;
-    
-    console.log(`✅ Data load complete: ${successCount}/${totalCount} successful`);
-    console.log('Load results:', results);
-    
-    // Set appropriate error message if some loads failed
-    if (successCount < totalCount) {
-      const failed = Object.entries(results)
-        .filter(([_, success]) => !success)
-        .map(([name]) => name);
+      console.log('🔄 Starting full data load...');
       
-      if (failed.includes('dataRange') || failed.includes('categories') || failed.includes('items')) {
-        setError(`Critical data could not be loaded: ${failed.join(', ')}. Please refresh.`);
-      } else if (failed.includes('consumption') || failed.includes('footfall')) {
-        setError('Some analytics data is unavailable. Charts may be incomplete.');
+      const rangeResult = await fetchDataRange();
+      results.dataRange = rangeResult.success;
+      
+      if (!rangeResult.success) {
+        console.warn('Using default date range as backend range fetch failed');
       }
+      
+      const basicPromises = [
+        refreshDashboard().then(() => { results.dashboard = true; }).catch(e => {
+          console.error('Dashboard error:', e);
+          return false;
+        }),
+        refreshCategories().then(() => { results.categories = true; }).catch(e => {
+          console.error('Categories error:', e);
+          return false;
+        }),
+        refreshItems().then(() => { results.items = true; }).catch(e => {
+          console.error('Items error:', e);
+          return false;
+        })
+      ];
+      
+      await Promise.allSettled(basicPromises);
+      
+      const dataPromises = [
+        fetchConsumptionData().then(r => { results.consumption = r.success; }),
+        fetchFootfallData().then(r => { results.footfall = r.success; })
+      ];
+      
+      await Promise.allSettled(dataPromises);
+      
+      try {
+        await enhancedAnalytics.refreshAll(period === 'bimonthly' ? 'monthly' : period, dateRange.start, dateRange.end);
+        results.enhanced = true;
+      } catch (e) {
+        console.warn('Enhanced analytics failed (non-critical):', e);
+      }
+      
+      const successCount = Object.values(results).filter(r => r).length;
+      const totalCount = Object.keys(results).length;
+      
+      console.log(`✅ Data load complete: ${successCount}/${totalCount} successful`);
+      console.log('Load results:', results);
+      
+      if (successCount < totalCount) {
+        const failed = Object.entries(results)
+          .filter(([_, success]) => !success)
+          .map(([name]) => name);
+        
+        if (failed.includes('dataRange') || failed.includes('categories') || failed.includes('items')) {
+          setError(`Critical data could not be loaded: ${failed.join(', ')}. Please refresh.`);
+        } else if (failed.includes('consumption') || failed.includes('footfall')) {
+          setError('Some analytics data is unavailable. Charts may be incomplete.');
+        }
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Fatal error in loadAllData:', error);
+      setError('Failed to load data. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
-    
-  } catch (error: any) {
-    console.error('❌ Fatal error in loadAllData:', error);
-    setError('Failed to load data. Please check your connection and try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-  // Initial load - fetch data range first
+  // Initial load
   useEffect(() => {
     fetchDataRange();
   }, []);
-
-  
 
   // Load all data when date range is set
   useEffect(() => {
@@ -1219,7 +1302,7 @@ const processChartData = (): ConsumptionDataPoint[] => {
       fetchConsumptionData();
       fetchFootfallData();
     }
-  }, [period, dateRange]);
+  }, [period, dateRange, monthlyBin]);
 
   // Handle date range presets
   const handleDatePreset = (preset: string) => {
@@ -1330,7 +1413,7 @@ const processChartData = (): ConsumptionDataPoint[] => {
           </div>
         </Card>
 
-        {/* FIXED: Enhanced Date Range Selector */}
+        {/* Date Range Selector */}
         <Card background={cardBackgrounds.primary}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Calendar style={{ width: '14px', height: '14px', color: COLORS.primary }} />
@@ -1431,7 +1514,7 @@ const processChartData = (): ConsumptionDataPoint[] => {
           </Card>
         )}
 
-        {/* Enhanced Tabs with Seasonal */}
+        {/* Enhanced Tabs */}
         <Card>
           <div style={{ 
             display: 'flex', 
@@ -1480,24 +1563,28 @@ const processChartData = (): ConsumptionDataPoint[] => {
                     <Tooltip content={<ModernTooltip />} />
                     <Legend wrapperStyle={{ fontSize: '10px' }} />
                     
-                    {categories.slice(0, 3).map((cat, index) => (
-                      <Bar
-                        key={cat.id}
-                        yAxisId="left"
-                        dataKey={cat.categoryName}
-                        fill={CHART_COLORS[index]}
-                        opacity={0.8}
-                      />
-                    ))}
+                    {/* Show all categories, not just first 3 */}
+                    {categories
+                      .filter(cat => visibleCategories.includes(cat.id))
+                      .slice(0, 5)
+                      .map((cat, index) => (
+                        <Bar
+                          key={cat.id}
+                          yAxisId="left"
+                          dataKey={cat.categoryName}
+                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+                          opacity={0.8}
+                        />
+                      ))}
                     
                     <Line
                       yAxisId="right"
                       type="monotone"
-                      dataKey="employeeCount"
+                      dataKey={period === 'daily' ? 'employeeCount' : 'totalEmployees'}
                       stroke={COLORS.primary}
                       strokeWidth={2}
                       dot={{ r: 2 }}
-                      name="Employees"
+                      name={period === 'daily' ? 'Employees' : 'Total Employees'}
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
@@ -1533,11 +1620,17 @@ const processChartData = (): ConsumptionDataPoint[] => {
 
           {activeTab === 'consumption' && (
             <div>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                {['daily', 'weekly', 'monthly'].map(p => (
+              {/* Enhanced period selector with bi-monthly */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                {['daily', 'weekly', 'monthly', 'bimonthly'].map(p => (
                   <button
                     key={p}
-                    onClick={() => setPeriod(p as any)}
+                    onClick={() => {
+                      setPeriod(p as any);
+                      if (p !== 'bimonthly') {
+                        setMonthlyBin('full');
+                      }
+                    }}
                     style={{
                       padding: '5px 12px',
                       backgroundColor: period === p ? COLORS.primary : 'white',
@@ -1549,9 +1642,154 @@ const processChartData = (): ConsumptionDataPoint[] => {
                       textTransform: 'capitalize'
                     }}
                   >
-                    {p}
+                    {p === 'bimonthly' ? 'Bi-Monthly' : p}
                   </button>
                 ))}
+                
+                {/* Bi-monthly bin selector */}
+                {period === 'bimonthly' && (
+                  <>
+                    <div style={{ marginLeft: '12px', borderLeft: `1px solid ${COLORS.light}`, paddingLeft: '12px' }}>
+                      <Split style={{ width: '14px', height: '14px', display: 'inline', color: COLORS.info, marginRight: '6px' }} />
+                    </div>
+                    {['full', 'bin1', 'bin2'].map(bin => (
+                      <button
+                        key={bin}
+                        onClick={() => setMonthlyBin(bin as any)}
+                        style={{
+                          padding: '5px 12px',
+                          backgroundColor: monthlyBin === bin ? COLORS.info : 'white',
+                          color: monthlyBin === bin ? 'white' : COLORS.dark,
+                          border: `1px solid ${monthlyBin === bin ? COLORS.info : COLORS.light}`,
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '11px'
+                        }}
+                      >
+                        {bin === 'full' ? 'Full Month' : 
+                         bin === 'bin1' ? 'Days 1-15' : 'Days 16-31'}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+
+              {/* NEW: Advanced Filters Row */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                marginBottom: '16px', 
+                padding: '12px',
+                backgroundColor: cardBackgrounds.neutral,
+                borderRadius: '6px',
+                flexWrap: 'wrap',
+                alignItems: 'center'
+              }}>
+                {/* Category Filter */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Filter style={{ width: '14px', height: '14px', color: COLORS.muted }} />
+                  <select
+                    value={selectedConsumptionCategory || 'all'}
+                    onChange={(e) => setSelectedConsumptionCategory(e.target.value === 'all' ? null : Number(e.target.value))}
+                    style={{
+                      padding: '5px 10px',
+                      border: `1px solid ${COLORS.light}`,
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      minWidth: '150px'
+                    }}
+                  >
+                    <option value="all">All Categories</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.categoryName}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Item Filter */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Package style={{ width: '14px', height: '14px', color: COLORS.muted }} />
+                  <select
+                    value={selectedConsumptionItem || 'all'}
+                    onChange={(e) => setSelectedConsumptionItem(e.target.value === 'all' ? null : Number(e.target.value))}
+                    style={{
+                      padding: '5px 10px',
+                      border: `1px solid ${COLORS.light}`,
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      minWidth: '150px'
+                    }}
+                  >
+                    <option value="all">All Items</option>
+                    {items
+                      .filter(item => !selectedConsumptionCategory || item.categoryId === selectedConsumptionCategory)
+                      .map(item => (
+                        <option key={item.id} value={item.id}>{item.itemName}</option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* View Mode Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+                  <span style={{ fontSize: '11px', color: COLORS.muted }}>View:</span>
+                  <button
+                    onClick={() => setViewMode('quantity')}
+                    style={{
+                      padding: '5px 12px',
+                      backgroundColor: viewMode === 'quantity' ? COLORS.success : 'white',
+                      color: viewMode === 'quantity' ? 'white' : COLORS.dark,
+                      border: `1px solid ${viewMode === 'quantity' ? COLORS.success : COLORS.light}`,
+                      borderRadius: '4px 0 0 4px',
+                      cursor: 'pointer',
+                      fontSize: '11px'
+                    }}
+                  >
+                    <Package style={{ width: '12px', height: '12px', display: 'inline', marginRight: '4px' }} />
+                    Quantity
+                  </button>
+                  <button
+                    onClick={() => setViewMode('price')}
+                    style={{
+                      padding: '5px 12px',
+                      backgroundColor: viewMode === 'price' ? COLORS.warning : 'white',
+                      color: viewMode === 'price' ? 'white' : COLORS.dark,
+                      border: `1px solid ${viewMode === 'price' ? COLORS.warning : COLORS.light}`,
+                      borderRadius: '0 4px 4px 0',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      marginLeft: '-1px'
+                    }}
+                  >
+                    <DollarSign style={{ width: '12px', height: '12px', display: 'inline', marginRight: '4px' }} />
+                    Price
+                  </button>
+                </div>
+
+                {/* Categories Visibility Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+                  <Eye style={{ width: '14px', height: '14px', color: COLORS.muted }} />
+                  <span style={{ fontSize: '11px', color: COLORS.muted, marginRight: '8px' }}>Show Categories:</span>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    {categories.slice(0, 8).map((cat, index) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => toggleCategoryVisibility(cat.id)}
+                        style={{
+                          padding: '3px 8px',
+                          backgroundColor: visibleCategories.includes(cat.id) ? CHART_COLORS[index % CHART_COLORS.length] : 'white',
+                          color: visibleCategories.includes(cat.id) ? 'white' : COLORS.dark,
+                          border: `1px solid ${visibleCategories.includes(cat.id) ? CHART_COLORS[index % CHART_COLORS.length] : COLORS.light}`,
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '10px',
+                          opacity: visibleCategories.includes(cat.id) ? 1 : 0.5
+                        }}
+                      >
+                        {cat.categoryName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <ResponsiveContainer width="100%" height={350}>
@@ -1563,25 +1801,48 @@ const processChartData = (): ConsumptionDataPoint[] => {
                   <Tooltip content={<ModernTooltip />} />
                   <Legend wrapperStyle={{ fontSize: '10px' }} />
                   
-                  {categories.slice(0, 5).map((cat, index) => (
-                    <Bar
-                      key={cat.id}
-                      yAxisId="left"
-                      dataKey={cat.categoryName}
-                      fill={CHART_COLORS[index % CHART_COLORS.length]}
-                      opacity={0.8}
-                    />
-                  ))}
+                  {/* Render bars for visible categories */}
+                  {categories
+                    .filter(cat => visibleCategories.includes(cat.id))
+                    .map((cat, index) => {
+                      const dataKey = viewMode === 'price' && consumptionData?.data?.find(d => d.category === cat.categoryName || d.categoryName === cat.categoryName) ? 
+                        `${cat.categoryName}_cost` : 
+                        cat.categoryName;
+                        
+                      return (
+                        <Bar
+                          key={cat.id}
+                          yAxisId="left"
+                          dataKey={dataKey}
+                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+                          opacity={0.8}
+                          name={viewMode === 'price' ? `${cat.categoryName} ($)` : cat.categoryName}
+                        />
+                      );
+                    })}
                   
                   <Line
                     yAxisId="right"
                     type="monotone"
-                    dataKey="employeeCount"
+                    dataKey={period === 'daily' ? 'employeeCount' : 'totalEmployees'}
                     stroke={COLORS.primary}
                     strokeWidth={2}
                     dot={{ r: 2 }}
-                    name="Employee Count"
+                    name={period === 'daily' ? 'Employee Count' : 'Total Employees'}
                   />
+                  
+                  {period !== 'daily' && (
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="totalVisitors"
+                      stroke={COLORS.warning}
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={{ r: 2 }}
+                      name="Total Visitors"
+                    />
+                  )}
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -1656,12 +1917,13 @@ const processChartData = (): ConsumptionDataPoint[] => {
             />
           )}
 
-          {/* NEW: Seasonal Cost Analysis Tab */}
           {activeTab === 'seasonal' && (
             <SeasonalCostAnalysis
               consumptionData={consumptionData}
               dateRange={dateRange}
-              categories={categories} items={[]}            />
+              categories={categories}
+              items={items}
+            />
           )}
         </Card>
 
