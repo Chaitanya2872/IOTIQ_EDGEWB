@@ -1,22 +1,16 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2022",
-    "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
-
-    /* Emit JS even with errors */
-    "noEmit": false,
-    "noEmitOnError": false,
-
+    "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Turn off strict checks */
+    /* Relax strict checks */
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false
