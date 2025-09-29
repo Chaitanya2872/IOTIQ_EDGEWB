@@ -1,0 +1,28 @@
+name: Deploy Fullstack App to Vercel
+
+on:
+  push:
+    branches:
+      - master  # Or your main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repo
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 2: Install Vercel CLI
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      # Step 3: Authenticate Vercel
+      - name: Vercel Login
+        run: vercel login --token ${{ secrets.VERCEL_TOKEN }}
+
+      # Step 4: Deploy to Vercel
+      - name: Deploy to Vercel
+        run: |
+          vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --confirm
