@@ -8,6 +8,9 @@ export type Category = {
 };
 
 export type Item = {
+  lastReceivedQuantity: undefined;
+  receivedStock: undefined;
+  consumedQuantity: undefined;
   category: any;
   id: number;
   itemName: string;
@@ -28,7 +31,7 @@ export type Item = {
   avgDailyConsumption?: number;    // ✅ backend gives
   coverageDays?: number;           // ✅ backend gives
   stockAlertLevel?: string;        // ✅ backend gives (SAFE / LOW / CRITICAL)
-  lastReceivedDate?: string;
+  last_received_date?: string;
   lastConsumptionDate?: string;
   categoryId: number;
   updated_at?: string;          // ✅ add if not already in type

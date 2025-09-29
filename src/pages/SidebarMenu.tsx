@@ -194,7 +194,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
         {sidebarOpen && (
           <div
             style={{
-              maxHeight: inventoryOpen ? "260px" : "0",
+              maxHeight: inventoryOpen ? "400px" : "0",
               overflow: "hidden",
               transition: "max-height 0.3s ease",
               marginLeft: "6px",
@@ -229,6 +229,15 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
             >
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Inventory Report</span>
             </Link>
+             <Link 
+  to="/inventory/predictive-inserts"  // <-- corrected route
+  className="sidebar-item"
+  style={subMenuItemStyle("/inventory/predictive-inserts")}
+  onMouseEnter={() => setHoveredItem("/inventory/predictive-inserts")}
+  onMouseLeave={() => setHoveredItem(null)}
+>
+  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Predictive Insights</span>
+</Link>
 
             <Link 
               to="/inventory/stock-usage" 
@@ -249,6 +258,30 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
             >
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Inventory Analytics</span>
             </Link>
+
+            
+            <Link 
+              to="/inventory/consumption-inventory"
+              className="sidebar-item"
+              style={subMenuItemStyle("/inventory/consumption-inventory")}
+              onMouseEnter={() => setHoveredItem("/inventory/consumption-inventory")}
+              onMouseLeave={() => setHoveredItem(null)}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Consumption Inventory</span>
+            </Link>
+
+            
+
+            <Link 
+              to="/inventory/budget-analysis"
+              className="sidebar-item"
+              style={subMenuItemStyle("/inventory/budget-analysis")}
+              onMouseEnter={() => setHoveredItem("/inventory/budget-analysis")}
+              onMouseLeave={() => setHoveredItem(null)}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Budget Analysis</span>
+            </Link>
+
           </div>
         )}
 

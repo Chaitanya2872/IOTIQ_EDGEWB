@@ -286,12 +286,11 @@
 
 // export default Dashboard;
 import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area } from 'recharts';
-import { Package, AlertTriangle, Zap, Building, Thermometer, Users, Bell, Settings, Search, Filter, Calendar, Plus } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { Package, AlertTriangle, Zap, Building, Thermometer, Users, Settings } from 'lucide-react';
 
 const UnifiedSmartFacilityDashboard: React.FC = () => {
   const [selectedView, setSelectedView] = useState('overview');
-  const [timeRange, setTimeRange] = useState('today');
 
   // Combined data from all dashboards
   const facilityMetrics = {

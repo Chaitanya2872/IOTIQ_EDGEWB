@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area } from 'recharts';
+import { Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar } from 'recharts';
 
 const EnergySustainabilityDashboard: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('6M');
-  const [selectedMetric, setSelectedMetric] = useState('usage');
 
   // Energy usage data over time
   const energyUsageData = [

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, Col, Row } from 'antd';
 import { ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts';
-import { Layers3, Boxes, AlertTriangle, ListChecks } from 'lucide-react';
+import { Layers3, Boxes, AlertTriangle } from 'lucide-react';
 import { useCategories, useItems } from '../api/hooks';
 
 const numberFmt = new Intl.NumberFormat();
