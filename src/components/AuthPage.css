@@ -58,8 +58,30 @@
 }
 
 .auth-right-section {
-  background: #1677ff;
+  /* Replace blue with image */
+  background-image: url('../assets/auth-bg.jpeg'); /* Change this to your image path */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   padding: 0 80px;
+  position: relative;
+}
+
+/* Add overlay for better text readability on image */
+.auth-right-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4); /* Semi-transparent overlay */
+  z-index: 1;
+}
+
+.auth-right-section .right-content {
+  position: relative;
+  z-index: 2;
 }
 
 /* Content Wrappers */
@@ -99,12 +121,39 @@
 
 .simple-auth-content.register-mode .auth-left-section {
   flex: 0.45;
-  background: #1677ff;
+  /* Replace blue with image when in register mode */
+  background-image: url('../assets/auth-bg.jpeg'); /* Change this to your image path */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+/* Add overlay for register mode left section */
+.simple-auth-content.register-mode .auth-left-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4); /* Semi-transparent overlay */
+  z-index: 1;
+}
+
+.simple-auth-content.register-mode .auth-left-section .left-content {
+  position: relative;
+  z-index: 2;
 }
 
 .simple-auth-content.register-mode .auth-right-section {
   flex: 0.55;
   background: white;
+  background-image: none;
+}
+
+.simple-auth-content.register-mode .auth-right-section::before {
+  display: none;
 }
 
 .simple-auth-content.register-mode .curved-divider {
@@ -183,9 +232,9 @@
 
 .switch-btn:hover {
   background: white !important;
-  color: #1677ff !important;
+  color: #333 !important;
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 /* Form Styles */

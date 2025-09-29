@@ -220,34 +220,11 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Manage Items</span>
             </Link>
 
-            <Link 
-              to="/inventory" 
-              className="sidebar-item"
-              style={subMenuItemStyle("/inventory")}
-              onMouseEnter={() => setHoveredItem("/inventory")}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Inventory Report</span>
-            </Link>
-             <Link 
-  to="/inventory/predictive-inserts"  // <-- corrected route
-  className="sidebar-item"
-  style={subMenuItemStyle("/inventory/predictive-inserts")}
-  onMouseEnter={() => setHoveredItem("/inventory/predictive-inserts")}
-  onMouseLeave={() => setHoveredItem(null)}
->
-  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Predictive Insights</span>
-</Link>
 
-            <Link 
-              to="/inventory/stock-usage" 
-              className="sidebar-item"
-              style={subMenuItemStyle("/inventory/stock-usage")}
-              onMouseEnter={() => setHoveredItem("/inventory/stock-usage")}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Analytics and Insights</span>
-            </Link>
+
+          
+            
+             
 
             <Link 
               to="/inventory/analytics"

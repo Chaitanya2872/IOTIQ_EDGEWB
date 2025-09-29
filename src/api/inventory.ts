@@ -17,6 +17,11 @@ export type Item = {
   itemDescription: string;
   itemCode: string;                // ✅ add this if not already in type
   currentQuantity: number;
+  totalReceivedStock?: number;  
+  totalConsumedStock? : number;
+  totalOpeningStock?: number;
+  monthConsumedStock?: number; 
+  monthReceivedStock?: number; // ✅ add
   openingStock?: number;           // ✅ add
   closingStock?: number;           // ✅ add
   oldStockQuantity?: number;

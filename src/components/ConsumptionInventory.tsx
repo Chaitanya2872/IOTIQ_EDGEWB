@@ -6,7 +6,7 @@ import {
 import {
   RefreshCw, Calendar,
   ChevronLeft, ChevronRight, Layers,
-  Package, Bell,
+  Package, Bell, Filter, ArrowUpDown,
   X, AlertCircle
 } from 'lucide-react';
 import {
@@ -22,16 +22,19 @@ import {
   type FootfallData
 } from '../api/inventory';
 
-// Color palette
+// Enhanced Color palette
 const COLORS = {
-  primary: '#60a5fa',
-  success: '#86efac',  
-  warning: '#fdba74',
-  danger: '#fca5a5',
-  info: '#93c5fd',
-  dark: '#64748b',
-  light: '#f8fafc',
-  muted: '#94a3b8'
+  primary: '#3b82f6',
+  success: '#10b981',  
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  info: '#8b5cf6',
+  dark: '#374151',
+  light: '#f9fafb',
+  muted: '#6b7280',
+  accent1: '#06b6d4',
+  accent2: '#84cc16',
+  accent3: '#f97316'
 };
 
 const cardBackgrounds = {
@@ -50,32 +53,32 @@ const ModernTooltip: React.FC<any> = ({ active, payload, label }) => {
         backgroundColor: 'rgba(255, 255, 255, 0.98)', 
         backdropFilter: 'blur(10px)',
         color: COLORS.dark, 
-        padding: '12px', 
-        borderRadius: '8px',
+        padding: '16px', 
+        borderRadius: '12px',
         border: `1px solid ${COLORS.light}`,
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        fontSize: '12px'
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        fontSize: '13px'
       }}>
-        <div style={{ fontWeight: '600', marginBottom: '6px', color: COLORS.dark }}>
+        <div style={{ fontWeight: '600', marginBottom: '8px', color: COLORS.dark }}>
           {label}
         </div>
         {payload.map((entry: any, index: number) => (
           <div key={index} style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '6px', 
-            marginBottom: '4px'
+            gap: '8px', 
+            marginBottom: '6px'
           }}>
             <div style={{ 
-              width: '8px', 
-              height: '8px', 
+              width: '10px', 
+              height: '10px', 
               borderRadius: '50%', 
               backgroundColor: entry.color
             }} />
-            <span style={{ flex: 1, color: COLORS.muted, fontSize: '11px' }}>
+            <span style={{ flex: 1, color: COLORS.muted, fontSize: '12px' }}>
               {entry.name}:
             </span>
-            <span style={{ fontWeight: '500', color: COLORS.dark }}>
+            <span style={{ fontWeight: '600', color: COLORS.dark }}>
               {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
             </span>
           </div>
@@ -91,11 +94,11 @@ const Card: React.FC<{ children: React.ReactNode; background?: string }> = ({ ch
   return (
     <div style={{
       backgroundColor: background || 'white',
-      borderRadius: '10px',
-      padding: '18px',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+      borderRadius: '12px',
+      padding: '24px',
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
       border: `1px solid ${COLORS.light}`,
-      marginBottom: '16px'
+      marginBottom: '20px'
     }}>
       {children}
     </div>
@@ -120,9 +123,9 @@ const NotificationPanel: React.FC<{
 
   const getSeverityIcon = (severity: string) => {
     switch(severity?.toLowerCase()) {
-      case 'critical': return <AlertCircle style={{ width: '14px', height: '14px' }} />;
-      case 'high': return <AlertCircle style={{ width: '14px', height: '14px' }} />;
-      default: return <Bell style={{ width: '14px', height: '14px' }} />;
+      case 'critical': return <AlertCircle style={{ width: '16px', height: '16px' }} />;
+      case 'high': return <AlertCircle style={{ width: '16px', height: '16px' }} />;
+      default: return <Bell style={{ width: '16px', height: '16px' }} />;
     }
   };
 
@@ -131,35 +134,35 @@ const NotificationPanel: React.FC<{
       position: 'fixed',
       top: 0,
       right: 0,
-      width: '400px',
+      width: '420px',
       height: '100vh',
       backgroundColor: 'white',
-      boxShadow: '-2px 0 10px rgba(0, 0, 0, 0.1)',
+      boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.15)',
       zIndex: 1000,
       display: 'flex',
       flexDirection: 'column'
     }}>
       <div style={{
-        padding: '16px',
+        padding: '20px',
         borderBottom: `1px solid ${COLORS.light}`,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: COLORS.dark }}>
+        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: COLORS.dark }}>
           Notifications ({notifications.length})
         </h3>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
           {notifications.length > 0 && (
             <button
               onClick={onMarkAllAsRead}
               style={{
-                padding: '4px 8px',
+                padding: '6px 12px',
                 backgroundColor: COLORS.primary,
                 color: 'white',
                 border: 'none',
-                borderRadius: '4px',
-                fontSize: '11px',
+                borderRadius: '6px',
+                fontSize: '12px',
                 cursor: 'pointer'
               }}
             >
@@ -169,7 +172,7 @@ const NotificationPanel: React.FC<{
           <button
             onClick={onClose}
             style={{
-              padding: '4px',
+              padding: '6px',
               backgroundColor: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -184,60 +187,60 @@ const NotificationPanel: React.FC<{
       <div style={{
         flex: 1,
         overflowY: 'auto',
-        padding: '8px'
+        padding: '12px'
       }}>
         {notifications.length === 0 ? (
           <div style={{
-            padding: '40px',
+            padding: '60px 20px',
             textAlign: 'center',
             color: COLORS.muted
           }}>
             <Bell style={{ width: '48px', height: '48px', margin: '0 auto', opacity: 0.3 }} />
-            <p style={{ marginTop: '16px', fontSize: '14px' }}>No new notifications</p>
+            <p style={{ marginTop: '16px', fontSize: '15px' }}>No new notifications</p>
           </div>
         ) : (
           notifications.map((notification) => (
             <div
               key={notification.id}
               style={{
-                padding: '12px',
-                marginBottom: '8px',
+                padding: '16px',
+                marginBottom: '12px',
                 backgroundColor: notification.read ? 'white' : cardBackgrounds.primary,
                 border: `1px solid ${COLORS.light}`,
-                borderRadius: '8px',
+                borderRadius: '10px',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.3s'
               }}
               onClick={() => onMarkAsRead(notification.id)}
             >
               <div style={{
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: '8px'
+                gap: '12px'
               }}>
                 <span style={{ color: getSeverityColor(notification.severity) }}>
                   {getSeverityIcon(notification.severity)}
                 </span>
                 <div style={{ flex: 1 }}>
                   <div style={{ 
-                    fontSize: '12px', 
+                    fontSize: '14px', 
                     fontWeight: '600', 
                     color: COLORS.dark,
-                    marginBottom: '4px'
+                    marginBottom: '6px'
                   }}>
                     {notification.title || notification.type}
                   </div>
                   <div style={{ 
-                    fontSize: '11px', 
+                    fontSize: '13px', 
                     color: COLORS.muted,
                     lineHeight: '1.4'
                   }}>
                     {notification.message}
                   </div>
                   <div style={{ 
-                    fontSize: '10px', 
+                    fontSize: '11px', 
                     color: COLORS.muted,
-                    marginTop: '6px'
+                    marginTop: '8px'
                   }}>
                     {notification.timestamp || new Date().toLocaleString()}
                   </div>
@@ -251,7 +254,7 @@ const NotificationPanel: React.FC<{
   );
 };
 
-// Core Inventory Stock Table Component
+// Enhanced Core Inventory Stock Table Component
 const CoreInventoryTable: React.FC<{ 
   items: Item[]; 
   categories: Category[];
@@ -263,12 +266,58 @@ const CoreInventoryTable: React.FC<{
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
   const itemsPerPage = 15;
 
-  const totalPages = Math.ceil(filteredLevels.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedItems = filteredLevels.slice(startIndex, endIndex);
+  // Get the latest consumption month from all items
+  const getLatestConsumptionMonth = () => {
+    let latestDate = '';
+    items.forEach(item => {
+      if (item.consumptionRecords && item.consumptionRecords.length > 0) {
+        const dates = item.consumptionRecords.map(record => record.date).filter(Boolean);
+        if (dates.length > 0) {
+          const maxDate = dates.sort().reverse()[0];
+          if (maxDate > latestDate) {
+            latestDate = maxDate;
+          }
+        }
+      }
+      if (item.lastConsumptionDate && item.lastConsumptionDate > latestDate) {
+        latestDate = item.lastConsumptionDate;
+      }
+    });
+    
+    if (latestDate) {
+      const date = new Date(latestDate);
+      return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+    }
+    
+    // Default to current month if no consumption data
+    const now = new Date();
+    return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+  };
+
+  // Get month-wise consumption for an item
+  const getMonthConsumption = (item: Item, month: string) => {
+    if (!item.consumptionRecords) return 0;
+    
+    return item.consumptionRecords
+      .filter(record => {
+        if (!record.date) return false;
+        const recordMonth = record.date.substring(0, 7); // Get YYYY-MM
+        return recordMonth === month;
+      })
+      .reduce((sum, record) => sum + (record.consumedQuantity || 0), 0);
+  };
+
+  // Initialize selected month
+  useEffect(() => {
+    if (!selectedMonth && items.length > 0) {
+      setSelectedMonth(getLatestConsumptionMonth());
+    }
+  }, [items, selectedMonth]);
 
   useEffect(() => {
     if (items && items.length > 0) {
@@ -277,12 +326,11 @@ const CoreInventoryTable: React.FC<{
         const openingStock = Number(item.openingStock ?? 0);
         const currentStock = Number(item.currentQuantity ?? 0);
         
-        let receivedStock = Number(item.receivedStock ?? 0);
-        let consumedStock = Number(item.consumedQuantity ?? 0);
-        
-        if (consumedStock === 0 && currentStock < openingStock) {
-          consumedStock = openingStock - currentStock;
-        }
+        // Properly fetch received and consumed stock
+        const totalReceivedStock = Number(item.totalReceivedStock ?? 0);
+        const totalConsumedStock = Number(item.totalConsumedStock ?? 0);
+        const monthReceivedStock = Number(item.monthReceivedStock ?? 0);
+        const monthConsumedStock = selectedMonth ? getMonthConsumption(item, selectedMonth) : Number(item.monthConsumedStock ?? 0);
         
         let coverageDays = Number(item.coverageDays ?? 0);
         if (coverageDays === 0 && item.avgDailyConsumption) {
@@ -306,8 +354,10 @@ const CoreInventoryTable: React.FC<{
           itemCode: item.itemCode || `ITM${String(item.id).padStart(4, '0')}`,
           category: category?.categoryName || 'Unknown',
           openingStock,
-          receivedStock,
-          consumedStock,
+          totalReceivedStock,
+          totalConsumedStock,
+          monthReceivedStock,
+          monthConsumedStock,
           closingStock: currentStock,
           minLevel: Number(item.minStockLevel) || 0,
           maxLevel: Number(item.maxStockLevel) || 0,
@@ -323,7 +373,7 @@ const CoreInventoryTable: React.FC<{
 
       setStockLevels(levels);
     }
-  }, [items, categories]);
+  }, [items, categories, selectedMonth]);
 
   useEffect(() => {
     let filtered = [...stockLevels];
@@ -331,7 +381,8 @@ const CoreInventoryTable: React.FC<{
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase())
+        item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.itemCode.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -346,12 +397,34 @@ const CoreInventoryTable: React.FC<{
       filtered = filtered.filter(item => item.status === selectedStatus);
     }
 
+    // Apply sorting
+    if (sortField) {
+      filtered.sort((a, b) => {
+        let aVal = a[sortField];
+        let bVal = b[sortField];
+        
+        if (typeof aVal === 'string') {
+          aVal = aVal.toLowerCase();
+          bVal = bVal.toLowerCase();
+        }
+        
+        if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
     setFilteredLevels(filtered);
     setCurrentPage(1);
-  }, [stockLevels, searchTerm, selectedCategory, selectedStatus, categories]);
+  }, [stockLevels, searchTerm, selectedCategory, selectedStatus, categories, sortField, sortOrder]);
+
+  const totalPages = Math.ceil(filteredLevels.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedItems = filteredLevels.slice(startIndex, endIndex);
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'critical': return COLORS.danger;
       case 'low': return COLORS.warning;
       case 'reorder': return COLORS.info;
@@ -361,12 +434,61 @@ const CoreInventoryTable: React.FC<{
     }
   };
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  // Get available months from consumption records
+  const getAvailableMonths = () => {
+    const months = new Set<string>();
+    items.forEach(item => {
+      if (item.consumptionRecords) {
+        item.consumptionRecords.forEach(record => {
+          if (record.date) {
+            months.add(record.date.substring(0, 7));
+          }
+        });
+      }
+    });
+    return Array.from(months).sort().reverse();
+  };
+
+  const SortableHeader: React.FC<{ field: string; children: React.ReactNode }> = ({ field, children }) => (
+    <th 
+      onClick={() => handleSort(field)}
+      style={{ 
+        padding: '12px', 
+        textAlign: 'left', 
+        color: COLORS.dark, 
+        cursor: 'pointer', 
+        userSelect: 'none',
+        position: 'relative',
+        backgroundColor: sortField === field ? cardBackgrounds.primary : 'transparent'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {children}
+        <ArrowUpDown style={{ 
+          width: '14px', 
+          height: '14px',
+          color: sortField === field ? COLORS.primary : COLORS.muted,
+          transform: sortField === field && sortOrder === 'desc' ? 'rotate(180deg)' : 'none'
+        }} />
+      </div>
+    </th>
+  );
+
   return (
     <Card>
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
-            <Layers style={{ width: '18px', height: '18px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.primary }} />
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
+            <Layers style={{ width: '20px', height: '20px', display: 'inline', marginRight: '8px', verticalAlign: 'middle', color: COLORS.primary }} />
             Core Inventory Stock Levels
           </h2>
           <button
@@ -374,34 +496,37 @@ const CoreInventoryTable: React.FC<{
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              padding: '6px 12px',
+              gap: '6px',
+              padding: '8px 16px',
               backgroundColor: COLORS.primary,
               color: 'white',
               border: 'none',
-              borderRadius: '6px',
+              borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '12px'
+              fontSize: '13px',
+              fontWeight: '500'
             }}
           >
-            <RefreshCw style={{ width: '12px', height: '12px' }} />
+            <RefreshCw style={{ width: '14px', height: '14px' }} />
             Refresh
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <Filter style={{ width: '16px', height: '16px', color: COLORS.muted }} />
+          
           <input
             type="text"
-            placeholder="Search items..."
+            placeholder="Search items, codes, categories..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
               flex: '1',
-              minWidth: '150px',
-              padding: '6px 10px',
+              minWidth: '200px',
+              padding: '8px 12px',
               border: `1px solid ${COLORS.light}`,
-              borderRadius: '6px',
-              fontSize: '12px'
+              borderRadius: '8px',
+              fontSize: '13px'
             }}
           />
 
@@ -409,10 +534,11 @@ const CoreInventoryTable: React.FC<{
             value={selectedCategory || ''}
             onChange={(e) => setSelectedCategory(e.target.value ? Number(e.target.value) : null)}
             style={{
-              padding: '6px 10px',
+              padding: '8px 12px',
               border: `1px solid ${COLORS.light}`,
-              borderRadius: '6px',
-              fontSize: '12px'
+              borderRadius: '8px',
+              fontSize: '13px',
+              minWidth: '150px'
             }}
           >
             <option value="">All Categories</option>
@@ -425,10 +551,11 @@ const CoreInventoryTable: React.FC<{
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
             style={{
-              padding: '6px 10px',
+              padding: '8px 12px',
               border: `1px solid ${COLORS.light}`,
-              borderRadius: '6px',
-              fontSize: '12px'
+              borderRadius: '8px',
+              fontSize: '13px',
+              minWidth: '120px'
             }}
           >
             <option value="all">All Status</option>
@@ -438,25 +565,43 @@ const CoreInventoryTable: React.FC<{
             <option value="optimal">Optimal</option>
             <option value="excess">Excess</option>
           </select>
+
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              border: `1px solid ${COLORS.light}`,
+              borderRadius: '8px',
+              fontSize: '13px',
+              minWidth: '140px'
+            }}
+          >
+            {getAvailableMonths().map(month => (
+              <option key={month} value={month}>
+                {new Date(month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead>
             <tr style={{ backgroundColor: cardBackgrounds.neutral, borderBottom: `2px solid ${COLORS.light}` }}>
-              <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark, whiteSpace: 'nowrap' }}>Date</th>
-              <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark, whiteSpace: 'nowrap' }}>Item Code</th>
-              <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark, minWidth: '150px' }}>Item Name</th>
-              <th style={{ padding: '8px', textAlign: 'left', color: COLORS.dark, whiteSpace: 'nowrap' }}>Category</th>
-              <th style={{ padding: '8px', textAlign: 'right', color: COLORS.dark, whiteSpace: 'nowrap' }}>Opening Stock</th>
-              <th style={{ padding: '8px', textAlign: 'right', color: COLORS.dark, whiteSpace: 'nowrap' }}>Received Stock</th>
-              <th style={{ padding: '8px', textAlign: 'right', color: COLORS.dark, whiteSpace: 'nowrap' }}>Consumed Stock</th>
-              <th style={{ padding: '8px', textAlign: 'right', color: COLORS.dark, whiteSpace: 'nowrap' }}>Closing Stock (SIH)</th>
-              <th style={{ padding: '8px', textAlign: 'right', color: COLORS.dark, whiteSpace: 'nowrap' }}>Unit Price</th>
-              <th style={{ padding: '8px', textAlign: 'right', color: COLORS.dark, whiteSpace: 'nowrap' }}>Inventory Value</th>
-              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark, whiteSpace: 'nowrap' }}>Coverage Days</th>
-              <th style={{ padding: '8px', textAlign: 'center', color: COLORS.dark, whiteSpace: 'nowrap' }}>Stock Alert Risk</th>
+              <SortableHeader field="lastUpdated">Date</SortableHeader>
+              <SortableHeader field="itemCode">Item Code</SortableHeader>
+              <SortableHeader field="itemName">Item Name</SortableHeader>
+              <SortableHeader field="category">Category</SortableHeader>
+              <SortableHeader field="openingStock">Opening Stock</SortableHeader>
+              <SortableHeader field="monthReceivedStock">Received ({selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'short' }) : 'Month'})</SortableHeader>
+              <SortableHeader field="monthConsumedStock">Consumed ({selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'short' }) : 'Month'})</SortableHeader>
+              <SortableHeader field="closingStock">Closing Stock (SIH)</SortableHeader>
+              <SortableHeader field="unitPrice">Price</SortableHeader>
+              <SortableHeader field="stockValue">Inventory Value</SortableHeader>
+              <SortableHeader field="coverageDays">Coverage Days</SortableHeader>
+              <SortableHeader field="status">Stock Alert Risk</SortableHeader>
             </tr>
           </thead>
           <tbody>
@@ -475,41 +620,42 @@ const CoreInventoryTable: React.FC<{
                   e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
-                <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>{item.lastUpdated?.slice(0,10) || '-'}</td>
-                <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>{item.itemCode}</td>
-                <td style={{ padding: '6px', fontWeight: '500', color: COLORS.primary }}>
+                <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>{item.lastUpdated?.slice(0,10) || '-'}</td>
+                <td style={{ padding: '12px', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{item.itemCode}</td>
+                <td style={{ padding: '12px', fontWeight: '500', color: COLORS.primary, minWidth: '180px' }}>
                   {item.itemName}
                 </td>
-                <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>{item.category}</td>
-                <td style={{ padding: '6px', textAlign: 'right' }}>{item.openingStock}</td>
-                <td style={{ padding: '6px', textAlign: 'right', color: COLORS.success, fontWeight: '500' }}>
-                  {item.receivedStock > 0 ? `+${item.receivedStock}` : '0'}
+                <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>{item.category}</td>
+                <td style={{ padding: '12px', textAlign: 'right' }}>{item.openingStock.toLocaleString()}</td>
+                <td style={{ padding: '12px', textAlign: 'right', color: COLORS.success, fontWeight: '500' }}>
+                  {item.monthReceivedStock > 0 ? `+${item.monthReceivedStock.toLocaleString()}` : '0'}
                 </td>
-                <td style={{ padding: '6px', textAlign: 'right', color: COLORS.danger }}>
-                  {item.consumedStock > 0 ? `-${item.consumedStock}` : '0'}
+                <td style={{ padding: '12px', textAlign: 'right', color: COLORS.danger, fontWeight: '500' }}>
+                  {item.monthConsumedStock > 0 ? `-${item.monthConsumedStock.toLocaleString()}` : '0'}
                 </td>
-                <td style={{ padding: '6px', textAlign: 'right', fontWeight: '600' }}>
-                  {item.closingStock} {item.unitOfMeasurement}
+                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>
+                  {item.closingStock.toLocaleString()} <span style={{ color: COLORS.muted, fontSize: '11px' }}>{item.unitOfMeasurement}</span>
                 </td>
-                <td style={{ padding: '6px', textAlign: 'right' }}>${item.unitPrice.toFixed(2)}</td>
-                <td style={{ padding: '6px', textAlign: 'right' }}>${item.stockValue.toLocaleString()}</td>
-                <td style={{ padding: '6px', textAlign: 'center' }}>
+                <td style={{ padding: '12px', textAlign: 'right' }}>${item.unitPrice.toFixed(2)}</td>
+                <td style={{ padding: '12px', textAlign: 'right', fontWeight: '500' }}>${item.stockValue.toLocaleString()}</td>
+                <td style={{ padding: '12px', textAlign: 'center' }}>
                   <span style={{
-                    fontWeight: '500',
+                    fontWeight: '600',
                     color: item.coverageDays <= 10 ? COLORS.danger : item.coverageDays <= 20 ? COLORS.warning : COLORS.success
                   }}>
                     {item.coverageDays} days
                   </span>
                 </td>
-                <td style={{ padding: '6px', textAlign: 'center' }}>
+                <td style={{ padding: '12px', textAlign: 'center' }}>
                   <span style={{
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    fontSize: '10px',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
                     backgroundColor: getStatusColor(item.status) + '20',
                     color: getStatusColor(item.status),
-                    fontWeight: '500',
-                    whiteSpace: 'nowrap'
+                    fontWeight: '600',
+                    whiteSpace: 'nowrap',
+                    textTransform: 'uppercase'
                   }}>
                     {item.status}
                   </span>
@@ -520,19 +666,24 @@ const CoreInventoryTable: React.FC<{
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* Enhanced Pagination */}
       {filteredLevels.length > 0 && (
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginTop: '16px',
-          padding: '12px',
+          marginTop: '20px',
+          padding: '16px',
           backgroundColor: cardBackgrounds.neutral,
-          borderRadius: '6px'
+          borderRadius: '8px'
         }}>
-          <div style={{ fontSize: '12px', color: COLORS.muted }}>
+          <div style={{ fontSize: '13px', color: COLORS.muted }}>
             Showing {startIndex + 1}-{Math.min(endIndex, filteredLevels.length)} of {filteredLevels.length} items
+            {selectedMonth && (
+              <span style={{ marginLeft: '8px', color: COLORS.primary }}>
+                for {new Date(selectedMonth + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+              </span>
+            )}
           </div>
           
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -540,23 +691,23 @@ const CoreInventoryTable: React.FC<{
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
               style={{
-                padding: '6px 10px',
+                padding: '8px 12px',
                 backgroundColor: currentPage === 1 ? COLORS.light : 'white',
                 border: `1px solid ${COLORS.light}`,
-                borderRadius: '4px',
+                borderRadius: '6px',
                 cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
+                fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '6px',
                 opacity: currentPage === 1 ? 0.5 : 1
               }}
             >
-              <ChevronLeft style={{ width: '12px', height: '12px' }} />
+              <ChevronLeft style={{ width: '14px', height: '14px' }} />
               Previous
             </button>
             
-            <span style={{ padding: '6px 12px', fontSize: '11px', color: COLORS.dark }}>
+            <span style={{ padding: '8px 16px', fontSize: '12px', color: COLORS.dark, fontWeight: '500' }}>
               Page {currentPage} of {totalPages}
             </span>
             
@@ -564,20 +715,20 @@ const CoreInventoryTable: React.FC<{
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
               style={{
-                padding: '6px 10px',
+                padding: '8px 12px',
                 backgroundColor: currentPage === totalPages ? COLORS.light : 'white',
                 border: `1px solid ${COLORS.light}`,
-                borderRadius: '4px',
+                borderRadius: '6px',
                 cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
+                fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '6px',
                 opacity: currentPage === totalPages ? 0.5 : 1
               }}
             >
               Next
-              <ChevronRight style={{ width: '12px', height: '12px' }} />
+              <ChevronRight style={{ width: '14px', height: '14px' }} />
             </button>
           </div>
         </div>
@@ -586,7 +737,7 @@ const CoreInventoryTable: React.FC<{
   );
 };
 
-// Monthly Consumption Component
+// Enhanced Monthly Consumption Component
 const MonthlyConsumption: React.FC<{
   categories: Category[];
   items: Item[];
@@ -820,16 +971,16 @@ const MonthlyConsumption: React.FC<{
 
   return (
     <Card>
-      <div style={{ marginBottom: '16px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: '600', color: COLORS.dark, margin: '0 0 12px 0' }}>
-          <Package style={{ width: '18px', height: '18px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.success }} />
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: '600', color: COLORS.dark, margin: '0 0 16px 0' }}>
+          <Package style={{ width: '20px', height: '20px', display: 'inline', marginRight: '8px', verticalAlign: 'middle', color: COLORS.success }} />
           Monthly Consumption Analysis - {getDisplayName()}
         </h2>
 
         {/* Controls */}
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Category/Item Selector */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
             <select
               value={selectedCategory || ''}
               onChange={(e) => {
@@ -839,11 +990,11 @@ const MonthlyConsumption: React.FC<{
                 setSelectedItem(null); // Clear item when category changes
               }}
               style={{
-                padding: '6px 10px',
+                padding: '8px 12px',
                 border: `1px solid ${COLORS.light}`,
-                borderRadius: '6px',
-                fontSize: '12px',
-                minWidth: '150px'
+                borderRadius: '8px',
+                fontSize: '13px',
+                minWidth: '160px'
               }}
             >
               <option value="">All Categories</option>
@@ -861,11 +1012,11 @@ const MonthlyConsumption: React.FC<{
               }}
               disabled={!selectedCategory}
               style={{
-                padding: '6px 10px',
+                padding: '8px 12px',
                 border: `1px solid ${COLORS.light}`,
-                borderRadius: '6px',
-                fontSize: '12px',
-                minWidth: '150px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                minWidth: '160px',
                 opacity: selectedCategory ? 1 : 0.5,
                 cursor: selectedCategory ? 'pointer' : 'not-allowed'
               }}
@@ -880,17 +1031,18 @@ const MonthlyConsumption: React.FC<{
           </div>
 
           {/* Bin Mode Selector */}
-          <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', gap: '0', marginLeft: 'auto' }}>
             <button
               onClick={() => setBinMode('full')}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: binMode === 'full' ? COLORS.primary : 'white',
                 color: binMode === 'full' ? 'white' : COLORS.dark,
                 border: `1px solid ${binMode === 'full' ? COLORS.primary : COLORS.light}`,
-                borderRadius: '6px 0 0 6px',
+                borderRadius: '8px 0 0 8px',
                 cursor: 'pointer',
-                fontSize: '11px'
+                fontSize: '12px',
+                fontWeight: '500'
               }}
             >
               Full Month
@@ -898,12 +1050,13 @@ const MonthlyConsumption: React.FC<{
             <button
               onClick={() => setBinMode('first15')}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: binMode === 'first15' ? COLORS.primary : 'white',
                 color: binMode === 'first15' ? 'white' : COLORS.dark,
                 border: `1px solid ${binMode === 'first15' ? COLORS.primary : COLORS.light}`,
                 cursor: 'pointer',
-                fontSize: '11px',
+                fontSize: '12px',
+                fontWeight: '500',
                 marginLeft: '-1px'
               }}
             >
@@ -912,13 +1065,14 @@ const MonthlyConsumption: React.FC<{
             <button
               onClick={() => setBinMode('last15')}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: binMode === 'last15' ? COLORS.primary : 'white',
                 color: binMode === 'last15' ? 'white' : COLORS.dark,
                 border: `1px solid ${binMode === 'last15' ? COLORS.primary : COLORS.light}`,
-                borderRadius: '0 6px 6px 0',
+                borderRadius: '0 8px 8px 0',
                 cursor: 'pointer',
-                fontSize: '11px',
+                fontSize: '12px',
+                fontWeight: '500',
                 marginLeft: '-1px'
               }}
             >
@@ -931,47 +1085,47 @@ const MonthlyConsumption: React.FC<{
       {/* Chart */}
       {loading ? (
         <div style={{ 
-          height: '350px', 
+          height: '400px', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
           backgroundColor: cardBackgrounds.neutral,
-          borderRadius: '8px'
+          borderRadius: '10px'
         }}>
           <div style={{ textAlign: 'center' }}>
             <RefreshCw style={{ 
-              width: '24px', 
-              height: '24px', 
+              width: '32px', 
+              height: '32px', 
               animation: 'spin 2s linear infinite', 
               margin: '0 auto',
               color: COLORS.primary
             }} />
-            <div style={{ marginTop: '8px', fontSize: '12px', color: COLORS.muted }}>
+            <div style={{ marginTop: '12px', fontSize: '14px', color: COLORS.muted }}>
               Loading consumption data...
             </div>
           </div>
         </div>
       ) : chartData.length === 0 ? (
         <div style={{ 
-          height: '350px', 
+          height: '400px', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
           backgroundColor: cardBackgrounds.neutral,
-          borderRadius: '8px'
+          borderRadius: '10px'
         }}>
           <div style={{ textAlign: 'center', padding: '20px' }}>
             <Package style={{ 
-              width: '32px', 
-              height: '32px', 
+              width: '48px', 
+              height: '48px', 
               margin: '0 auto',
               color: COLORS.muted,
               opacity: 0.5
             }} />
-            <div style={{ marginTop: '12px', fontSize: '13px', color: COLORS.muted }}>
+            <div style={{ marginTop: '16px', fontSize: '15px', color: COLORS.muted, fontWeight: '500' }}>
               No data available for selected filters
             </div>
-            <div style={{ marginTop: '6px', fontSize: '11px', color: COLORS.muted }}>
+            <div style={{ marginTop: '8px', fontSize: '13px', color: COLORS.muted }}>
               {binMode === 'first15' ? 'Days 1-15' : binMode === 'last15' ? 'Days 16-31' : 'Full Month'}
               {selectedCategory && ` • ${getDisplayName()}`}
             </div>
@@ -983,45 +1137,46 @@ const MonthlyConsumption: React.FC<{
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            marginBottom: '8px',
-            padding: '8px',
+            marginBottom: '12px',
+            padding: '12px',
             backgroundColor: cardBackgrounds.primary,
-            borderRadius: '6px'
+            borderRadius: '8px'
           }}>
-            <span style={{ fontSize: '11px', color: COLORS.muted }}>
+            <span style={{ fontSize: '13px', color: COLORS.muted, fontWeight: '500' }}>
               Showing {chartData.length} days of data
             </span>
-            <span style={{ fontSize: '11px', color: COLORS.muted }}>
+            <span style={{ fontSize: '13px', color: COLORS.primary, fontWeight: '600' }}>
               {binMode === 'first15' ? 'Days 1-15' : binMode === 'last15' ? 'Days 16-31' : 'Full Month'}
             </span>
           </div>
           
-          <ResponsiveContainer width="100%" height={350}>
+          <ResponsiveContainer width="100%" height={400}>
             <ComposedChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis 
                 dataKey="date" 
-                tick={{ fontSize: 9 }} 
+                tick={{ fontSize: 10 }} 
                 angle={-45} 
                 textAnchor="end" 
-                height={60}
+                height={70}
                 tickFormatter={(value) => {
                   // Format date as MM/DD
                   const date = new Date(value);
                   return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
                 }}
               />
-              <YAxis yAxisId="left" tick={{ fontSize: 9 }} label={{ value: 'Quantity', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9 }} label={{ value: 'Footfall', angle: 90, position: 'insideRight', style: { fontSize: 10 } }} />
+              <YAxis yAxisId="left" tick={{ fontSize: 10 }} label={{ value: 'Quantity', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} label={{ value: 'Footfall', angle: 90, position: 'insideRight', style: { fontSize: 11 } }} />
               <Tooltip content={<ModernTooltip />} />
-              <Legend wrapperStyle={{ fontSize: '10px' }} />
+              <Legend wrapperStyle={{ fontSize: '11px' }} />
               
               <Bar
                 yAxisId="left"
                 dataKey="consumption"
-                fill={COLORS.success}
-                opacity={0.8}
+                fill={COLORS.accent2}
+                opacity={0.9}
                 name={`${getDisplayName()} (Qty)`}
+                radius={[2, 2, 0, 0]}
               />
               
               <Line
@@ -1029,8 +1184,8 @@ const MonthlyConsumption: React.FC<{
                 type="monotone"
                 dataKey="employeeCount"
                 stroke={COLORS.primary}
-                strokeWidth={2}
-                dot={{ r: 3 }}
+                strokeWidth={3}
+                dot={{ r: 4, fill: COLORS.primary }}
                 name="Employees"
               />
               
@@ -1038,10 +1193,10 @@ const MonthlyConsumption: React.FC<{
                 yAxisId="right"
                 type="monotone"
                 dataKey="visitorCount"
-                stroke={COLORS.warning}
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={{ r: 3 }}
+                stroke={COLORS.accent3}
+                strokeWidth={3}
+                strokeDasharray="6 6"
+                dot={{ r: 4, fill: COLORS.accent3 }}
                 name="Visitors"
               />
             </ComposedChart>
@@ -1107,7 +1262,7 @@ const ConsumptionInventory: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#fafafa', padding: '16px' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px' }}>
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
@@ -1120,42 +1275,42 @@ const ConsumptionInventory: React.FC = () => {
         }
       `}</style>
       
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
         {/* Header */}
         <Card background={cardBackgrounds.neutral}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1 style={{ 
-              fontSize: '24px', 
-              fontWeight: '600', 
+              fontSize: '28px', 
+              fontWeight: '700', 
               margin: 0,
               color: COLORS.dark
             }}>
               Consumption & Inventory Analysis
             </h1>
             
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <Calendar style={{ width: '14px', height: '14px', color: COLORS.primary }} />
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <Calendar style={{ width: '16px', height: '16px', color: COLORS.primary }} />
               <input
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
                 style={{
-                  padding: '5px 8px',
+                  padding: '8px 12px',
                   border: `1px solid ${COLORS.light}`,
-                  borderRadius: '4px',
-                  fontSize: '11px'
+                  borderRadius: '6px',
+                  fontSize: '13px'
                 }}
               />
-              <span style={{ color: COLORS.muted, fontSize: '11px' }}>to</span>
+              <span style={{ color: COLORS.muted, fontSize: '13px', fontWeight: '500' }}>to</span>
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
                 style={{
-                  padding: '5px 8px',
+                  padding: '8px 12px',
                   border: `1px solid ${COLORS.light}`,
-                  borderRadius: '4px',
-                  fontSize: '11px'
+                  borderRadius: '6px',
+                  fontSize: '13px'
                 }}
               />
               
@@ -1164,32 +1319,32 @@ const ConsumptionInventory: React.FC = () => {
                 onClick={() => setShowNotifications(true)}
                 style={{
                   position: 'relative',
-                  padding: '8px',
+                  padding: '10px',
                   backgroundColor: unreadCount > 0 ? COLORS.warning + '20' : 'white',
                   border: `1px solid ${COLORS.light}`,
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.3s'
                 }}
               >
                 <Bell style={{ 
-                  width: '18px', 
-                  height: '18px', 
+                  width: '20px', 
+                  height: '20px', 
                   color: unreadCount > 0 ? COLORS.warning : COLORS.dark,
                   animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none'
                 }} />
                 {unreadCount > 0 && (
                   <span style={{
                     position: 'absolute',
-                    top: '-4px',
-                    right: '-4px',
+                    top: '-6px',
+                    right: '-6px',
                     backgroundColor: COLORS.danger,
                     color: 'white',
-                    fontSize: '10px',
-                    fontWeight: '600',
-                    padding: '2px 6px',
-                    borderRadius: '10px',
-                    minWidth: '18px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    padding: '3px 7px',
+                    borderRadius: '12px',
+                    minWidth: '20px',
                     textAlign: 'center'
                   }}>
                     {unreadCount}
