@@ -1,167 +1,12 @@
-// // import React, { useState } from 'react';
-// // import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-// // import SidebarLayout from './pages/SidebarLayout';
-// // import InventoryStockUsage from './components/InventoryStockUsage';
-// // import InventoryAnalytics from './components/inventoryAnalytics'
-// // import InventoryDashboard from './components/InventoryDashboard';
-// // // import MaintenanceInventory from './components/MaintenanceInventory';
-// // import ManageCategories from './components/ManageCategories';
-// // import ManageItems from './components/ManageItems';
-// // import Dashboard from './components/Dashboard';
-// // import LoginPage from './components/LoginPage';
-// // import MealForecastDashboard from './components/MealForecastDashboard';
-// // import AssetDashboard from './components/AssetDashboard';
-// // import TicketingSystem from './components/TicketingSystem';
-// // import IoTSensorsDashboard from './components/IoTSensorsDashboard';
-// // import EnergySustainabilityDashboard from './components/EnergySustainabilityDashboard';
-// // import SpaceOccupancyDashboard from './components/SpaceOccupancyDashboard';
-// // import RegisterPage from './components/RegisterPage';
-// // import './App.css';
-
-// // const App: React.FC = () => {
-// //   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-// //   // Add logout handler function
-// //   const handleLogout = () => {
-// //     setIsLoggedIn(false);
-// //     localStorage.removeItem('token');
-// //   };
-
-// //   return (
-// //     <Router>
-// //       <Routes>
-// //         {!isLoggedIn ? (
-// //           <>
-// //             {/* Login & Register routes */}
-// //             <Route path="/" element={<LoginPage onLogin={() => setIsLoggedIn(true)} />} />
-// //             <Route path="/register" element={<RegisterPage />} />
-
-// //             {/* Fallback → Login */}
-// //             <Route path="*" element={<Navigate to="/" replace />} />
-// //           </>
-// //         ) : (
-// //           <>
-// //             {/* Root → Dashboard */}
-// //             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-// //             {/* Sidebar Routes - Pass logout function */}
-// //             <Route path="/" element={<SidebarLayout onLogout={handleLogout} />}>
-// //               <Route path="dashboard" element={<Dashboard />} />
-// //               <Route path="asset-dashboard" element={<AssetDashboard />} />
-// //               <Route path="ticketing" element={<TicketingSystem />} />
-// //               <Route path="iot-sensors" element={<IoTSensorsDashboard />} />
-// //               <Route path="energy-sustainability" element={<EnergySustainabilityDashboard />} />
-// //               <Route path="space-occupancy" element={<SpaceOccupancyDashboard />} />
-              
-// //               {/* Meal Forecast - Now separate top-level route */}
-// //               <Route path="meal-forecast" element={<MealForecastDashboard />} />
-              
-// //               {/* Inventory Management routes */}
-// //               <Route path="inventory/categories" element={<ManageCategories />} />
-// //               <Route path="inventory/items" element={<ManageItems />} />
-// //               <Route path="inventory" element={<InventoryDashboard />} />
-// //               <Route path="inventory/stock-usage" element={<InventoryStockUsage />} />
-// //               <Route path='inventory/analytics' element={<InventoryAnalytics />} />
-// //               {/* <Route path="inventory/maintenance" element={<MaintenanceInventory />} /> */}
-// //             </Route>
-
-// //             {/* Fallback → Dashboard */}
-// //             <Route path="*" element={<Navigate to="/dashboard" replace />} />
-// //           </>
-// //         )}
-// //       </Routes>
-// //     </Router>
-// //   );
-// // };
-
-// // export default App;
-// import React, { useState } from "react";
-// import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-// import SidebarLayout from "./pages/SidebarLayout";
-// import InventoryStockUsage from "./components/InventoryStockUsage";
-// // import InventoryAnalytics from "./components/inventoryAnalytics";
-// import InventoryAnalytics from "./components/InventoryAnalytics";
-// import InventoryDashboard from "./components/InventoryDashboard";
-// // import MaintenanceInventory from "./components/MaintenanceInventory";
-// import ManageCategories from "./components/ManageCategories";
-// import ManageItems from "./components/ManageItems";
-// import Dashboard from "./components/Dashboard";
-// import LoginPage from "./components/LoginPage";
-// import MealForecastDashboard from "./components/MealForecastDashboard";
-// import AssetDashboard from "./components/AssetDashboard";
-// import TicketingSystem from "./components/TicketingSystem";
-// import IoTSensorsDashboard from "./components/IoTSensorsDashboard";
-// import EnergySustainabilityDashboard from "./components/EnergySustainabilityDashboard";
-// import SpaceOccupancyDashboard from "./components/SpaceOccupancyDashboard";
-// import RegisterPage from "./components/RegisterPage";
-// import predictiveInserts from "./components/predictiveInserts";
-// import "./App.css";
-
-// const App: React.FC = () => {
-//   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-//   const handleLogout = () => {
-//     setIsLoggedIn(false);
-//     localStorage.removeItem("token");
-//   };
-
-//   return (
-//     <Router>
-//       <Routes>
-//         {!isLoggedIn ? (
-//           <>
-//             {/* Login & Register routes */}
-//             <Route path="/" element={<LoginPage onLogin={() => setIsLoggedIn(true)} />} />
-//             <Route path="/register" element={<RegisterPage />} />
-
-//             {/* Fallback → Login */}
-//             <Route path="*" element={<Navigate to="/" replace />} />
-//           </>
-//         ) : (
-//           <>
-//             {/* Root → Dashboard */}
-//             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-//             {/* Sidebar Routes */}
-//             <Route path="/" element={<SidebarLayout onLogout={handleLogout} />}>
-//               <Route path="dashboard" element={<Dashboard />} />
-//               <Route path="asset-dashboard" element={<AssetDashboard />} />
-//               <Route path="ticketing" element={<TicketingSystem />} />
-//               <Route path="iot-sensors" element={<IoTSensorsDashboard />} />
-//               <Route path="energy-sustainability" element={<EnergySustainabilityDashboard />} />
-//               <Route path="space-occupancy" element={<SpaceOccupancyDashboard />} />
-
-//               {/* Meal Forecast */}
-//               <Route path="meal-forecast" element={<MealForecastDashboard />} />
-
-//               {/* Inventory Management */}
-//               <Route path="inventory/categories" element={<ManageCategories />} />
-//               <Route path="inventory/items" element={<ManageItems />} />
-//               <Route path="inventory" element={<InventoryDashboard />} />
-//               <Route path="inventory/stock-usage" element={<InventoryStockUsage />} />
-//               <Route path="inventory/analytics" element={<InventoryAnalytics />} />
-//               <Route path="inventory/predictive-inserts" element={<PredictiveInserts />} />
-//               {/* <Route path="inventory/maintenance" element={<MaintenanceInventory />} /> */}
-//             </Route>
-
-//             {/* Fallback → Dashboard */}
-//             <Route path="*" element={<Navigate to="/dashboard" replace />} />
-//           </>
-//         )}
-//       </Routes>
-//     </Router>
-//   );
-// };
-
-// export default App;
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import SidebarLayout from "./pages/SidebarLayout";
 
-import Dashboard from "./components/Dashboard";
-import LoginPage from "./components/LoginPage";
-import RegisterPage from "./components/RegisterPage";
+// Import the clean auth page (choose one of the two versions)
+import SimpleAuthPage from "./components/AuthPage"; // Version 1: with curved divider
+// import CleanAuthPage from "./components/CleanAuthPage"; // Version 2: with wave cut
 
+import Dashboard from "./components/Dashboard";
 import AssetDashboard from "./components/AssetDashboard";
 import TicketingSystem from "./components/TicketingSystem";
 import MealForecastDashboard from "./components/MealForecastDashboard";
@@ -172,8 +17,7 @@ import InventoryAnalytics from "./components/InventoryAnalytics";
 import ManageCategories from "./components/ManageCategories";
 import ManageItems from "./components/ManageItems";
 import PredictiveInserts from "./components/predictiveInserts";
-import PredictiveAnalysis from "./components/predictiveInserts"; // <-- new component
-// import MaintenanceInventory from "./components/MaintenanceInventory";
+import PredictiveAnalysis from "./components/predictiveInserts";
 import ConsumptionInventory from './components/ConsumptionInventory';
 import BudgetAnalysis from './components/BudgetAnalysis';
 
@@ -182,9 +26,16 @@ import "./App.css";
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(!!localStorage.getItem("token"));
 
+  const handleAuthSuccess = () => {
+    setIsLoggedIn(true);
+  };
+
   const handleLogout = () => {
     setIsLoggedIn(false);
     localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("email");
+    localStorage.removeItem("roles");
   };
 
   return (
@@ -192,11 +43,13 @@ const App: React.FC = () => {
       <Routes>
         {!isLoggedIn ? (
           <>
-            {/* Login & Register routes */}
-            <Route path="/" element={<LoginPage onLogin={() => setIsLoggedIn(true)} />} />
-            <Route path="/register" element={<RegisterPage />} />
-
-            {/* Fallback → Login */}
+            {/* Simple Auth Page with left/right swap */}
+            <Route path="/" element={<SimpleAuthPage onAuthSuccess={handleAuthSuccess} />} />
+            
+            {/* Alternative: Use CleanAuthPage for wave-cut design */}
+            {/* <Route path="/" element={<CleanAuthPage onAuthSuccess={handleAuthSuccess} />} /> */}
+            
+            {/* Fallback → Auth Page */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (
@@ -221,8 +74,7 @@ const App: React.FC = () => {
               <Route path="inventory/stock-usage" element={<InventoryStockUsage />} />
               <Route path="inventory/analytics" element={<InventoryAnalytics />} />
               <Route path="inventory/predictive-inserts" element={<PredictiveInserts />} />
-              <Route path="inventory/predictive-analysis" element={<PredictiveAnalysis />} /> {/* new route */}
-              {/* <Route path="inventory/maintenance" element={<MaintenanceInventory />} /> */}
+              <Route path="inventory/predictive-analysis" element={<PredictiveAnalysis />} />
               <Route path="/inventory/consumption-inventory" element={<ConsumptionInventory />} />
               <Route path="/inventory/budget-analysis" element={<BudgetAnalysis />} />
             </Route>
@@ -237,4 +89,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

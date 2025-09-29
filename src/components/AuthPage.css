@@ -1,0 +1,424 @@
+/* Simple Auth Page - Clean Design with Curved Divider */
+
+.simple-auth-container {
+  min-height: 100vh;
+  background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Header */
+.simple-auth-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+}
+
+.simple-auth-header img {
+  height: 35px;
+  object-fit: contain;
+}
+
+/* Main Content Container */
+.simple-auth-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  position: relative;
+  transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Left and Right Sections */
+.auth-left-section,
+.auth-right-section {
+  flex: 1;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.6s ease;
+}
+
+.auth-left-section {
+  background: white;
+  padding: 0 80px;
+}
+
+.auth-right-section {
+  background: #1677ff;
+  padding: 0 80px;
+}
+
+/* Content Wrappers */
+.left-content,
+.right-content {
+  width: 100%;
+  max-width: 400px;
+  transition: all 0.6s ease;
+}
+
+/* Curved Divider */
+.curved-divider {
+  position: absolute;
+  width: 200px;
+  height: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.curve-svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transition: all 0.6s ease;
+}
+
+/* Swap Animation States */
+.simple-auth-content.login-mode .auth-left-section {
+  flex: 0.55;
+}
+
+.simple-auth-content.login-mode .auth-right-section {
+  flex: 0.45;
+}
+
+.simple-auth-content.register-mode .auth-left-section {
+  flex: 0.45;
+  background: #1677ff;
+}
+
+.simple-auth-content.register-mode .auth-right-section {
+  flex: 0.55;
+  background: white;
+}
+
+.simple-auth-content.register-mode .curved-divider {
+  transform: translateX(-50%) scaleX(-1);
+}
+
+/* Form Wrapper */
+.form-wrapper {
+  animation: fadeInUp 0.6s ease;
+}
+
+.form-logo {
+  display: block;
+  width: 120px;
+  height: auto;
+  margin: 0 auto 30px;
+  object-fit: contain;
+}
+
+.form-wrapper h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.form-wrapper p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+/* Switch Panel */
+.switch-panel {
+  text-align: center;
+  animation: fadeInUp 0.6s ease;
+}
+
+.switch-panel h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 20px;
+}
+
+.simple-auth-content.register-mode .auth-left-section .switch-panel h2 {
+  color: white;
+}
+
+.simple-auth-content.register-mode .auth-left-section .switch-panel p {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.switch-panel p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.switch-btn {
+  min-width: 160px;
+  height: 45px !important;
+  background: transparent !important;
+  color: white !important;
+  border: 2px solid white !important;
+  border-radius: 25px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease !important;
+}
+
+.switch-btn:hover {
+  background: white !important;
+  color: #1677ff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Form Styles */
+.form-wrapper .ant-form-item {
+  margin-bottom: 20px;
+}
+
+.form-wrapper .ant-input-affix-wrapper,
+.form-wrapper .ant-input,
+.form-wrapper .ant-select-selector {
+  background: #f8f9fa !important;
+  border: 1px solid #e1e4e8 !important;
+  border-radius: 8px !important;
+  height: 45px !important;
+  transition: all 0.3s ease !important;
+}
+
+.form-wrapper .ant-input-affix-wrapper:hover,
+.form-wrapper .ant-input:hover,
+.form-wrapper .ant-select-selector:hover {
+  border-color: #1677ff !important;
+}
+
+.form-wrapper .ant-input-affix-wrapper-focused,
+.form-wrapper .ant-input:focus,
+.form-wrapper .ant-select-focused .ant-select-selector {
+  border-color: #1677ff !important;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1) !important;
+  background: white !important;
+}
+
+.form-wrapper .ant-btn-primary {
+  height: 45px !important;
+  background: #1677ff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease !important;
+}
+
+.form-wrapper .ant-btn-primary:hover {
+  background: #0958d9 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(22, 119, 255, 0.3);
+}
+
+.form-links {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.form-links a {
+  color: #1677ff;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.form-links a:hover {
+  color: #0958d9;
+  text-decoration: underline;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .auth-left-section,
+  .auth-right-section {
+    padding: 0 40px;
+  }
+  
+  .curved-divider {
+    width: 150px;
+  }
+}
+
+@media (max-width: 992px) {
+  .simple-auth-content {
+    flex-direction: column;
+  }
+  
+  .auth-left-section,
+  .auth-right-section {
+    width: 100%;
+    height: auto;
+    min-height: 50vh;
+    padding: 60px 20px;
+  }
+  
+  .simple-auth-content.login-mode .auth-left-section,
+  .simple-auth-content.login-mode .auth-right-section,
+  .simple-auth-content.register-mode .auth-left-section,
+  .simple-auth-content.register-mode .auth-right-section {
+    flex: 1;
+  }
+  
+  .curved-divider {
+    width: 100%;
+    height: 100px;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%) rotate(90deg);
+  }
+  
+  .simple-auth-content.register-mode .curved-divider {
+    transform: translateY(-50%) rotate(90deg) scaleX(-1);
+  }
+  
+  .curve-svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .simple-auth-header {
+    padding: 15px 20px;
+  }
+  
+  .simple-auth-header img {
+    height: 28px;
+  }
+  
+  .form-logo {
+    width: 100px;
+  }
+  
+  .form-wrapper h2 {
+    font-size: 24px;
+  }
+  
+  .switch-panel h2 {
+    font-size: 26px;
+  }
+  
+  .switch-panel p {
+    font-size: 14px;
+  }
+  
+  .auth-left-section,
+  .auth-right-section {
+    padding: 40px 20px;
+  }
+}
+
+/* Loading State */
+.ant-btn-loading {
+  opacity: 0.8;
+}
+
+.ant-btn-loading::before {
+  background: transparent !important;
+}
+
+/* Message Styles */
+.ant-message {
+  top: 80px !important;
+}
+
+.ant-message-notice-content {
+  border-radius: 8px !important;
+  padding: 10px 16px !important;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Input Icons */
+.ant-input-prefix {
+  color: #8c8c8c;
+  margin-right: 10px;
+}
+
+/* Select Dropdown */
+.ant-select-dropdown {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ant-select-item-option-selected {
+  background: rgba(22, 119, 255, 0.1) !important;
+}
+
+.ant-select-item-option-active {
+  background: #f5f5f5 !important;
+}
+
+/* Smooth Transitions */
+* {
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* Remove focus outlines and add custom focus styles */
+*:focus {
+  outline: none;
+}
+
+input:focus,
+button:focus,
+.ant-input-affix-wrapper-focused,
+.ant-select-focused {
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+/* Clean scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4c4c4;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
