@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       method: req.method,
       headers: {
         'Content-Type': req.headers['content-type'] || 'application/json',
-        ...req.headers,
+        ...Object.fromEntries(Object.entries(req.headers).map(([key, value]) => [key, String(value)])),
       },
       body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
     });
