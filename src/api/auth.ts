@@ -53,6 +53,8 @@ export async function signUp(body: SignUpRequest): Promise<AuthResponse> {
   });
 }
 
+
+
 export function storeAuth(auth: AuthResponse) {
   localStorage.setItem("accessToken", auth.accessToken);
   localStorage.setItem("refreshToken", auth.refreshToken);

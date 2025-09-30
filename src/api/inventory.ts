@@ -8,6 +8,7 @@ export type Category = {
 };
 
 export type Item = {
+  consumptionRecords: boolean;
   lastReceivedQuantity: undefined;
   receivedStock: undefined;
   consumedQuantity: undefined;

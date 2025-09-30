@@ -329,7 +329,7 @@ async function testApiConnectivity() {
   // This would be imported from inventory-fixed
   // For now, just return a basic test
   return {
-    baseUrl: 'http://localhost:8080',
+    baseUrl: 'http://localhost:8082',
     tests: {
       dashboard: { success: true },
       costDistribution: { success: true },

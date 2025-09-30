@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ComposedChart
+  ResponsiveContainer, ComposedChart, PieChart, Pie, Cell
 } from 'recharts';
 import {
   RefreshCw, Calendar,
   ChevronLeft, ChevronRight, Layers,
   Package, Bell, Filter, ArrowUpDown,
-  X, AlertCircle
+  X, AlertCircle, Activity, TrendingUp, Shield
 } from 'lucide-react';
 import {
   useItems,
@@ -275,8 +275,10 @@ const CoreInventoryTable: React.FC<{
   const getLatestConsumptionMonth = () => {
     let latestDate = '';
     items.forEach(item => {
-      if (item.consumptionRecords && item.consumptionRecords.length > 0) {
-        const dates = item.consumptionRecords.map(record => record.date).filter(Boolean);
+      if (Array.isArray(item.consumptionRecords) && item.consumptionRecords.length > 0) {
+        const dates = Array.isArray(item.consumptionRecords)
+          ? item.consumptionRecords.map(record => record.date).filter(Boolean)
+          : [];
         if (dates.length > 0) {
           const maxDate = dates.sort().reverse()[0];
           if (maxDate > latestDate) {
@@ -301,7 +303,7 @@ const CoreInventoryTable: React.FC<{
 
   // Get month-wise consumption for an item
   const getMonthConsumption = (item: Item, month: string) => {
-    if (!item.consumptionRecords) return 0;
+    if (!Array.isArray(item.consumptionRecords)) return 0;
     
     return item.consumptionRecords
       .filter(record => {
@@ -447,7 +449,7 @@ const CoreInventoryTable: React.FC<{
   const getAvailableMonths = () => {
     const months = new Set<string>();
     items.forEach(item => {
-      if (item.consumptionRecords) {
+      if (Array.isArray(item.consumptionRecords)) {
         item.consumptionRecords.forEach(record => {
           if (record.date) {
             months.add(record.date.substring(0, 7));
@@ -832,8 +834,14 @@ const MonthlyConsumption: React.FC<{
       itemId: selectedItem,
       itemName: selectedItemName,
       binMode,
+      dateRange,
       consumptionDataPoints: consumptionData?.data?.length || 0
     });
+
+    // Parse date range for filtering
+    const startDate = new Date(dateRange.start);
+    const endDate = new Date(dateRange.end);
+    endDate.setHours(23, 59, 59, 999); // Include the entire end date
 
     // Process consumption data if available
     if (consumptionData?.data && consumptionData.data.length > 0) {
@@ -853,6 +861,10 @@ const MonthlyConsumption: React.FC<{
 
           // Parse the date
           const date = new Date(dateStr);
+          
+          // Filter by date range - IMPORTANT: Skip if outside selected range
+          if (date < startDate || date > endDate) return;
+          
           const day = date.getDate();
 
           // Apply bin filtering for days 1-15 or 16-31
@@ -907,11 +919,16 @@ const MonthlyConsumption: React.FC<{
       });
     }
 
-    // Add footfall data with bin filtering
+    // Add footfall data with bin filtering and date range filtering
     if (footfallData && footfallData.length > 0) {
       footfallData.forEach(record => {
+        const recordDate = new Date(record.date);
+        
+        // Filter by date range - IMPORTANT: Skip if outside selected range
+        if (recordDate < startDate || recordDate > endDate) return;
+        
         const dateKey = record.date.slice(0, 10);
-        const day = new Date(record.date).getDate();
+        const day = recordDate.getDate();
 
         // Apply bin filtering
         if (binMode === 'first15' && day > 15) return;
@@ -947,6 +964,7 @@ const MonthlyConsumption: React.FC<{
 
     console.log('Final processed data:', {
       totalPoints: processed.length,
+      dateRange: { start: dateRange.start, end: dateRange.end },
       totalConsumption: processed.reduce((sum, p) => sum + p.consumption, 0),
       hasConsumption: processed.some(p => p.consumption > 0),
       hasFootfall: processed.some(p => p.employeeCount > 0 || p.visitorCount > 0),
@@ -954,7 +972,7 @@ const MonthlyConsumption: React.FC<{
     });
     
     setChartData(processed);
-  }, [consumptionData, footfallData, binMode, selectedCategory, selectedItem, categories, items]);
+  }, [consumptionData, footfallData, binMode, selectedCategory, selectedItem, categories, items, dateRange]);
 
   // Get display name for chart
   const getDisplayName = () => {
@@ -974,7 +992,7 @@ const MonthlyConsumption: React.FC<{
       <div style={{ marginBottom: '20px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '600', color: COLORS.dark, margin: '0 0 16px 0' }}>
           <Package style={{ width: '20px', height: '20px', display: 'inline', marginRight: '8px', verticalAlign: 'middle', color: COLORS.success }} />
-          Monthly Consumption Analysis - {getDisplayName()}
+          Consumption & - {getDisplayName()}
         </h2>
 
         {/* Controls */}
@@ -1285,7 +1303,7 @@ const ConsumptionInventory: React.FC = () => {
               margin: 0,
               color: COLORS.dark
             }}>
-              Consumption & Inventory Analysis
+              Consumption & Footfall Trends
             </h1>
             
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
