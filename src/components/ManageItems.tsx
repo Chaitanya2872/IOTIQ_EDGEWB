@@ -368,14 +368,22 @@ const ManageItems: React.FC = () => {
       sorter: (a: any, b: any) => (Number(a.unitPrice) || 0) - (Number(b.unitPrice) || 0),
       render: (v: number | null) => v != null ? `$${Number(v).toFixed(2)}` : '—'
     },
-    {
-      title: 'Category',
-      key: 'category',
-      dataIndex: ['category', 'categoryName'],
-      filters: categoryOptions,
-      onFilter: (val: any, rec: any) => rec?.category?.id === val,
-      render: (_: any, rec: any) => <Tag color="blue">{rec?.category?.categoryName || '—'}</Tag>
-    },
+  {
+  title: 'Category',
+  key: 'category',
+  dataIndex: ['category', 'categoryName'],
+  filters: categories?.map(c => ({
+    text: c.categoryName,
+    value: c.id
+  })) ?? [],
+  onFilter: (val: any, rec: any) => rec?.category?.id === val || rec?.categoryId === val,
+  render: (_: any, rec: any) => (
+    <Tag color="blue">
+      {rec?.category?.categoryName ||
+        (categories?.find(c => c.id === rec.categoryId)?.categoryName ?? '—')}
+    </Tag>
+  )
+},
     {
       title: 'Actions', 
       key: 'actions', 

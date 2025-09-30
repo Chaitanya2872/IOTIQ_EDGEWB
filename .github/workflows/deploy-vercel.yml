@@ -24,14 +24,29 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      # Step 4: Install Vercel CLI
+      # Step 4: Lint code
+      - name: Lint
+        run: npm run lint
+
+      # Step 5: Build application
+      - name: Build
+        run: npm run build
+
+      # Step 6: Install Vercel CLI
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      # Step 5: Deploy to Vercel
+      # Step 7: Set Environment Variables for Production
+      - name: Set Vercel Environment Variables
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel env add VITE_AUTH_API_BASE_URL production --value "" --token $VERCEL_TOKEN --yes
+          vercel env add VITE_INVENTORY_API_BASE_URL production --value "" --token $VERCEL_TOKEN --yes
+          vercel env add VITE_API_BASE_URL production --value "" --token $VERCEL_TOKEN --yes
+
+      # Step 8: Deploy to Vercel
       - name: Deploy to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          # Add other environment variables here if needed
-          # e.g., DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: vercel --prod --token $VERCEL_TOKEN --yes

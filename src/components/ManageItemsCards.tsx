@@ -116,17 +116,26 @@ const ManageItemsCards: React.FC<{ onCardClick?: (key: CardKey) => void }> = ({ 
     let topCat: string | null = null;
     let maxQty = 0;
 
-    if (currentKey && monthly.data[currentKey]) {
-      const catMap = monthly.data[currentKey]?.byCategory || {};
+    // Calculate total consumption by category over all months
+    const totalByCategory: Record<string, number> = {};
+    for (const key of monthly.keys) {
+      const catMap = monthly.data[key]?.byCategory || {};
       for (const [cat, qty] of Object.entries(catMap)) {
-        if (qty > maxQty) {
-          topCat = cat;
-          maxQty = qty;
-        }
+        totalByCategory[cat] = (totalByCategory[cat] || 0) + qty;
       }
-      if (topCat) return { name: topCat, qty: maxQty };
     }
 
+    // Find the category with highest total consumption
+    for (const [cat, qty] of Object.entries(totalByCategory)) {
+      if (qty > maxQty) {
+        topCat = cat;
+        maxQty = qty;
+      }
+    }
+
+    if (topCat) return { name: topCat, qty: maxQty };
+
+    // Fallback to total current quantity if no consumption data
     const catTotals: Record<string, number> = {};
     (items || []).forEach((it: Item) => {
       const cat = it.category?.categoryName || 'Uncategorized';
@@ -140,7 +149,7 @@ const ManageItemsCards: React.FC<{ onCardClick?: (key: CardKey) => void }> = ({ 
       }
     }
     return { name: topCat, qty: maxQty };
-  }, [monthly, currentKey, items]);
+  }, [monthly, items]);
 
   // Average monthly consumption of that category
   const avgMonthlyConsumption = useMemo(() => {
