@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  DashboardOutlined,
-  BankOutlined,
-  QuestionCircleOutlined,
+  DashboardFilled,
+  BankFilled,
+  QuestionCircleFilled,
   RadarChartOutlined,
-  ThunderboltOutlined,
-  LayoutOutlined,
-  AppstoreOutlined,
-  CalendarOutlined,
+  ThunderboltFilled,
+  LayoutFilled,
+  AppstoreFilled,
+  CalendarFilled,
   DownOutlined,
   RightOutlined,
 } from "@ant-design/icons";
@@ -35,7 +35,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
   const selectedKey = location.pathname;
 
   useEffect(() => {
-    setSidebarWidth(sidebarOpen ? 220 : 70);
+    setSidebarWidth(sidebarOpen ? 200 : 60);
   }, [sidebarOpen, setSidebarWidth]);
 
   const showTooltip = (text: string, e: React.MouseEvent) => {
@@ -44,7 +44,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
       setTooltip({
         show: true,
         text,
-        x: rect.right + 10,
+        x: rect.right + 8,
         y: rect.top + rect.height / 2
       });
     }
@@ -54,32 +54,62 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
     setTooltip(prev => ({ ...prev, show: false }));
   };
 
- const menuItemStyle = (path: string) => {
-  const isActive = selectedKey === path || (path === "/inventory" && selectedKey.startsWith("/inventory"));
-  const isHovered = hoveredItem === path;
+  const menuItemStyle = (path: string) => {
+    const isActive = selectedKey === path || (path === "/inventory" && selectedKey.startsWith("/inventory"));
+    const isHovered = hoveredItem === path;
 
-  return {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "12px 14px",
-    color: "#0f172a",
-    fontWeight: isActive ? 700 : 600,
-    textDecoration: "none",
-    background: "transparent",
-    border: "none",
-    transition: "all 0.3s ease",
-    whiteSpace: "nowrap",
-    cursor: "pointer",
-    margin: "4px 0",
-    fontFamily: "Poppins, sans-serif",
-    width: sidebarOpen ? "auto" : "56px",
-    justifyContent: sidebarOpen ? "flex-start" : "center",
-    overflow: "hidden",
-  } as React.CSSProperties;
-};
+    return {
+      position: "relative",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: sidebarOpen ? "10px 14px" : "10px 0",
+      color: isActive ? "#06b6d4" : isHovered ? "#ffffff" : "rgba(255, 255, 255, 0.75)",
+      fontWeight: isActive ? 600 : 500,
+      textDecoration: "none",
+      background: isActive
+        ? "rgba(6, 182, 212, 0.12)"
+        : isHovered
+        ? "rgba(255, 255, 255, 0.06)"
+        : "transparent",
+      transition: "all 0.25s ease",
+      whiteSpace: "nowrap",
+      cursor: "pointer",
+      margin: "1px 0",
+      fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
+      justifyContent: sidebarOpen ? "flex-start" : "center",
+      overflow: "hidden",
+      borderLeft: isActive ? "3px solid #06b6d4" : "3px solid transparent",
+      fontSize: "13px",
+    } as React.CSSProperties;
+  };
 
+  const iconContainerStyle = (path: string) => {
+    const isActive = selectedKey === path || (path === "/inventory" && selectedKey.startsWith("/inventory"));
+    const isHovered = hoveredItem === path;
+
+    return {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "36px",
+      height: "36px",
+      borderRadius: "10px",
+      background: isActive
+        ? "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)"
+        : isHovered
+        ? "rgba(255, 255, 255, 0.12)"
+        : "rgba(255, 255, 255, 0.06)",
+      color: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.85)",
+      transition: "all 0.25s ease",
+      boxShadow: isActive
+        ? "0 2px 8px rgba(6, 182, 212, 0.25)"
+        : "none",
+      transform: isActive 
+        ? "scale(1.03)" 
+        : "scale(1)",
+    } as React.CSSProperties;
+  };
 
   const subMenuItemStyle = (path: string) => {
     const isActive = selectedKey === path;
@@ -89,17 +119,20 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
       display: "flex",
       alignItems: "center",
       gap: 8,
-      padding: "10px 16px",
-      color: "#0f172a",
+      padding: "8px 14px 8px 20px",
+      color: isActive ? "#06b6d4" : isHovered ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
       fontWeight: isActive ? 600 : 500,
       textDecoration: "none",
-      background: isActive ? "rgba(28, 198, 96, 0.15)" : isHovered ? "rgba(28, 198, 96, 0.08)" : "transparent",
-      border: isActive ? "1px solid rgba(28, 198, 96, 0.25)" : "1px solid transparent",
-      borderRadius: "8px",
-      margin: "3px 8px",
-      fontSize: "14px",
-      transition: "all 0.2s ease",
-      fontFamily: "Poppins, sans-serif",
+      background: isActive
+        ? "rgba(6, 182, 212, 0.08)"
+        : isHovered
+        ? "rgba(255, 255, 255, 0.04)"
+        : "transparent",
+      borderLeft: isActive ? "3px solid #06b6d4" : "3px solid transparent",
+      margin: "1px 0",
+      fontSize: "12.5px",
+      transition: "all 0.25s ease",
+      fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
     } as React.CSSProperties;
   };
 
@@ -113,38 +146,52 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
           hideTooltip();
         }}
         style={{
-          width: sidebarOpen ? 240 : 78,
-          background: "linear-gradient(180deg, rgba(241, 245, 249, 0.35) 0%, rgba(241, 245, 249, 0.15) 100%)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          borderRight: "1px solid rgba(148, 163, 184, 0.35)",
-          transition: "width 0.3s ease",
+          width: sidebarOpen ? 200 : 70,
+          background: "#0f172a",
+          borderRight: "1px solid rgba(6, 182, 212, 0.08)",
+          transition: "all 0.25s ease",
           overflowX: "hidden",
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
           minHeight: "100%",
-          padding: "10px 6px",
+          position: "relative",
         }}
       >
-        {/* === Sidebar Header === */}
+        {/* Yellow accent strip */}
         <div
           style={{
-            padding: sidebarOpen ? "16px 16px 10px" : "16px 0",
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: "3px",
+            background: "linear-gradient(180deg, #06b6d4 0%, #0891b2 100%)",
+            boxShadow: "0 0 8px rgba(6, 182, 212, 0.4)",
+          }}
+        />
+
+        {/* Sidebar Header - More compact */}
+        <div
+          style={{
+            padding: sidebarOpen ? "16px 14px 12px 18px" : "16px 0",
             fontWeight: 700,
-            fontSize: sidebarOpen ? "22px" : "20px",
-            color: "#0f172a",
+            fontSize: sidebarOpen ? "16px" : "16px",
+            color: "#ffffff",
             textAlign: sidebarOpen ? "left" : "center",
-            transition: "all 0.3s ease",
+            transition: "all 0.25s ease",
             display: "flex",
             alignItems: "center",
             gap: 8,
+            letterSpacing: "0.03em",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+            marginBottom: "8px",
           }}
         >
-          {sidebarOpen ? "Menu" : "☰"}
+          {sidebarOpen ? "MENU" : "☰"}
         </div>
 
-        {/* === Main Routes === */}
+        {/* Dashboard */}
         <Link 
           to="/dashboard" 
           className="sidebar-item"
@@ -158,46 +205,67 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
             hideTooltip();
           }}
         >
-          <DashboardOutlined style={{ fontSize: 24, minWidth: 24 }} />
-          {sidebarOpen && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Dashboard</span>}
+          <span style={iconContainerStyle("/dashboard")}>
+            <DashboardFilled style={{ fontSize: 18 }} />
+          </span>
+          <span style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            fontSize: sidebarOpen ? "13px" : "10px",
+            opacity: sidebarOpen ? 1 : 0.8
+          }}>
+            {sidebarOpen ? "Dashboard" : "Dash"}
+          </span>
         </Link>
 
-        {/* === Inventory Dropdown (Moved after Dashboard) === */}
+        {/* Inventory Dropdown */}
         <div
           onClick={toggleInventory}
           onMouseEnter={(e) => {
             setHoveredItem("/inventory");
-            showTooltip("Inventory Management", e);
+            showTooltip("Inventory", e);
           }}
           onMouseLeave={() => {
             setHoveredItem(null);
             hideTooltip();
           }}
-          style={{
-            ...menuItemStyle("/inventory"),
-            fontWeight: 700,
-          }}
+          style={menuItemStyle("/inventory")}
         >
-          <AppstoreOutlined style={{ fontSize: 24, minWidth: 24 }} />
+          <span style={iconContainerStyle("/inventory")}>
+            <AppstoreFilled style={{ fontSize: 18 }} />
+          </span>
           {sidebarOpen && (
             <>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", flex: 1 }} className="sidebar-item">
-                Inventory Management
+              <span style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                flex: 1,
+                fontSize: sidebarOpen ? "13px" : "10px",
+                opacity: sidebarOpen ? 1 : 0.8
+              }}>
+                {sidebarOpen ? "Inventory" : "Inv"}
               </span>
-              <span style={{ fontSize: 14, marginLeft: 4 }}>
+              <span 
+                style={{ 
+                  fontSize: 11, 
+                  marginLeft: 4,
+                  transition: "transform 0.25s ease",
+                  transform: inventoryOpen ? "rotate(0deg)" : "rotate(-90deg)"
+                }}
+              >
                 {inventoryOpen ? <DownOutlined /> : <RightOutlined />}
               </span>
             </>
           )}
         </div>
 
+        {/* Inventory Submenu */}
         {sidebarOpen && (
           <div
             style={{
               maxHeight: inventoryOpen ? "400px" : "0",
               overflow: "hidden",
-              transition: "max-height 0.3s ease",
-              marginLeft: "6px",
+              transition: "max-height 0.25s ease",
             }}
           >
             <Link 
@@ -207,7 +275,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
               onMouseEnter={() => setHoveredItem("/inventory/categories")}
               onMouseLeave={() => setHoveredItem(null)}
             >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Manage Categories</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Categories</span>
             </Link>
 
             <Link 
@@ -217,24 +285,28 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
               onMouseEnter={() => setHoveredItem("/inventory/items")}
               onMouseLeave={() => setHoveredItem(null)}
             >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Manage Items</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Items</span>
             </Link>
 
+            <Link
+              to="/inventory/analytics"
+              className="sidebar-item"
+              style={subMenuItemStyle("/inventory/analytics")}
+              onMouseEnter={() => setHoveredItem("/inventory/analytics")}
+              onMouseLeave={() => setHoveredItem(null)}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Analytics</span>
+            </Link>
 
-            
-            <Link 
+            <Link
               to="/inventory/consumption-inventory"
               className="sidebar-item"
               style={subMenuItemStyle("/inventory/consumption-inventory")}
               onMouseEnter={() => setHoveredItem("/inventory/consumption-inventory")}
               onMouseLeave={() => setHoveredItem(null)}
             >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Consumption Inventory</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Consumption</span>
             </Link>
-
-          
-
-            
 
             <Link 
               to="/inventory/budget-analysis"
@@ -243,47 +315,63 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
               onMouseEnter={() => setHoveredItem("/inventory/budget-analysis")}
               onMouseLeave={() => setHoveredItem(null)}
             >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Budget Analysis</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Budget</span>
             </Link>
-
           </div>
         )}
 
+        {/* Asset Dashboard */}
         <Link 
           to="/asset-dashboard"
-
           className="sidebar-item"
           style={menuItemStyle("/asset-dashboard")}
           onMouseEnter={(e) => {
             setHoveredItem("/asset-dashboard");
-            showTooltip("Asset Dashboard", e);
+            showTooltip("Assets", e);
           }}
           onMouseLeave={() => {
             setHoveredItem(null);
             hideTooltip();
           }}
         >
-          <BankOutlined style={{ fontSize: 24, minWidth: 24 }} />
-          {sidebarOpen && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Asset Dashboard</span>}
+          <span style={iconContainerStyle("/asset-dashboard")}>
+            <BankFilled style={{ fontSize: 18 }} />
+          </span>
+          <span style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            fontSize: sidebarOpen ? "13px" : "10px",
+            opacity: sidebarOpen ? 1 : 0.8
+          }}>
+            {sidebarOpen ? "Assets" : "Ast"}
+          </span>
         </Link>
 
+        {/* Ticketing System */}
         <Link 
           to="/ticketing"
           className="sidebar-item"
           style={menuItemStyle("/ticketing")}
           onMouseEnter={(e) => {
             setHoveredItem("/ticketing");
-            showTooltip("Ticketing System", e);
+            showTooltip("Ticketing", e);
           }}
           onMouseLeave={() => {
             setHoveredItem(null);
             hideTooltip();
           }}
         >
-          <QuestionCircleOutlined style={{ fontSize: 24, minWidth: 24 }} />
-          {sidebarOpen && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Ticketing System</span>}
+          <span style={iconContainerStyle("/ticketing")}>
+            <QuestionCircleFilled style={{ fontSize: 18 }} />
+          </span>
+          {sidebarOpen && (
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              Ticketing
+            </span>
+          )}
         </Link>
 
+        {/* IoT Sensors */}
         <Link 
           to="/iot-sensors" 
           className="sidebar-item"
@@ -297,63 +385,95 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
             hideTooltip();
           }}
         >
-          <RadarChartOutlined style={{ fontSize: 24, minWidth: 24 }} />
-          {sidebarOpen && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>IoT Sensors</span>}
+          <span style={iconContainerStyle("/iot-sensors")}>
+            <RadarChartOutlined style={{ fontSize: 18 }} />
+          </span>
+          {sidebarOpen && (
+            <span style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              fontSize: sidebarOpen ? "13px" : "10px",
+              opacity: sidebarOpen ? 1 : 0.8
+            }}>
+              IoT Sensors
+            </span>
+          )}
         </Link>
 
+        {/* Energy & Sustainability */}
         <Link 
           to="/energy-sustainability"
           className="sidebar-item" 
           style={menuItemStyle("/energy-sustainability")}
           onMouseEnter={(e) => {
             setHoveredItem("/energy-sustainability");
-            showTooltip("Energy & Sustainability", e);
+            showTooltip("Energy", e);
           }}
           onMouseLeave={() => {
             setHoveredItem(null);
             hideTooltip();
           }}
         >
-          <ThunderboltOutlined style={{ fontSize: 24, minWidth: 24 }} />
-          {sidebarOpen && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Energy & Sustainability</span>}
+          <span style={iconContainerStyle("/energy-sustainability")}>
+            <ThunderboltFilled style={{ fontSize: 18 }} />
+          </span>
+          {sidebarOpen && (
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              Energy
+            </span>
+          )}
         </Link>
 
+        {/* Space & Occupancy */}
         <Link 
           to="/space-occupancy" 
           className="sidebar-item"
           style={menuItemStyle("/space-occupancy")}
           onMouseEnter={(e) => {
             setHoveredItem("/space-occupancy");
-            showTooltip("Space & Occupancy", e);
+            showTooltip("Space", e);
           }}
           onMouseLeave={() => {
             setHoveredItem(null);
             hideTooltip();
           }}
         >
-          <LayoutOutlined style={{ fontSize: 24, minWidth: 24 }} />
-          {sidebarOpen && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Space & Occupancy</span>}
+          <span style={iconContainerStyle("/space-occupancy")}>
+            <LayoutFilled style={{ fontSize: 18 }} />
+          </span>
+          {sidebarOpen && (
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              Space
+            </span>
+          )}
         </Link>
 
+        {/* Meal Forecast */}
         <Link 
           to="/meal-forecast"
           className="sidebar-item"
           style={menuItemStyle("/meal-forecast")}
           onMouseEnter={(e) => {
             setHoveredItem("/meal-forecast");
-            showTooltip("Meal Forecast", e);
+            showTooltip("Meals", e);
           }}
           onMouseLeave={() => {
             setHoveredItem(null);
             hideTooltip();
           }}
         >
-          <CalendarOutlined style={{ fontSize: 24, minWidth: 24 }} />
-          {sidebarOpen && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Meal Forecast</span>}
+          <span style={iconContainerStyle("/meal-forecast")}>
+            <CalendarFilled style={{ fontSize: 18 }} />
+          </span>
+          {sidebarOpen && (
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              Meals
+            </span>
+          )}
         </Link>
       </div>
 
-      {/* Tooltip */}
+      {/* Compact Tooltip */}
       {tooltip.show && !sidebarOpen && (
         <div
           style={{
@@ -361,34 +481,32 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
             left: tooltip.x,
             top: tooltip.y,
             transform: "translateY(-50%)",
-            background: "rgba(15, 23, 42, 0.95)",
-            color: "white",
-            padding: "8px 12px",
+            background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+            color: "#06b6d4",
+            padding: "6px 12px",
             borderRadius: "6px",
-            fontSize: "14px",
-            fontWeight: 500,
-            zIndex: 1000,
+            fontSize: "12px",
+            fontWeight: 600,
+            zIndex: 10000,
             whiteSpace: "nowrap",
-            fontFamily: "Poppins, sans-serif",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-            backdropFilter: "blur(10px)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
+            fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
+            boxShadow: "0 2px 12px rgba(0, 0, 0, 0.3)",
+            border: "1px solid rgba(6, 182, 212, 0.25)",
             pointerEvents: "none",
           }}
         >
           {tooltip.text}
-          {/* Triangle pointer */}
           <div
             style={{
               position: "absolute",
-              left: "-6px",
+              left: "-5px",
               top: "50%",
               transform: "translateY(-50%)",
               width: 0,
               height: 0,
-              borderTop: "6px solid transparent",
-              borderBottom: "6px solid transparent",
-              borderRight: "6px solid rgba(15, 23, 42, 0.95)",
+              borderTop: "5px solid transparent",
+              borderBottom: "5px solid transparent",
+              borderRight: "5px solid #0f172a",
             }}
           />
         </div>

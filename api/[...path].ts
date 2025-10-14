@@ -1,43 +1,58 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import path from 'path';
-import { promises as fs } from 'fs';
 
-const AUTH_API_BASE = 'http://13.208.172.7:8084';
-const INVENTORY_API_BASE = 'http://15.168.240.206:8082';
+const AUTH_API_BASE = process.env.AUTH_API_BASE_URL || 'http://13.208.172.7:8084';
+const INVENTORY_API_BASE = process.env.INVENTORY_API_BASE_URL || 'http://15.168.240.206:8082';
+
+// Enable debug logs locally
+const DEBUG = process.env.NODE_ENV !== 'production';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { path: reqPath } = req.query;
-  const fullPath = Array.isArray(reqPath) ? '/' + reqPath.join('/') : '/';
-
-  // Determine backend
-  const isAuth = fullPath.startsWith('/auth');
-  const targetBase = isAuth ? AUTH_API_BASE : INVENTORY_API_BASE;
-
-  // Preserve query parameters
-  const url = new URL(req.url || '', `http://${req.headers.host}`);
-  const targetUrl = targetBase + fullPath + url.search;
-
-  console.log("Proxying:", targetUrl);
-
   try {
-    const response = await fetch(targetUrl, {
+    // --- Construct full path ---
+    const pathSegments = Array.isArray(req.query.path) ? req.query.path : [];
+    const fullPath = '/api' + '/' + pathSegments.join('/');
+
+    if (DEBUG) {
+      console.log('Incoming request:', req.method, fullPath, 'Query:', req.query);
+    }
+
+    // --- Determine target API ---
+    const isAuth = fullPath.startsWith('/api/auth');
+    const targetBase = isAuth ? AUTH_API_BASE : INVENTORY_API_BASE;
+
+    // --- Build target URL including query string ---
+    const url = new URL(targetBase + fullPath);
+    if (req.url?.includes('?')) {
+      const queryString = req.url.split('?')[1];
+      url.search = queryString;
+    }
+
+    if (DEBUG) console.log('Proxying to:', url.toString());
+
+    // --- Forward the request ---
+    const response = await fetch(url.toString(), {
       method: req.method,
       headers: {
+        'Content-Type': req.headers['content-type'] || 'application/json',
         ...Object.fromEntries(Object.entries(req.headers).map(([k, v]) => [k, String(v)])),
       },
       body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
     });
 
-    const responseBody = await response.text();
+    // --- Forward response status and headers ---
     res.status(response.status);
-
     response.headers.forEach((value, key) => {
       if (!['content-length', 'transfer-encoding'].includes(key.toLowerCase())) {
         res.setHeader(key, value);
       }
     });
 
-    res.send(responseBody);
+    // --- Send response body ---
+    const text = await response.text();
+    res.send(text);
+
+    if (DEBUG) console.log('Response forwarded with status', response.status);
+
   } catch (err) {
     console.error('Proxy error:', err);
     res.status(500).send('Internal Server Error');

@@ -36,20 +36,40 @@ export function useCategories() {
   return { data, loading, error, refresh, ...actions };
 }
 
+// Add this enhanced error handling to your useItems hook
 export function useItems() {
   const [data, setData] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = async () => {
-    setLoading(true); setError(null);
-    try { setData(await ItemsAPI.list()); }
-    catch (e: any) { setError(e?.message || 'Failed to load items'); }
-    finally { setLoading(false); }
+    setLoading(true); 
+    setError(null);
+    try { 
+      console.log('🔄 Fetching items...');
+      const items = await ItemsAPI.list();
+      console.log('✅ Items fetched:', items.length);
+      setData(items); 
+    }
+    catch (e: any) { 
+      console.error('❌ Items fetch error:', e);
+      const errorMessage = e?.message || 'Failed to load items';
+      setError(errorMessage);
+      
+      // Check if it's an auth error
+      if (errorMessage.includes('Session expired') || errorMessage.includes('401')) {
+        console.log('🔄 Redirecting to login due to auth error');
+        // The enhanced http function should handle this, but just in case
+      }
+    }
+    finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => { refresh(); }, []);
 
+  // Rest of your existing actions...
   const actions = useMemo(() => ({
     get: (id: number) => ItemsAPI.get(id),
     create: async (body: Omit<Item, 'id'>) => { await ItemsAPI.create(body); await refresh(); },

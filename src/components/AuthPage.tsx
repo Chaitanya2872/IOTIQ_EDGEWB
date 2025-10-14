@@ -12,9 +12,11 @@ import './AuthPage.css';
 import facility from '../assets/facility.png';
 import iotiq from '../assets/iotiq.png';
 import logo from '../assets/logo.png';
-import { signIn, signUp, storeAuth } from '../api/auth';
+
+import { useAuth } from '../contexts/AuthContext';
 
 const { Option } = Select;
+
 
 type Props = {
   onAuthSuccess: () => void;
@@ -25,38 +27,34 @@ const SimpleAuthPage: React.FC<Props> = ({ onAuthSuccess }) => {
   const [loginForm] = Form.useForm();
   const [registerForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const { login, register } = useAuth();
 
-  const handleSwap = () => {
-    setIsLoginMode(!isLoginMode);
-  };
+const handleSwap = () => {
+  setIsLoginMode(!isLoginMode);
+};
 
-  const handleLogin = async (values: any) => {
-    try {
-      setLoading(true);
-      const res = await signIn({
-        email: values.email,
-        password: values.password,
-      });
-      storeAuth(res);
-      message.success('Login successful');
-      onAuthSuccess();
-    } catch (err: any) {
-      message.error(err.message || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleLogin = async (email: string, password: string) => {
+  try {
+    setLoading(true);
+    await login({ email, password });
+    message.success('Login successful');
+    onAuthSuccess();
+  } catch (error: any) {
+    message.error(error.message || 'Login failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleRegister = async (values: any) => {
     try {
       setLoading(true);
-      const res = await signUp({
+      await register({
         fullName: values.fullName,
         email: values.email,
         password: values.password,
         roles: values.roles || ['USER'],
       });
-      storeAuth(res);
       message.success('Registration successful');
       onAuthSuccess();
     } catch (err: any) {
@@ -89,7 +87,7 @@ const SimpleAuthPage: React.FC<Props> = ({ onAuthSuccess }) => {
                 
                 <Form
                   form={loginForm}
-                  onFinish={handleLogin}
+                  onFinish={({ email, password }) => handleLogin(email, password)}
                   layout="vertical"
                   requiredMark={false}
                 >

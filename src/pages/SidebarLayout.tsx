@@ -8,25 +8,29 @@ interface SidebarLayoutProps {
 }
 
 const SidebarLayout: React.FC<SidebarLayoutProps> = ({ onLogout }) => {
-  // track sidebar state (collapsed or expanded)
-  const [sidebarWidth, setSidebarWidth] = useState(220); // default expanded
+  const [sidebarWidth, setSidebarWidth] = useState(200); // Compact default width
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       {/* Sidebar */}
-      <div style={{ position: "fixed", top: 60, left: 0, bottom: 0 }}>
+      <div style={{ position: "fixed", top: 64, left: 0, bottom: 0, zIndex: 900 }}>
         <SidebarMenu setSidebarWidth={setSidebarWidth} />
       </div>
 
       {/* Main Area */}
-      <div style={{ flex: 1, marginLeft: sidebarWidth, transition: "margin-left 0.3s ease" }}>
+      <div 
+        style={{ 
+          flex: 1, 
+          marginLeft: sidebarWidth, 
+          transition: "margin-left 0.25s ease" 
+        }}
+      >
         {/* Fixed Header */}
         <div
           style={{
             width: "100%",
-            height: "60px",
-            borderBottom: "1px solid #e0e0e0",
-            backgroundColor: "#fff",
+            height: "64px",
+            backgroundColor: "transparent",
             position: "fixed",
             top: 0,
             left: 0,
@@ -36,13 +40,13 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ onLogout }) => {
           <Header onLogout={onLogout} />
         </div>
 
-        {/* Page Content */}
+        {/* Page Content - Minimal padding */}
         <div
           style={{
-            marginTop: "60px", // push below header
-            height: "calc(100vh - 60px)",
+            marginTop: "64px",
+            height: "calc(100vh - 64px)",
             overflowY: "auto",
-            backgroundColor: "#fafafa",
+            background: "linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%)",
             padding: "16px",
             boxSizing: "border-box",
           }}

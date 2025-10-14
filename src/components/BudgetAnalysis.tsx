@@ -5,7 +5,7 @@ import {
   PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, AreaChart, ScatterChart, Scatter
 } from 'recharts';
 import { 
-  DollarSign, TrendingUp, PieChart as PieChartIcon, BarChart3,
+  DollarSign, TrendingUp, BarChart3,
   Activity, Shield, AlertTriangle, Calendar, RefreshCw, Package, 
   Users, Layers, Sparkles, Bell, X, Check, AlertCircle, Zap,
   TrendingDown, Archive, ShoppingCart
@@ -19,8 +19,11 @@ import {
   AnalyticsAPI,
   type ConsumptionTrendsResponse,
   type Category,
-  type Item
+  type Item,
+  type CostDistributionResponse
 } from '../api/inventory';
+
+// Note: CostDistributionResponse now includes monthlyBreakdown for bin data
 
 // Color palette
 const COLORS = {
@@ -65,7 +68,7 @@ const ModernTooltip: React.FC<any> = ({ active, payload, label }) => {
         color: COLORS.dark, 
         padding: '12px', 
         borderRadius: '8px',
-        border: `1px solid ₹{COLORS.light}`,
+        border: `1px solid ${COLORS.light}`,
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
         fontSize: '12px',
         minWidth: '180px'
@@ -91,7 +94,7 @@ const ModernTooltip: React.FC<any> = ({ active, payload, label }) => {
             </span>
             <span style={{ fontWeight: '500', color: COLORS.dark }}>
               {entry.name.includes('₹') || entry.name.includes('Cost') || entry.name.includes('Price') || entry.name.includes('Value') ? 
-                `₹₹{Number(entry.value).toLocaleString()}` : 
+                `₹${Number(entry.value).toLocaleString()}` : 
                 typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
             </span>
           </div>
@@ -110,7 +113,7 @@ const Card: React.FC<{ children: React.ReactNode; background?: string }> = ({ ch
       borderRadius: '10px',
       padding: '18px',
       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-      border: `1px solid ₹{COLORS.light}`,
+      border: `1px solid ${COLORS.light}`,
       marginBottom: '16px'
     }}>
       {children}
@@ -118,7 +121,7 @@ const Card: React.FC<{ children: React.ReactNode; background?: string }> = ({ ch
   );
 };
 
-// Stock Movement Classification Component (Fast/Slow/Dead Stock)
+// Stock Movement Classification Component (Fast/Slow/Dead Stock) - UPDATED: Removed Value column
 const StockMovementClassification: React.FC<{
   items: Item[];
   categories: Category[];
@@ -139,7 +142,6 @@ const StockMovementClassification: React.FC<{
   }, [items, selectedCategory]);
 
   const classifyStock = () => {
-    // Filter items by category if selected
     let filteredItems = selectedCategory 
       ? items.filter(item => item.categoryId === selectedCategory)
       : items;
@@ -173,28 +175,21 @@ const StockMovementClassification: React.FC<{
         unitPrice: Number(item.unitPrice || 0)
       };
 
-      // Classification logic
       if (avgConsumption > 5 && coverageDays < 30) {
-        // Fast moving: High consumption, low coverage
         fast.push(stockItem);
       } else if (avgConsumption > 0 && avgConsumption <= 5 && coverageDays < 90) {
-        // Slow moving: Low consumption but still moving
         slow.push(stockItem);
       } else if (avgConsumption === 0 || daysSinceLastConsumption > 90 || coverageDays > 180) {
-        // Dead stock: No consumption or very old stock
         dead.push(stockItem);
       } else {
-        // Default to slow moving
         slow.push(stockItem);
       }
     });
 
-    // Sort by stock value descending
     fast.sort((a, b) => b.stockValue - a.stockValue);
     slow.sort((a, b) => b.stockValue - a.stockValue);
     dead.sort((a, b) => b.stockValue - a.stockValue);
 
-    // Prepare chart data
     const chartData = [
       { 
         name: 'Fast Moving', 
@@ -236,7 +231,7 @@ const StockMovementClassification: React.FC<{
               onChange={(e) => setSelectedCategory(e.target.value ? Number(e.target.value) : null)}
               style={{
                 padding: '5px 10px',
-                border: `1px solid ₹{COLORS.light}`,
+                border: `1px solid ${COLORS.light}`,
                 borderRadius: '6px',
                 fontSize: '11px'
               }}
@@ -254,7 +249,7 @@ const StockMovementClassification: React.FC<{
                   padding: '5px 10px',
                   backgroundColor: viewMode === 'chart' ? COLORS.primary : 'white',
                   color: viewMode === 'chart' ? 'white' : COLORS.dark,
-                  border: `1px solid ₹{COLORS.light}`,
+                  border: `1px solid ${COLORS.light}`,
                   borderRadius: '6px 0 0 6px',
                   cursor: 'pointer',
                   fontSize: '11px'
@@ -268,7 +263,7 @@ const StockMovementClassification: React.FC<{
                   padding: '5px 10px',
                   backgroundColor: viewMode === 'table' ? COLORS.primary : 'white',
                   color: viewMode === 'table' ? 'white' : COLORS.dark,
-                  border: `1px solid ₹{COLORS.light}`,
+                  border: `1px solid ${COLORS.light}`,
                   borderRadius: '0 6px 6px 0',
                   cursor: 'pointer',
                   fontSize: '11px',
@@ -300,8 +295,6 @@ const StockMovementClassification: React.FC<{
         </div>
       </div>
 
-
-      {/* Calculation Explanation Panel */}
       {showCalculationInfo && (
         <div style={{
           padding: '16px',
@@ -351,7 +344,6 @@ const StockMovementClassification: React.FC<{
         </div>
       )}
 
-      {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
         <div 
           onClick={() => {
@@ -440,7 +432,6 @@ const StockMovementClassification: React.FC<{
 
       {viewMode === 'chart' ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px' }}>
-          {/* Donut Chart */}
           <ResponsiveContainer width="100%" height={280}>
             <PieChart>
               <Pie
@@ -453,14 +444,13 @@ const StockMovementClassification: React.FC<{
                 dataKey="value"
               >
                 {stockData.chartData.map((entry: any, index: number) => (
-                  <Cell key={`cell-₹{index}`} fill={entry.fill} />
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Pie>
               <Tooltip content={<ModernTooltip />} />
             </PieChart>
           </ResponsiveContainer>
 
-          {/* Legend and Stats */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ marginBottom: '16px', padding: '10px', backgroundColor: cardBackgrounds.primary, borderRadius: '6px' }}>
               <div style={{ fontSize: '10px', color: COLORS.muted }}>Total Inventory Value</div>
@@ -478,7 +468,7 @@ const StockMovementClassification: React.FC<{
                 marginBottom: '6px',
                 backgroundColor: cardBackgrounds.neutral,
                 borderRadius: '6px',
-                border: `1px solid ₹{COLORS.light}`
+                border: `1px solid ${COLORS.light}`
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ 
@@ -510,7 +500,6 @@ const StockMovementClassification: React.FC<{
         </div>
       ) : (
         <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-          {/* Table View */}
           {['fast', 'slow', 'dead'].filter(type => selectedStockType === 'all' || selectedStockType === type).map(type => {
             const typeData = stockData[type];
             const typeColor = STOCK_MOVEMENT_COLORS[type as keyof typeof STOCK_MOVEMENT_COLORS];
@@ -540,26 +529,22 @@ const StockMovementClassification: React.FC<{
                 
                 <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ borderBottom: `1px solid ₹{COLORS.light}` }}>
+                    <tr style={{ borderBottom: `1px solid ${COLORS.light}` }}>
                       <th style={{ padding: '6px', textAlign: 'left', color: COLORS.muted }}>Item</th>
                       <th style={{ padding: '6px', textAlign: 'left', color: COLORS.muted }}>Category</th>
                       <th style={{ padding: '6px', textAlign: 'right', color: COLORS.muted }}>Stock</th>
                       <th style={{ padding: '6px', textAlign: 'right', color: COLORS.muted }}>Avg Daily</th>
                       <th style={{ padding: '6px', textAlign: 'right', color: COLORS.muted }}>Coverage</th>
-                      <th style={{ padding: '6px', textAlign: 'right', color: COLORS.muted }}>Value</th>
                     </tr>
                   </thead>
                   <tbody>
                     {typeData.map((item: any) => (
-                      <tr key={item.id} style={{ borderBottom: `1px solid ₹{COLORS.light}` }}>
+                      <tr key={item.id} style={{ borderBottom: `1px solid ${COLORS.light}` }}>
                         <td style={{ padding: '6px', fontWeight: '500' }}>{item.itemName}</td>
                         <td style={{ padding: '6px', color: COLORS.muted }}>{item.category}</td>
                         <td style={{ padding: '6px', textAlign: 'right' }}>{item.currentStock}</td>
                         <td style={{ padding: '6px', textAlign: 'right' }}>{item.avgConsumption.toFixed(1)}</td>
                         <td style={{ padding: '6px', textAlign: 'right' }}>{item.coverageDays}d</td>
-                        <td style={{ padding: '6px', textAlign: 'right', fontWeight: '500', color: typeColor }}>
-                          ₹{item.stockValue.toLocaleString()}
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -582,26 +567,21 @@ const ItemCorrelationsAndAnomalies: React.FC<{
   const [correlationData, setCorrelationData] = useState<any[]>([]);
   const [anomalies, setAnomalies] = useState<any[]>([]);
   const [selectedView, setSelectedView] = useState<'correlations' | 'anomalies'>('correlations');
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     analyzeCorrelationsAndAnomalies();
   }, [items, consumptionData]);
 
   const analyzeCorrelationsAndAnomalies = () => {
-    // Analyze item correlations (items frequently consumed together)
     const correlations: any[] = [];
     const anomalyList: any[] = [];
 
-    // Find correlations based on consumption patterns
     if (consumptionData?.data) {
       const itemPairs = new Map<string, number>();
       
-      // Group items that are consumed on the same dates
       consumptionData.data.forEach(categoryData => {
         categoryData.dataPoints?.forEach((point: any) => {
           if (point.items && Array.isArray(point.items) && point.items.length > 1) {
-            // Found multiple items consumed on same date
             for (let i = 0; i < point.items.length - 1; i++) {
               for (let j = i + 1; j < point.items.length; j++) {
                 const item1 = point.items[i];
@@ -614,30 +594,25 @@ const ItemCorrelationsAndAnomalies: React.FC<{
         });
       });
 
-      // Convert to correlation array
       itemPairs.forEach((count, pairKey) => {
         const [item1, item2] = pairKey.split('::');
-        if (count > 2) { // Only show if items appear together more than twice
+        if (count > 2) {
           correlations.push({
             item1,
             item2,
-            strength: Math.min(count / 10, 1), // Normalize strength to 0-1
+            strength: Math.min(count / 10, 1),
             occurrences: count
           });
         }
       });
     }
 
-    // No sample data - only use real correlations from API
-
-    // Detect anomalies (unusual consumption patterns)
     items.forEach(item => {
       const avgConsumption = Number(item.avgDailyConsumption || 0);
       const currentStock = Number(item.currentQuantity || 0);
       const minLevel = Number(item.minStockLevel || 0);
       const maxLevel = Number(item.maxStockLevel || 0);
       
-      // Check for various anomaly conditions
       if (currentStock > maxLevel * 1.5) {
         anomalyList.push({
           type: 'overstock',
@@ -646,7 +621,7 @@ const ItemCorrelationsAndAnomalies: React.FC<{
           category: categories.find(c => c.id === item.categoryId)?.categoryName || 'Unknown',
           value: currentStock,
           threshold: maxLevel,
-          message: `Stock exceeds max level by ₹{((currentStock/maxLevel - 1) * 100).toFixed(0)}%`
+          message: `Stock exceeds max level by ${((currentStock/maxLevel - 1) * 100).toFixed(0)}%`
         });
       }
       
@@ -674,9 +649,8 @@ const ItemCorrelationsAndAnomalies: React.FC<{
         });
       }
 
-      // Check for sudden consumption spike (if we have consumption records)
       const consumedStock = Number(item.totalConsumedStock || 0);
-      if (consumedStock > avgConsumption * 30 * 2) { // More than 2x monthly average
+      if (consumedStock > avgConsumption * 30 * 2) {
         anomalyList.push({
           type: 'consumption_spike',
           severity: 'medium',
@@ -684,7 +658,7 @@ const ItemCorrelationsAndAnomalies: React.FC<{
           category: categories.find(c => c.id === item.categoryId)?.categoryName || 'Unknown',
           value: consumedStock,
           threshold: avgConsumption * 30,
-          message: `Consumption spike detected - ₹{((consumedStock/(avgConsumption * 30) - 1) * 100).toFixed(0)}% above normal`
+          message: `Consumption spike detected - ${((consumedStock/(avgConsumption * 30) - 1) * 100).toFixed(0)}% above normal`
         });
       }
     });
@@ -712,12 +686,11 @@ const ItemCorrelationsAndAnomalies: React.FC<{
     }
   };
 
-  // Prepare scatter plot data for correlations
   const scatterData = correlationData.map((corr, index) => ({
     x: index + 1,
     y: corr.strength * 100,
     strength: corr.strength,
-    label: `₹{corr.item1} - ₹{corr.item2}`
+    label: `${corr.item1} - ${corr.item2}`
   }));
 
   return (
@@ -736,7 +709,7 @@ const ItemCorrelationsAndAnomalies: React.FC<{
                 padding: '5px 12px',
                 backgroundColor: selectedView === 'correlations' ? COLORS.purple : 'white',
                 color: selectedView === 'correlations' ? 'white' : COLORS.dark,
-                border: `1px solid ₹{selectedView === 'correlations' ? COLORS.purple : COLORS.light}`,
+                border: `1px solid ${selectedView === 'correlations' ? COLORS.purple : COLORS.light}`,
                 borderRadius: '6px 0 0 6px',
                 cursor: 'pointer',
                 fontSize: '11px',
@@ -751,7 +724,7 @@ const ItemCorrelationsAndAnomalies: React.FC<{
                 padding: '5px 12px',
                 backgroundColor: selectedView === 'anomalies' ? COLORS.warning : 'white',
                 color: selectedView === 'anomalies' ? 'white' : COLORS.dark,
-                border: `1px solid ₹{selectedView === 'anomalies' ? COLORS.warning : COLORS.light}`,
+                border: `1px solid ${selectedView === 'anomalies' ? COLORS.warning : COLORS.light}`,
                 borderRadius: '0 6px 6px 0',
                 cursor: 'pointer',
                 fontSize: '11px',
@@ -774,7 +747,6 @@ const ItemCorrelationsAndAnomalies: React.FC<{
             </div>
           ) : (
             <>
-              {/* Correlation Strength Chart */}
               <ResponsiveContainer width="100%" height={250}>
                 <ScatterChart>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
@@ -799,7 +771,6 @@ const ItemCorrelationsAndAnomalies: React.FC<{
                 </ScatterChart>
               </ResponsiveContainer>
 
-              {/* Correlation Details */}
               <div style={{ marginTop: '20px' }}>
                 <div style={{ fontSize: '12px', fontWeight: '600', color: COLORS.dark, marginBottom: '12px' }}>
                   Strong Item Correlations
@@ -813,14 +784,14 @@ const ItemCorrelationsAndAnomalies: React.FC<{
                     marginBottom: '8px',
                     backgroundColor: cardBackgrounds.neutral,
                     borderRadius: '6px',
-                    border: `1px solid ₹{COLORS.light}`
+                    border: `1px solid ${COLORS.light}`
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{
                         width: '40px',
                         height: '40px',
                         borderRadius: '50%',
-                        backgroundColor: `₹{COLORS.purple}15`,
+                        backgroundColor: `${COLORS.purple}15`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
@@ -875,13 +846,13 @@ const ItemCorrelationsAndAnomalies: React.FC<{
                   marginBottom: '10px',
                   backgroundColor: cardBackgrounds.neutral,
                   borderRadius: '8px',
-                  border: `1px solid ₹{getAnomalyColor(anomaly.severity)}30`
+                  border: `1px solid ${getAnomalyColor(anomaly.severity)}30`
                 }}>
                   <div style={{
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    backgroundColor: `₹{getAnomalyColor(anomaly.severity)}20`,
+                    backgroundColor: `${getAnomalyColor(anomaly.severity)}20`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -893,14 +864,14 @@ const ItemCorrelationsAndAnomalies: React.FC<{
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '12', fontWeight: '600', color: COLORS.dark }}>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: COLORS.dark }}>
                         {anomaly.itemName}
                       </span>
                       <span style={{
                         fontSize: '9px',
                         padding: '2px 6px',
                         borderRadius: '4px',
-                        backgroundColor: `₹{getAnomalyColor(anomaly.severity)}20`,
+                        backgroundColor: `${getAnomalyColor(anomaly.severity)}20`,
                         color: getAnomalyColor(anomaly.severity),
                         fontWeight: '600',
                         textTransform: 'uppercase'
@@ -935,33 +906,267 @@ const ItemCorrelationsAndAnomalies: React.FC<{
   );
 };
 
-// Cost Distribution Component (keep existing)
+// Cost Distribution Component - FIXED: Proper cost calculation from consumption records
 const CostDistribution: React.FC<{
   data: any;
   categories: Category[];
-}> = ({ data, categories }) => {
+  items: Item[];
+}> = ({ data, categories, items }) => {
+  const [selectedBin, setSelectedBin] = useState<'all' | 'bin1' | 'bin2'>('all');
+  const [filteredData, setFilteredData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [localDateRange, setLocalDateRange] = useState({
+    start: '2025-01-01',
+    end: '2025-07-31'
+  });
+
+  useEffect(() => {
+    calculateCostDistribution();
+  }, [selectedBin, localDateRange.start, localDateRange.end, items.length]);
+
+  const calculateCostDistribution = async () => {
+    setLoading(true);
+    try {
+      console.log('=== FETCHING COST DISTRIBUTION ===');
+      console.log('Date Range:', localDateRange);
+      console.log('Selected Bin:', selectedBin);
+      
+      // Fetch cost distribution with bin breakdown from backend
+      const response = await AnalyticsAPI.costDistribution('monthly', localDateRange.start, localDateRange.end, true);
+
+      console.log('=== RAW API RESPONSE ===');
+      console.log('Response keys:', Object.keys(response));
+      console.log('Response:', response);
+      console.log('Has monthlyBreakdown?', !!response?.monthlyBreakdown);
+      console.log('Has categoryDistribution?', !!response?.categoryDistribution);
+      console.log('Total Cost:', response?.totalCost);
+      
+      // Check if the response is wrapped
+      if (response && typeof response === 'object' && !response.monthlyBreakdown && !response.categoryDistribution) {
+        console.log('Response might be wrapped, checking nested structure...');
+        console.log('Checking response properties:', Object.entries(response).slice(0, 5));
+      }
+
+      if (!response) {
+        console.error('No response from API');
+        setFilteredData(data);
+        setLoading(false);
+        return;
+      }
+
+      // If "All Days" selected, use the original categoryDistribution
+      if (selectedBin === 'all') {
+        console.log('Using ALL DAYS - categoryDistribution');
+        setFilteredData({
+          categoryDistribution: response.categoryDistribution || [],
+          totalCost: response.totalCost || 0,
+          period: `${localDateRange.start} to ${localDateRange.end}`,
+          startDate: localDateRange.start,
+          endDate: localDateRange.end
+        });
+        setLoading(false);
+        return;
+      }
+
+      // For Bin 1 or Bin 2, extract data from monthlyBreakdown
+      console.log('=== PROCESSING BIN DATA ===');
+      const categoryMap = new Map<string, { cost: number; quantity: number; categoryId: number }>();
+
+      // Process all months in the breakdown
+      if (response.monthlyBreakdown && Array.isArray(response.monthlyBreakdown)) {
+        console.log(`Found ${response.monthlyBreakdown.length} months in breakdown`);
+        
+        response.monthlyBreakdown.forEach((monthData, monthIndex) => {
+          console.log(`\n--- Month ${monthIndex + 1}: ${monthData.monthName} ---`);
+          console.log('Month data structure:', Object.keys(monthData));
+          console.log('Bins in this month:', monthData.bins?.length);
+          
+          if (monthData.bins) {
+            monthData.bins.forEach((bin, binIndex) => {
+              console.log(`  Bin ${binIndex + 1}: ${bin.binPeriod}`);
+            });
+          }
+          
+          // Find the matching bin
+          const binData = monthData.bins?.find((b) => {
+            if (selectedBin === 'bin1') {
+              return b.binPeriod === '1-15';
+            } else {
+              return b.binPeriod.startsWith('16-');
+            }
+          });
+          
+          if (!binData) {
+            console.warn(`  ⚠️ No matching bin found for ${selectedBin} in ${monthData.monthName}`);
+            return;
+          }
+
+          console.log(`  ✓ Found bin: ${binData.binPeriod}`);
+          console.log(`  Categories in bin:`, binData.categories?.length || 0);
+          console.log(`  Bin total cost:`, binData.totalCost);
+          
+          if (binData?.categories && Array.isArray(binData.categories)) {
+            binData.categories.forEach((cat, catIndex) => {
+              console.log(`    Category ${catIndex + 1}: ${cat.categoryName}`);
+              console.log(`      Items:`, cat.items?.length || 0);
+              console.log(`      Total Cost:`, cat.totalCost);
+              
+              const categoryName = cat.categoryName;
+              const category = categories.find(c => c.categoryName === categoryName);
+              const categoryId = category?.id || 0;
+
+              if (!categoryMap.has(categoryName)) {
+                categoryMap.set(categoryName, { cost: 0, quantity: 0, categoryId });
+              }
+
+              const current = categoryMap.get(categoryName)!;
+
+              // Sum up costs from all items in this category
+              if (cat.items && Array.isArray(cat.items)) {
+                cat.items.forEach((item, itemIndex) => {
+                  // Use item.totalCost directly (already calculated by backend)
+                  const itemCost = Number(item.totalCost || 0);
+                  const itemQuantity = Number(item.quantity || 0);
+                  
+                  console.log(`        Item ${itemIndex + 1}: ${item.itemName}`);
+                  console.log(`          Total Cost: ${itemCost}`);
+                  console.log(`          Quantity: ${itemQuantity}`);
+                  
+                  current.cost += itemCost;
+                  current.quantity += itemQuantity;
+                });
+              }
+            });
+          }
+        });
+      } else {
+        console.error('❌ No monthlyBreakdown in response or not an array');
+        console.log('Response keys:', Object.keys(response));
+      }
+
+      console.log('\n=== FINAL CATEGORY MAP ===');
+      categoryMap.forEach((value, key) => {
+        console.log(`${key}: Cost=${value.cost}, Quantity=${value.quantity}`);
+      });
+
+      // Calculate total cost for the selected bin
+      const totalCost = Array.from(categoryMap.values()).reduce((sum, item) => sum + item.cost, 0);
+      
+      console.log('\n=== TOTALS ===');
+      console.log('Total Cost:', totalCost);
+      console.log('Total Categories:', categoryMap.size);
+
+      // If no data found for the bin, show a message but don't fail
+      if (totalCost === 0 || categoryMap.size === 0) {
+        console.warn(`❌ No data found for ${selectedBin}`);
+        setFilteredData({
+          categoryDistribution: [],
+          totalCost: 0,
+          period: `No data for ${selectedBin === 'bin1' ? 'Days 1-15' : 'Days 16-31'}`,
+          startDate: localDateRange.start,
+          endDate: localDateRange.end,
+          isEmpty: true
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Create category distribution for the selected bin
+      const categoryDistribution = Array.from(categoryMap.entries())
+        .map(([category, { cost, quantity, categoryId }]) => ({
+          category,
+          categoryId,
+          totalCost: cost,
+          totalQuantity: quantity,
+          percentage: totalCost > 0 ? (cost / totalCost) * 100 : 0,
+          avgUnitPrice: quantity > 0 ? cost / quantity : 0
+        }))
+        .filter(item => item.totalCost > 0)
+        .sort((a, b) => b.totalCost - a.totalCost);
+
+      console.log('\n=== FINAL DISTRIBUTION ===');
+      console.log('Categories:', categoryDistribution.length);
+      categoryDistribution.forEach(cat => {
+        console.log(`  ${cat.category}: ₹${cat.totalCost.toLocaleString()} (${cat.percentage.toFixed(1)}%)`);
+      });
+
+      // Calculate actual date ranges for display
+      const startDate = new Date(localDateRange.start);
+      const endDate = new Date(localDateRange.end);
+      
+      let dateRangeDisplay = '';
+      if (selectedBin === 'bin1') {
+        dateRangeDisplay = `Days 1-15 (${formatDateRange(startDate, endDate, 1, 15)})`;
+      } else {
+        dateRangeDisplay = `Days 16-31 (${formatDateRange(startDate, endDate, 16, 31)})`;
+      }
+
+      setFilteredData({
+        categoryDistribution,
+        totalCost,
+        period: dateRangeDisplay,
+        startDate: localDateRange.start,
+        endDate: localDateRange.end
+      });
+
+      console.log('✅ Successfully set filtered data');
+
+    } catch (error) {
+      console.error('❌ ERROR in calculateCostDistribution:', error);
+      console.error('Error stack:', error);
+      setFilteredData(data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to format date range for bin display
+  const formatDateRange = (startDate: Date, endDate: Date, startDay: number, endDay: number): string => {
+    const ranges: string[] = [];
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      
+      const binStart = new Date(year, month, startDay);
+      const binEnd = new Date(year, month, Math.min(endDay, new Date(year, month + 1, 0).getDate()));
+      
+      if (binStart >= startDate && binStart <= endDate) {
+        const formatDate = (d: Date) => d.toISOString().split('T')[0];
+        ranges.push(`${formatDate(binStart)} to ${formatDate(binEnd)}`);
+      }
+      
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    
+    return ranges.join(', ');
+  };
+
   const processCostDistribution = () => {
-    if (data?.categoryDistribution && data.categoryDistribution.length > 0) {
-      return data.categoryDistribution.map((item: any, index: number) => ({
+    const dataSource = filteredData || data;
+    if (dataSource?.categoryDistribution && dataSource.categoryDistribution.length > 0) {
+      return dataSource.categoryDistribution.map((item: any, index: number) => ({
         name: item.category,
         value: Number(item.totalCost || 0),
+        quantity: Number(item.totalQuantity || 0),
         percentage: Number(item.percentage || 0),
         fill: CHART_COLORS[index % CHART_COLORS.length]
       }));
     }
-    
     return [];
   };
 
   const chartData = processCostDistribution();
   const totalValue = chartData.reduce((sum: number, item: any) => sum + item.value, 0);
+  const totalQuantity = chartData.reduce((sum: number, item: any) => sum + item.quantity, 0);
 
-  if (chartData.length === 0) {
+  if (chartData.length === 0 && !loading) {
     return (
       <Card>
         <div style={{ marginBottom: '16px' }}>
           <h3 style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
-            <PieChartIcon style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.primary }} />
+            <BarChart3 style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.primary }} />
             Cost Distribution by Category
           </h3>
         </div>
@@ -975,61 +1180,213 @@ const CostDistribution: React.FC<{
   return (
     <Card>
       <div style={{ marginBottom: '16px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
-          <PieChartIcon style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.primary }} />
-          Cost Distribution by Category
-        </h3>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px' }}>
-        <ResponsiveContainer width="100%" height={280}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              innerRadius={40}
-              outerRadius={80}
-              paddingAngle={2}
-              dataKey="value"
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
+            <BarChart3 style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.primary }} />
+            Cost Distribution by Category
+            {loading && (
+              <RefreshCw style={{ 
+                width: '14px', 
+                height: '14px', 
+                display: 'inline', 
+                marginLeft: '8px', 
+                animation: 'spin 2s linear infinite',
+                color: COLORS.primary 
+              }} />
+            )}
+          </h3>
+          
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <Calendar style={{ width: '14px', height: '14px', color: COLORS.primary }} />
+            <input
+              type="date"
+              value={localDateRange.start}
+              onChange={(e) => setLocalDateRange(prev => ({ ...prev, start: e.target.value }))}
+              style={{
+                padding: '5px 8px',
+                border: `1px solid ${COLORS.light}`,
+                borderRadius: '4px',
+                fontSize: '11px'
+              }}
+            />
+            <span style={{ color: COLORS.muted, fontSize: '11px' }}>to</span>
+            <input
+              type="date"
+              value={localDateRange.end}
+              onChange={(e) => setLocalDateRange(prev => ({ ...prev, end: e.target.value }))}
+              style={{
+                padding: '5px 8px',
+                border: `1px solid ${COLORS.light}`,
+                borderRadius: '4px',
+                fontSize: '11px'
+              }}
+            />
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0' }}>
+            <button
+              onClick={() => setSelectedBin('all')}
+              disabled={loading}
+              style={{
+                padding: '5px 12px',
+                backgroundColor: selectedBin === 'all' ? COLORS.primary : 'white',
+                color: selectedBin === 'all' ? 'white' : COLORS.dark,
+                border: `1px solid ${COLORS.light}`,
+                borderRadius: '6px 0 0 6px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '11px',
+                fontWeight: '500',
+                opacity: loading ? 0.6 : 1
+              }}
             >
-              {chartData.map((entry: any, index: number) => (
-                <Cell key={`cell-₹{index}`} fill={entry.fill} />
-              ))}
-            </Pie>
-            <Tooltip content={<ModernTooltip />} />
-          </PieChart>
-        </ResponsiveContainer>
-
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div style={{ marginBottom: '12px', padding: '8px', backgroundColor: cardBackgrounds.primary, borderRadius: '6px' }}>
-            <div style={{ fontSize: '10px', color: COLORS.muted }}>Total Cost</div>
-            <div style={{ fontSize: '20px', fontWeight: '600', color: COLORS.primary }}>
-              ₹{totalValue.toLocaleString()}
-            </div>
+              All Days
+            </button>
+            <button
+              onClick={() => setSelectedBin('bin1')}
+              disabled={loading}
+              style={{
+                padding: '5px 12px',
+                backgroundColor: selectedBin === 'bin1' ? COLORS.primary : 'white',
+                color: selectedBin === 'bin1' ? 'white' : COLORS.dark,
+                border: `1px solid ${COLORS.light}`,
+                borderRadius: '0',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '11px',
+                fontWeight: '500',
+                marginLeft: '-1px',
+                opacity: loading ? 0.6 : 1
+              }}
+            >
+              Bin 1 (Days 1-15)
+            </button>
+            <button
+              onClick={() => setSelectedBin('bin2')}
+              disabled={loading}
+              style={{
+                padding: '5px 12px',
+                backgroundColor: selectedBin === 'bin2' ? COLORS.primary : 'white',
+                color: selectedBin === 'bin2' ? 'white' : COLORS.dark,
+                border: `1px solid ${COLORS.light}`,
+                borderRadius: '0 6px 6px 0',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '11px',
+                fontWeight: '500',
+                marginLeft: '-1px',
+                opacity: loading ? 0.6 : 1
+              }}
+            >
+              Bin 2 (Days 16-31)
+            </button>
           </div>
           
-          {chartData.map((item: any, index: number) => (
-            <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <div style={{ 
-                width: '12px', 
-                height: '12px', 
-                borderRadius: '2px', 
-                backgroundColor: item.fill
-              }} />
-              <span style={{ flex: 1, fontSize: '11px', color: COLORS.dark }}>{item.name}</span>
-              <span style={{ fontSize: '11px', fontWeight: '500', color: COLORS.muted }}>
-                {item.percentage?.toFixed(1) || ((item.value / totalValue) * 100).toFixed(1)}%
-              </span>
+          {selectedBin !== 'all' && (
+            <div style={{ 
+              padding: '4px 10px', 
+              backgroundColor: cardBackgrounds.primary, 
+              borderRadius: '6px',
+              fontSize: '11px',
+              color: COLORS.dark,
+              fontWeight: '500'
+            }}>
+              Showing: {selectedBin === 'bin1' ? 'Days 1-15' : 'Days 16-31'} only
             </div>
-          ))}
+          )}
         </div>
       </div>
+
+      {loading ? (
+        <div style={{ height: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <RefreshCw style={{ width: '32px', height: '32px', animation: 'spin 2s linear infinite', color: COLORS.primary }} />
+        </div>
+      ) : chartData.length === 0 ? (
+        <div style={{ height: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+          <AlertCircle style={{ width: '48px', height: '48px', color: COLORS.muted, opacity: 0.5 }} />
+          <div style={{ fontSize: '14px', color: COLORS.muted, textAlign: 'center' }}>
+            <div style={{ fontWeight: '600', marginBottom: '4px' }}>No data available</div>
+            <div style={{ fontSize: '12px' }}>
+              {selectedBin !== 'all' 
+                ? `No consumption records found for ${selectedBin === 'bin1' ? 'days 1-15' : 'days 16-31'} in the selected period`
+                : 'No cost distribution data available for the selected period'}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px' }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                innerRadius={40}
+                outerRadius={80}
+                paddingAngle={2}
+                dataKey="value"
+              >
+                {chartData.map((entry: any, index: number) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip content={<ModernTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ marginBottom: '12px', padding: '8px', backgroundColor: cardBackgrounds.primary, borderRadius: '6px' }}>
+              <div style={{ fontSize: '10px', color: COLORS.muted }}>
+                Total Cost
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: '600', color: COLORS.primary }}>
+                ₹{totalValue.toLocaleString()}
+              </div>
+              {filteredData?.period && (
+                <div style={{ fontSize: '10px', color: COLORS.muted, marginTop: '4px' }}>
+                  {filteredData.period}
+                </div>
+              )}
+            </div>
+            
+            {chartData.map((item: any, index: number) => (
+              <div key={index} style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                gap: '8px', 
+                marginBottom: '6px',
+                padding: '6px',
+                backgroundColor: cardBackgrounds.neutral,
+                borderRadius: '4px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                  <div style={{ 
+                    width: '12px', 
+                    height: '12px', 
+                    borderRadius: '2px', 
+                    backgroundColor: item.fill,
+                    flexShrink: 0
+                  }} />
+                  <span style={{ fontSize: '11px', color: COLORS.dark, fontWeight: '500' }}>{item.name}</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '600', color: COLORS.dark }}>
+                    {item.percentage?.toFixed(1) || ((item.value / totalValue) * 100).toFixed(1)}%
+                  </div>
+                  <div style={{ fontSize: '10px', color: COLORS.primary, fontWeight: '500' }}>
+                    ₹{item.value.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
 
-// Stock Movement Analysis Component (keep existing)
+// Stock Movement Analysis Component
 const StockMovementAnalysis: React.FC<{
   items: Item[];
   categories: Category[];
@@ -1052,7 +1409,7 @@ const StockMovementAnalysis: React.FC<{
         
         if (data?.movements && Array.isArray(data.movements)) {
           const processedData = data.movements.map((movement: any, index: number) => ({
-            week: `Week ₹{index + 1}`,
+            week: `Week ${index + 1}`,
             date: dateRange.start,
             received: Number(movement.totalQuantity || 0) * (movement.movementType === 'RECEIPT' ? 1 : 0),
             consumed: Number(movement.totalQuantity || 0) * (movement.movementType === 'CONSUMPTION' ? 1 : 0),
@@ -1064,7 +1421,7 @@ const StockMovementAnalysis: React.FC<{
           setMovementData([]);
         }
       } catch (error) {
-        console.error('Stock movements component available but not displayed in main dashboard', error);
+        console.error('Stock movements error:', error);
         setMovementData([]);
       } finally {
         setLoading(false);
@@ -1088,7 +1445,7 @@ const StockMovementAnalysis: React.FC<{
             onChange={(e) => setSelectedCategory(e.target.value ? Number(e.target.value) : null)}
             style={{
               padding: '5px 10px',
-              border: `1px solid ₹{COLORS.light}`,
+              border: `1px solid ${COLORS.light}`,
               borderRadius: '6px',
               fontSize: '11px'
             }}
@@ -1170,7 +1527,7 @@ const BudgetAnalysis: React.FC = () => {
   const { data: items = [] } = useItems();
   const enhancedAnalytics = useEnhancedAnalytics();
   const [consumptionData, setConsumptionData] = useState<ConsumptionTrendsResponse | null>(null);
-  const [dateRange, setDateRange] = useState({
+  const [dateRange] = useState({
     start: '2025-01-01',
     end: '2025-07-31'
   });
@@ -1191,7 +1548,7 @@ const BudgetAnalysis: React.FC = () => {
     };
 
     fetchData();
-  }, [dateRange]);
+  }, []);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fafafa', padding: '16px' }}>
@@ -1203,7 +1560,6 @@ const BudgetAnalysis: React.FC = () => {
       `}</style>
       
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Header */}
         <Card background={cardBackgrounds.neutral}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1 style={{ 
@@ -1215,63 +1571,37 @@ const BudgetAnalysis: React.FC = () => {
               Inventory Analytics Dashboard
             </h1>
             
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <Calendar style={{ width: '14px', height: '14px', color: COLORS.primary }} />
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                style={{
-                  padding: '5px 8px',
-                  border: `1px solid ₹{COLORS.light}`,
-                  borderRadius: '4px',
-                  fontSize: '11px'
-                }}
-              />
-              <span style={{ color: COLORS.muted, fontSize: '11px' }}>to</span>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                style={{
-                  padding: '5px 8px',
-                  border: `1px solid ₹{COLORS.light}`,
-                  borderRadius: '4px',
-                  fontSize: '11px'
-                }}
-              />
-              
-              <button
-                onClick={() => enhancedAnalytics.refreshAll('monthly', dateRange.start, dateRange.end)}
-                disabled={loading}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 16px',
-                  backgroundColor: COLORS.primary,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: '12px',
-                  opacity: loading ? 0.6 : 1
-                }}
-              >
-                <RefreshCw style={{ width: '14px', height: '14px' }} />
-                {loading ? 'Loading...' : 'Refresh'}
-              </button>
-            </div>
+            <button
+              onClick={() => enhancedAnalytics.refreshAll('monthly', dateRange.start, dateRange.end)}
+              disabled={loading}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                backgroundColor: COLORS.primary,
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '12px',
+                opacity: loading ? 0.6 : 1
+              }}
+            >
+              <RefreshCw style={{ width: '14px', height: '14px' }} />
+              {loading ? 'Loading...' : 'Refresh All'}
+            </button>
           </div>
         </Card>
 
-        {/* Cost Distribution - Full Width */}
-        <CostDistribution data={enhancedAnalytics.costDistributionData} categories={categories} />
-
-        {/* Stock Movement Classification (Fast/Slow/Dead) */}
+        <CostDistribution 
+          data={enhancedAnalytics.costDistributionData} 
+          categories={categories} 
+          items={items}
+        />
         <StockMovementClassification items={items} categories={categories} />
-
-
+        <ItemCorrelationsAndAnomalies items={items} categories={categories} consumptionData={consumptionData} />
+        <StockMovementAnalysis items={items} categories={categories} dateRange={dateRange} />
       </div>
     </div>
   );

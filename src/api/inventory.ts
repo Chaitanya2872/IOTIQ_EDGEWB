@@ -7,8 +7,16 @@ export type Category = {
   categoryDescription: string;
 };
 
+export type ConsumptionRecord = {
+  date: string;
+  consumedQuantity: number;
+  id?: number;
+  notes?: string;
+  department?: string;
+};
+
 export type Item = {
-  consumptionRecords: boolean;
+  consumptionRecords?: ConsumptionRecord[];
   lastReceivedQuantity: undefined;
   receivedStock: undefined;
   consumedQuantity: undefined;
@@ -117,18 +125,17 @@ export type TopConsumersResponse = {
   period: string;
   startDate: string;
   endDate: string;
-  actualDataRange: string;
+  totalConsumption: number;
   topConsumers: Array<{
+    itemId: number;
     itemName: string;
-    category: string;
-    totalConsumption: number;
-    totalCost: number;
+    categoryName: string;
+    consumedQuantity: number;
     percentageOfTotal: number;
-    trend: 'up' | 'down' | 'stable';
-    trendPercentage: number;
+    totalCost: number;
+    unitPrice: number | null;
     dailyPattern: number[];
   }>;
-  totalConsumption: number;
 };
 
 export type DataRangeResponse = {
@@ -152,6 +159,28 @@ export type CostDistributionResponse = {
     totalQuantity: number;
     percentage: number;
     avgUnitPrice: number;
+  }>;
+  monthlyBreakdown?: Array<{
+    month: string;
+    monthName: string;
+    bins: Array<{
+      binPeriod: string;
+      totalCost: number;
+      categories: Array<{
+        categoryName: string;
+        totalCost: number;
+        items: Array<{
+          totalCost: number;
+          quantity: number;
+          itemName: string;
+          consumptionDetails: Array<{
+            date: string;
+            quantity: number;
+            cost: number;
+          }>;
+        }>;
+      }>;
+    }>;
   }>;
 };
 
@@ -291,23 +320,58 @@ const API_BASE: string =
   "http://localhost:8080";
 
 // ENHANCED: HTTP client with better error handling for 500 errors
+// Replace your existing http function with this enhanced version
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;
   
   console.log(`🔗 API Call: ${init?.method || 'GET'} ${url}`);
   
+  // Get auth token
+  const accessToken = localStorage.getItem('accessToken');
+  
+  // Enhanced headers with authentication
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+    ...(init?.headers || {}),
+  };
+  
   try {
-    const res = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init?.headers || {}),
-      },
+    let response = await fetch(url, {
       ...init,
+      headers,
     });
 
-    const contentType = res.headers.get('content-type');
+    // Handle 401 unauthorized - try token refresh
+    if (response.status === 401 && accessToken) {
+      console.log('🔄 Token expired, attempting refresh...');
+      
+      try {
+        // Import the refresh function
+        const { refreshToken } = await import('./auth');
+        const newAuth = await refreshToken();
+        
+        // Retry with new token
+        const retryHeaders = {
+          ...headers,
+          'Authorization': `Bearer ${newAuth.accessToken}`
+        };
+        
+        response = await fetch(url, {
+          ...init,
+          headers: retryHeaders,
+        });
+      } catch (refreshError) {
+        console.error('🚫 Token refresh failed:', refreshError);
+        // Redirect to login
+        window.location.href = '/login';
+        throw new Error('Session expired. Please login again.');
+      }
+    }
+
+    const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      const responseText = await res.text();
+      const responseText = await response.text();
       
       if (responseText.includes('<html>')) {
         console.error('❌ Received HTML instead of JSON:', responseText.substring(0, 200));
@@ -317,23 +381,23 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 
     let data;
     try {
-      data = await res.json();
+      data = await response.json();
     } catch (jsonError) {
       console.error('❌ Failed to parse JSON response:', jsonError);
-      if (res.status >= 500) {
-        throw new Error(`Server error (${res.status}): Internal server error. Check backend logs for details.`);
+      if (response.status >= 500) {
+        throw new Error(`Server error (${response.status}): Internal server error. Check backend logs for details.`);
       }
       data = {};
     }
     
-    if (!res.ok) {
-      const message = (data && (data.message || data.error)) || `Request failed: ${res.status}`;
-      console.error(`❌ API Error: ${res.status} - ${message}`);
+    if (!response.ok) {
+      const message = (data && (data.message || data.error)) || `Request failed: ${response.status}`;
+      console.error(`❌ API Error: ${response.status} - ${message}`);
       
       // Enhanced error handling for specific status codes
-      if (res.status >= 500) {
-        throw new Error(`Server Error (${res.status}): ${message}. Check backend implementation and logs.`);
-      } else if (res.status === 404) {
+      if (response.status >= 500) {
+        throw new Error(`Server Error (${response.status}): ${message}. Check backend implementation and logs.`);
+      } else if (response.status === 404) {
         throw new Error(`Endpoint not found: ${path}. Check if the endpoint exists in your backend.`);
       } else {
         throw new Error(message);
@@ -553,11 +617,12 @@ export const AnalyticsAPI = {
   analytics: () => http<any>("/api/analytics", { method: "GET" }),
   
   // FIXED: Cost distribution by category (matches backend implementation)
-  costDistribution: (period?: string, startDate?: string, endDate?: string) => {
+  costDistribution: (period?: string, startDate?: string, endDate?: string, includeBins?: boolean) => {
     const params = new URLSearchParams();
     if (period) params.append('period', period);
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    if (includeBins) params.append('includeBins', 'true');
     const query = params.toString();
     console.log(`💰 Fetching cost distribution: /api/analytics/cost-distribution${query ? `?${query}` : ''}`);
     return http<CostDistributionResponse>(`/api/analytics/cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
@@ -655,39 +720,107 @@ export const AnalyticsAPI = {
 // ------- Upload -------
 export const UploadAPI = {
   uploadItems: async (file: File) => {
+    console.log(`📤 Uploading items file: ${file.name}`);
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(`${API_BASE}/api/upload/inventory-complete`, {
+    
+    // Get auth token for header
+    const accessToken = localStorage.getItem('accessToken');
+    const headers: HeadersInit = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    
+    const res = await fetch(`${API_BASE}/api/upload/items`, {
       method: 'POST',
       body: form,
+      headers,
     });
-    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-    return res.json().catch(() => ({}));
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Upload failed: ${res.status} - ${errorText}`);
+    }
+    
+    const result = await res.json();
+    console.log('✅ Items upload result:', result);
+    return result;
   },
   
   uploadConsumption: async (file: File) => {
+    console.log(`📤 Uploading consumption file: ${file.name}`);
     const form = new FormData();
     form.append('file', file);
+    
+    // Get auth token for header
+    const accessToken = localStorage.getItem('accessToken');
+    const headers: HeadersInit = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    
     const res = await fetch(`${API_BASE}/api/upload/consumption`, {
       method: 'POST',
       body: form,
+      headers,
     });
-    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-    return res.json().catch(() => ({}));
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Upload failed: ${res.status} - ${errorText}`);
+    }
+    
+    const result = await res.json();
+    console.log('✅ Consumption upload result:', result);
+    return result;
   },
   
-  uploadInventoryComplete: async (file: File) => {
+  validateItems: async (file: File) => {
+    console.log(`🔍 Validating items file: ${file.name}`);
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(`${API_BASE}/api/upload/inventory-complete`, {
+    
+    const accessToken = localStorage.getItem('accessToken');
+    const headers: HeadersInit = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    
+    const res = await fetch(`${API_BASE}/api/upload/items/validate`, {
       method: 'POST',
       body: form,
+      headers,
     });
-    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-    return res.json().catch(() => ({}));
+    
+    if (!res.ok) throw new Error(`Validation failed: ${res.status}`);
+    return res.json();
   },
   
-  template: () => http<Blob>(`/api/upload/template`, { method: 'GET' }),
+  validateConsumption: async (file: File) => {
+    console.log(`🔍 Validating consumption file: ${file.name}`);
+    const form = new FormData();
+    form.append('file', file);
+    
+    const accessToken = localStorage.getItem('accessToken');
+    const headers: HeadersInit = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    
+    const res = await fetch(`${API_BASE}/api/upload/consumption/validate`, {
+      method: 'POST',
+      body: form,
+      headers,
+    });
+    
+    if (!res.ok) throw new Error(`Validation failed: ${res.status}`);
+    return res.json();
+  },
+  
+  getItemsTemplate: () => http<any>(`/api/upload/template`, { method: 'GET' }),
+  getConsumptionTemplate: () => http<any>(`/api/upload/consumption/template`, { method: 'GET' }),
+  getItemsInstructions: () => http<any>(`/api/upload/instructions`, { method: 'GET' }),
+  getConsumptionInstructions: () => http<any>(`/api/upload/consumption/instructions`, { method: 'GET' }),
 };
 
 export function getApiBase() {

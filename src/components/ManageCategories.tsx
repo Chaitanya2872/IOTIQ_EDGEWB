@@ -17,13 +17,91 @@ const ManageCategories: React.FC = () => {
     return map;
   }, [items]);
 
+  // Calculate stock status for each category
+  const categoryStockStatus = useMemo(() => {
+    const statusMap = new Map<number, { low: number; critical: number; safe: number }>();
+    (items || []).forEach(item => {
+      const catId = item.categoryId;
+      if (!statusMap.has(catId)) {
+        statusMap.set(catId, { low: 0, critical: 0, safe: 0 });
+      }
+      const status = statusMap.get(catId)!;
+      const currentQty = item.currentQuantity || 0;
+      const minStock = item.minStockLevel || 0;
+      
+      if (currentQty <= minStock * 0.5) {
+        status.critical++;
+      } else if (currentQty <= minStock) {
+        status.low++;
+      } else {
+        status.safe++;
+      }
+    });
+    return statusMap;
+  }, [items]);
+
+  // Calculate last updated date for each category
+  const categoryLastUpdated = useMemo(() => {
+    const dateMap = new Map<number, string>();
+    (items || []).forEach(item => {
+      const catId = item.categoryId;
+      const itemDate = item.updated_at;
+      if (itemDate) {
+        const existing = dateMap.get(catId);
+        if (!existing || new Date(itemDate) > new Date(existing)) {
+          dateMap.set(catId, itemDate);
+        }
+      }
+    });
+    return dateMap;
+  }, [items]);
+
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 80, sorter: (a: any, b: any) => a.id - b.id },
-    { title: 'Name', dataIndex: 'categoryName', key: 'categoryName', sorter: (a: any, b: any) => String(a.categoryName).localeCompare(String(b.categoryName)) },
-    { title: 'Description', dataIndex: 'categoryDescription', key: 'categoryDescription' },
+    { title: 'Category', dataIndex: 'categoryName', key: 'categoryName', sorter: (a: any, b: any) => String(a.categoryName).localeCompare(String(b.categoryName)) },
     { title: 'Items', key: 'itemsCount', width: 100, render: (_: any, rec: any) => <Tag color="blue">{countsByCategoryId.get(rec.id) || 0}</Tag> },
     {
-      title: 'Actions', key: 'actions', width: 180,
+      title: 'Stock Status',
+      key: 'stockStatus',
+      width: 200,
+      render: (_: any, rec: any) => {
+        const status = categoryStockStatus.get(rec.id) || { low: 0, critical: 0, safe: 0 };
+        return (
+          <Space size={4}>
+            {status.critical > 0 && <Tag color="red">Critical: {status.critical}</Tag>}
+            {status.low > 0 && <Tag color="orange">Low: {status.low}</Tag>}
+            {status.safe > 0 && <Tag color="green">Safe: {status.safe}</Tag>}
+            {status.critical === 0 && status.low === 0 && status.safe === 0 && <Tag>No items</Tag>}
+          </Space>
+        );
+      }
+    },
+    {
+      title: 'Last Updated',
+      key: 'lastUpdated',
+      width: 150,
+      sorter: (a: any, b: any) => {
+        const dateA = categoryLastUpdated.get(a.id) || '';
+        const dateB = categoryLastUpdated.get(b.id) || '';
+        return dateA.localeCompare(dateB);
+      },
+      render: (_: any, rec: any) => {
+        const lastDate = categoryLastUpdated.get(rec.id);
+        if (!lastDate) return <Tag color="default">—</Tag>;
+        const date = new Date(lastDate);
+        return (
+          <div style={{ fontSize: '12px' }}>
+            {date.toLocaleDateString('en-IN', { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            })}
+          </div>
+        );
+      }
+    },
+    {
+      title: 'Actions', key: 'actions', width: 120,
       render: (_: any, record: any) => (
         <Space>
           <Button size="small" icon={<Edit3 size={14} />} onClick={() => onEdit(record)} />

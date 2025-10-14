@@ -1,17 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { 
   Button, Card, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Upload, 
-  message, DatePicker, Row, Col, Statistic, Badge, Tooltip
+  message, DatePicker, Row, Col, Statistic, Badge, Tooltip, Alert, Divider
 } from 'antd';
-import type { UploadProps } from 'antd';
+import type { UploadProps, UploadFile } from 'antd';
 import { useItems, useCategories } from '../api/hooks';
 import type { Item } from '../api/inventory';
 import { UploadAPI } from '../api/inventory';
 import ManageItemsCards from './ManageItemsCards';
-import { Edit3, Trash2, Clock, TrendingDown, TrendingUp } from 'lucide-react';
+import { Edit3, Trash2, Clock, TrendingUp, Download, Upload as UploadIcon, FileSpreadsheet, TableIcon } from 'lucide-react';
 import dayjs from 'dayjs';
+import * as XLSX from 'xlsx';
 
 const { RangePicker } = DatePicker;
+
+const currencyFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 interface TransactionModalProps {
   visible: boolean;
@@ -206,7 +209,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                   min={0}
                   step={0.01}
                   placeholder="Unit price"
-                  addonBefore="$"
+                  addonBefore="₹"
                 />
               </Form.Item>
             </Col>
@@ -235,6 +238,383 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   );
 };
 
+interface UploadModalProps {
+  visible: boolean;
+  onCancel: () => void;
+  type: 'items' | 'consumption';
+  onRefresh: () => void;
+}
+
+const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRefresh }) => {
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (!visible) {
+      setFileList([]);
+    }
+  }, [visible]);
+
+  // Generate XLSX template
+  const downloadTemplate = () => {
+    let data: any[] = [];
+    let filename = '';
+
+    if (type === 'items') {
+      data = [
+        { 
+          Category: 'HK Chemicals', 
+          'Item Name': 'Pril-Dishwash', 
+          'Item SKU': '125ml', 
+          UOM: 'Bottle', 
+          Price: 17.00, 
+          Stock: 50, 
+          'Reorder Level': 10 
+        },
+        { 
+          Category: 'HK Chemicals', 
+          'Item Name': 'Pril-Dishwash', 
+          'Item SKU': '500ml', 
+          UOM: 'Bottle', 
+          Price: 52.00, 
+          Stock: 30, 
+          'Reorder Level': 10 
+        },
+        { 
+          Category: 'Beverages', 
+          'Item Name': 'Coffee Beans', 
+          'Item SKU': '500g', 
+          UOM: 'kg', 
+          Price: 450, 
+          Stock: 20, 
+          'Reorder Level': 5 
+        },
+        { 
+          Category: 'Pantry Items', 
+          'Item Name': 'Sugar', 
+          'Item SKU': '1kg', 
+          UOM: 'kg', 
+          Price: 45, 
+          Stock: 100, 
+          'Reorder Level': 20 
+        },
+        { 
+          Category: 'Cleaning', 
+          'Item Name': 'Hand Soap', 
+          'Item SKU': '100ml', 
+          UOM: 'Bottle', 
+          Price: 15, 
+          Stock: 75, 
+          'Reorder Level': 15 
+        }
+      ];
+      filename = 'items_template.xlsx';
+    } else {
+      data = [
+        { 
+          'Item Name': 'Pril-Dishwash', 
+          'Item SKU': '125ml', 
+          Date: '2024-01-15', 
+          'Opening Stock': 50, 
+          'Received Quantity': 10, 
+          'Consumed Quantity': 5, 
+          'Closing Stock': 55, 
+          Department: 'Kitchen', 
+          Notes: 'Regular usage' 
+        },
+        { 
+          'Item Name': 'Coffee Beans', 
+          'Item SKU': '500g', 
+          Date: '2024-01-15', 
+          'Opening Stock': 20, 
+          'Received Quantity': 0, 
+          'Consumed Quantity': 2, 
+          'Closing Stock': 18, 
+          Department: 'Pantry', 
+          Notes: 'Morning coffee' 
+        },
+        { 
+          'Item Name': 'Sugar', 
+          'Item SKU': '1kg', 
+          Date: '2024-01-15', 
+          'Opening Stock': 100, 
+          'Received Quantity': 50, 
+          'Consumed Quantity': 10, 
+          'Closing Stock': 140, 
+          Department: 'Pantry', 
+          Notes: 'Event catering' 
+        },
+        { 
+          'Item Name': 'Hand Soap', 
+          'Item SKU': '100ml', 
+          Date: '2024-01-15', 
+          'Opening Stock': 75, 
+          'Received Quantity': 0, 
+          'Consumed Quantity': 8, 
+          'Closing Stock': 67, 
+          Department: 'Restroom', 
+          Notes: '' 
+        }
+      ];
+      filename = 'consumption_template.xlsx';
+    }
+
+    // Create workbook and worksheet
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    (XLSX as any).utils.book_append_sheet(wb, ws, type === 'items' ? 'Items' : 'Consumption');
+
+    // Auto-size columns
+    const maxWidth = data.reduce((w, r) => Math.max(w, ...Object.keys(r).map(k => k.length)), 10);
+    ws['!cols'] = Object.keys(data[0]).map(() => ({ wch: maxWidth + 2 }));
+
+    // Download
+    XLSX.writeFile(wb, filename);
+    message.success(`${filename} downloaded`);
+  };
+
+  const handleUpload = async () => {
+    if (fileList.length === 0) {
+      message.error('Please select a file first');
+      return;
+    }
+
+    const file = fileList[0].originFileObj as File;
+    setUploading(true);
+
+    try {
+      const result = type === 'items' 
+        ? await UploadAPI.uploadItems(file)
+        : await UploadAPI.uploadConsumption(file);
+      
+      if (result.success) {
+        const count = type === 'items' ? result.itemsCreated : result.recordsCreated;
+        message.success(`Successfully ${type === 'items' ? 'created' : 'recorded'} ${count} ${type === 'items' ? 'items' : 'records'}`);
+        setFileList([]);
+        onRefresh();
+        
+        // Show detailed results if there are warnings or errors
+        if (result.warnings?.length > 0 || result.parseErrors?.length > 0 || result.creationErrors?.length > 0) {
+          setTimeout(() => {
+            Modal.info({
+              title: `Upload Results - ${type === 'items' ? 'Items' : 'Consumption'}`,
+              width: 700,
+              content: (
+                <div>
+                  <p><strong>Total Rows Processed:</strong> {result.totalRowsProcessed}</p>
+                  <p><strong>{type === 'items' ? 'Items Created' : 'Records Created'}:</strong> {count}</p>
+                  {type === 'consumption' && result.missingItemsCount > 0 && (
+                    <p><strong>Missing Items:</strong> {result.missingItemsCount}</p>
+                  )}
+                  
+                  {result.parseErrors?.length > 0 && (
+                    <Alert 
+                      type="warning" 
+                      message="Parse Errors" 
+                      description={
+                        <div style={{ maxHeight: 150, overflow: 'auto' }}>
+                          {result.parseErrors.slice(0, 10).map((e: string, i: number) => (
+                            <div key={i} style={{ fontSize: '12px' }}>• {e}</div>
+                          ))}
+                          {result.parseErrors.length > 10 && (
+                            <div style={{ fontSize: '12px', marginTop: 4 }}>
+                              ... and {result.parseErrors.length - 10} more
+                            </div>
+                          )}
+                        </div>
+                      }
+                      style={{ marginTop: 12 }}
+                    />
+                  )}
+                  
+                  {result.creationErrors?.length > 0 && (
+                    <Alert 
+                      type="error" 
+                      message="Creation Errors" 
+                      description={
+                        <div style={{ maxHeight: 150, overflow: 'auto' }}>
+                          {result.creationErrors.slice(0, 10).map((e: string, i: number) => (
+                            <div key={i} style={{ fontSize: '12px' }}>• {e}</div>
+                          ))}
+                          {result.creationErrors.length > 10 && (
+                            <div style={{ fontSize: '12px', marginTop: 4 }}>
+                              ... and {result.creationErrors.length - 10} more
+                            </div>
+                          )}
+                        </div>
+                      }
+                      style={{ marginTop: 12 }}
+                    />
+                  )}
+                  
+                  {result.warnings?.length > 0 && (
+                    <Alert 
+                      type="warning" 
+                      message="Warnings" 
+                      description={
+                        <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                          {result.warnings.slice(0, 15).map((w: string, i: number) => (
+                            <div key={i} style={{ fontSize: '12px' }}>{w}</div>
+                          ))}
+                          {result.warnings.length > 15 && (
+                            <div style={{ fontSize: '12px', marginTop: 4 }}>
+                              ... and {result.warnings.length - 15} more
+                            </div>
+                          )}
+                        </div>
+                      }
+                      style={{ marginTop: 12 }}
+                    />
+                  )}
+                </div>
+              )
+            });
+          }, 500);
+        }
+        
+        onCancel();
+      } else {
+        Modal.error({
+          title: 'Upload Failed',
+          content: result.message || 'Upload failed. Please check your file format.'
+        });
+      }
+    } catch (e: any) {
+      message.error(e?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const uploadProps: UploadProps = {
+    fileList,
+    beforeUpload: (file) => {
+      setFileList([file]);
+      return false;
+    },
+    onRemove: () => {
+      setFileList([]);
+    },
+    accept: '.xlsx,.xls',
+    maxCount: 1,
+  };
+
+  const title = type === 'items' ? 'Import Items' : 'Import Consumption';
+  const icon = type === 'items' ? <TableIcon size={20} /> : <FileSpreadsheet size={20} />;
+
+  return (
+    <Modal
+      open={visible}
+      onCancel={onCancel}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {icon}
+          <span>{title}</span>
+        </div>
+      }
+      width={600}
+      footer={[
+        <Button key="cancel" onClick={onCancel}>
+          Cancel
+        </Button>,
+        <Button 
+          key="upload" 
+          type="primary" 
+          onClick={handleUpload}
+          loading={uploading}
+          disabled={fileList.length === 0}
+          icon={<UploadIcon size={14} />}
+        >
+          Upload
+        </Button>
+      ]}
+    >
+      <div style={{ padding: '8px 0' }}>
+        {/* Info Alert */}
+        {type === 'consumption' && (
+          <Alert 
+            message="Important: Items must exist before importing consumption records" 
+            type="info" 
+            showIcon 
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {/* Download Template */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 8, fontWeight: 500 }}>Step 1: Download Template</div>
+          <Button 
+            icon={<Download size={16} />} 
+            onClick={downloadTemplate}
+            block
+            size="large"
+          >
+            Download {type === 'items' ? 'Items' : 'Consumption'} Template (Excel)
+          </Button>
+          <div style={{ fontSize: '12px', color: '#666', marginTop: 8 }}>
+            {type === 'items' 
+              ? 'Excel file with sample items (5 examples included)'
+              : 'Excel file with sample consumption records (4 examples included)'}
+          </div>
+        </div>
+
+        <Divider />
+
+        {/* Upload File */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 8, fontWeight: 500 }}>Step 2: Select File</div>
+          <Upload {...uploadProps}>
+            <Button icon={<UploadIcon size={16} />} block size="large">
+              {fileList.length > 0 ? 'Change File' : 'Select Excel File'}
+            </Button>
+          </Upload>
+          {fileList.length > 0 && (
+            <div style={{ 
+              marginTop: 8, 
+              padding: 8, 
+              backgroundColor: '#f0f5ff', 
+              borderRadius: 4,
+              fontSize: '12px'
+            }}>
+              Selected: <strong>{fileList[0].name}</strong>
+            </div>
+          )}
+        </div>
+
+        {/* Requirements */}
+        <div style={{ 
+          padding: 12, 
+          backgroundColor: '#f9f9f9', 
+          borderRadius: 4,
+          fontSize: '12px'
+        }}>
+          <div style={{ fontWeight: 500, marginBottom: 8 }}>
+            Required Columns:
+          </div>
+          {type === 'items' ? (
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <li>Category</li>
+              <li>Item Name</li>
+              <li>Stock (opening/current/closing)</li>
+            </ul>
+          ) : (
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <li>Item Name</li>
+              <li>Date</li>
+              <li>Consumed Quantity</li>
+            </ul>
+          )}
+          <div style={{ marginTop: 8, color: '#666' }}>
+            Optional: {type === 'items' 
+              ? 'Item SKU, UOM, Price, Reorder Level' 
+              : 'Item SKU, Opening/Received/Closing Stock, Department, Notes'}
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 const ManageItems: React.FC = () => {
   const { data, loading, error, create, update, remove, refresh, consume, receive, search } = useItems();
   const { data: categories } = useCategories();
@@ -245,6 +625,10 @@ const ManageItems: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'sih' | 'low' | 'price' | 'low-stock-risk' | 'inventory-value' | 'quick-stats'>('all');
   const [categoryFilter, setCategoryFilter] = useState<number | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  
+  // Upload modal states
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [uploadType, setUploadType] = useState<'items' | 'consumption'>('items');
   
   // Transaction modal states
   const [transactionModal, setTransactionModal] = useState<{
@@ -259,11 +643,12 @@ const ManageItems: React.FC = () => {
     loading: false
   });
 
+  const [searchFocused, setSearchFocused] = useState(false);
+
   useEffect(() => { setRows(data || []); }, [data]);
 
   const categoryOptions = useMemo(() => (categories || []).map(c => ({ label: c.categoryName, value: c.id })), [categories]);
 
-  // Enhanced filtering with coverage days calculation
   const filteredRows = useMemo(() => {
     let r = [...(rows || [])];
     
@@ -305,95 +690,78 @@ const ManageItems: React.FC = () => {
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70, sorter: (a: any, b: any) => a.id - b.id },
-    { title: 'Code', dataIndex: 'itemCode', key: 'itemCode' },
-    { title: 'Name', dataIndex: 'itemName', key: 'itemName', sorter: (a: any, b: any) => String(a.itemName).localeCompare(String(b.itemName)) },
-    { title: 'Description', dataIndex: 'itemDescription', key: 'itemDescription' },
-    { title: 'Unit', dataIndex: 'unitOfMeasurement', key: 'unitOfMeasurement' },
-    { 
-      title: 'Qty', 
-      dataIndex: 'currentQuantity', 
-      key: 'currentQuantity', 
-      sorter: (a: any, b: any) => a.currentQuantity - b.currentQuantity,
-      render: (qty: number, record: any) => (
-        <Badge 
-          count={qty} 
-          overflowCount={9999}
-          style={{ 
-            backgroundColor: qty <= (record.minStockLevel || 0) ? '#ff4d4f' : '#52c41a' 
-          }}
-        />
+    {
+      title: 'Category',
+      key: 'category',
+      width: 150,
+      dataIndex: ['category', 'categoryName'],
+      filters: categories?.map(c => ({
+        text: c.categoryName,
+        value: c.id
+      })) ?? [],
+      onFilter: (val: any, rec: any) => rec?.category?.id === val || rec?.categoryId === val,
+      render: (_: any, rec: any) => (
+        <Tag color="blue">
+          {rec?.category?.categoryName ||
+            (categories?.find(c => c.id === rec.categoryId)?.categoryName ?? '—')}
+        </Tag>
       )
     },
-    // Coverage Days Column - only show when viewing low stock risk items
-    ...(activeFilter === 'low-stock-risk' ? [{
-      title: 'Coverage Days',
-      key: 'coverageDays',
+    {
+      title: 'Item Name',
+      dataIndex: 'itemName',
+      key: 'itemName',
+      sorter: (a: any, b: any) => String(a.itemName).localeCompare(String(b.itemName))
+    },
+    {
+      title: 'Item SKU',
+      dataIndex: 'itemCode',
+      key: 'itemCode',
       width: 120,
-      sorter: (a: any, b: any) => (a.coverageDays || 999) - (b.coverageDays || 999),
-      render: (_: any, record: any) => {
-        if (record.coverageDays === undefined) return '—';
-        
-        const riskColor = record.riskLevel === 'CRITICAL' ? 'red' : 
-                         record.riskLevel === 'HIGH' ? 'orange' : 'yellow';
-        
+      sorter: (a: any, b: any) => String(a.itemCode || '').localeCompare(String(b.itemCode || ''))
+    },
+    {
+      title: 'Qty',
+      dataIndex: 'currentQuantity',
+      key: 'currentQuantity',
+      width: 100,
+      sorter: (a: any, b: any) => (Number(a.currentQuantity) || 0) - (Number(b.currentQuantity) || 0),
+      render: (qty: number, record: any) => {
+        const quantity = Number.isFinite(Number(qty)) ? Number(qty) : Number(record?.currentQuantity) || 0;
+        const badgeColor = quantity <= (record?.minStockLevel || 0) ? '#ff4d4f' : '#52c41a';
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ 
-              fontSize: '16px', 
-              fontWeight: 'bold',
-              color: record.riskLevel === 'CRITICAL' ? '#ff4d4f' : 
-                     record.riskLevel === 'HIGH' ? '#fa8c16' : '#fadb14'
-            }}>
-              {record.coverageDays}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <Tag 
-                color={riskColor}
-                style={{ margin: 0, fontSize: '10px' }}
-              >
-                {record.riskLevel}
-              </Tag>
-              <div style={{ fontSize: '10px', color: '#666', marginTop: 2 }}>
-                days
-              </div>
-            </div>
-          </div>
+          <Badge 
+            count={quantity.toLocaleString('en-IN')} 
+            overflowCount={Number.MAX_SAFE_INTEGER}
+            style={{ backgroundColor: badgeColor }}
+          />
         );
       }
-    }] : []),
+    },
+    { 
+      title: 'Unit', 
+      dataIndex: 'unitOfMeasurement', 
+      key: 'unitOfMeasurement',
+      width: 80
+    },
     {
-      title: 'Price',
+      title: 'Unit Price (₹)',
       dataIndex: 'unitPrice',
       key: 'unitPrice',
+      width: 120,
       sorter: (a: any, b: any) => (Number(a.unitPrice) || 0) - (Number(b.unitPrice) || 0),
-      render: (v: number | null) => v != null ? `$${Number(v).toFixed(2)}` : '—'
+      render: (v: number | null) => v != null ? currencyFormatter.format(Number(v) || 0) : '—'
     },
-  {
-  title: 'Category',
-  key: 'category',
-  dataIndex: ['category', 'categoryName'],
-  filters: categories?.map(c => ({
-    text: c.categoryName,
-    value: c.id
-  })) ?? [],
-  onFilter: (val: any, rec: any) => rec?.category?.id === val || rec?.categoryId === val,
-  render: (_: any, rec: any) => (
-    <Tag color="blue">
-      {rec?.category?.categoryName ||
-        (categories?.find(c => c.id === rec.categoryId)?.categoryName ?? '—')}
-    </Tag>
-  )
-},
     {
       title: 'Actions', 
       key: 'actions', 
       width: 220,
+      fixed: 'right' as const,
       render: (_: any, record: Item) => (
         <Space>
           <Button size="small" icon={<Edit3 size={14} />} onClick={() => onEdit(record)} />
           <Button size="small" danger icon={<Trash2 size={14} />} onClick={() => onDelete(record.id)} />
           
-          {/* Circled C icon for Consumption */}
           <Tooltip title="Record Consumption">
             <Button
               size="small"
@@ -413,7 +781,6 @@ const ManageItems: React.FC = () => {
             </Button>
           </Tooltip>
           
-          {/* Circled R icon for Receipt */}
           <Tooltip title="Record Receipt">
             <Button
               size="small"
@@ -434,6 +801,30 @@ const ManageItems: React.FC = () => {
           </Tooltip>
         </Space>
       )
+    },
+    {
+      title: 'Last Updated',
+      key: 'lastUpdated',
+      width: 150,
+      sorter: (a: any, b: any) => {
+        const dateA = a.updated_at || '';
+        const dateB = b.updated_at || '';
+        return dateA.localeCompare(dateB);
+      },
+      render: (_: any, rec: any) => {
+        const lastDate = rec.updated_at;
+        if (!lastDate) return <Tag color="default">—</Tag>;
+        const date = new Date(lastDate);
+        return (
+          <div style={{ fontSize: '12px' }}>
+            {date.toLocaleDateString('en-IN', { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            })}
+          </div>
+        );
+      }
     }
   ];
 
@@ -483,7 +874,6 @@ const ManageItems: React.FC = () => {
       
       closeTransactionModal();
       
-      // Refresh data to show real-time updates
       setTimeout(() => {
         refresh();
       }, 100);
@@ -533,22 +923,9 @@ const ManageItems: React.FC = () => {
     catch (e: any) { message.error(e?.message || 'Search failed'); }
   };
 
-  const uploadProps: UploadProps = {
-    multiple: true,
-    accept: '.csv,.xlsx',
-    showUploadList: true,
-    customRequest: async (options) => {
-      const { file, onSuccess, onError } = options as any;
-      try {
-        await UploadAPI.uploadItems(file as File);
-        message.success(`${(file as File).name} uploaded`);
-        onSuccess?.({}, file);
-        refresh();
-      } catch (e: any) {
-        message.error(e?.message || 'Upload failed');
-        onError?.(e);
-      }
-    },
+  const openUploadModal = (type: 'items' | 'consumption') => {
+    setUploadType(type);
+    setUploadModalVisible(true);
   };
 
   const handleCardClick = (key: any) => {
@@ -565,7 +942,7 @@ const ManageItems: React.FC = () => {
 
   const getTableTitle = () => {
     if (selectedCategory) return `Items in ${selectedCategory} Category`;
-    if (activeFilter === 'low-stock-risk') return 'Low Stock Risk Items (with Coverage Days)';
+    if (activeFilter === 'low-stock-risk') return 'Low Stock Risk Items';
     if (activeFilter === 'inventory-value') return 'Inventory Value Analysis';
     if (activeFilter === 'quick-stats') return 'Quick Statistics View';
     return 'Items';
@@ -575,67 +952,74 @@ const ManageItems: React.FC = () => {
     <div style={{ padding: 16 }}>
       <ManageItemsCards onCardClick={handleCardClick} />
 
-      {/* Show active filter status */}
-      <div style={{ marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {selectedCategory && (
-          <Tag color="purple" closable onClose={() => setSelectedCategory(null)}>
-            Category: {selectedCategory}
-          </Tag>
-        )}
-        {activeFilter === 'low-stock-risk' && (
-          <Tag color="red" icon={<Clock size={12} />}>
-            Low Stock Risk Items (with Coverage Days)
-          </Tag>
-        )}
-        {activeFilter === 'inventory-value' && (
-          <Tag color="green" icon={<TrendingUp size={12} />}>
-            Inventory Value Analysis
-          </Tag>
-        )}
-      </div>
+      {/* Active filter status */}
+      {(selectedCategory || activeFilter !== 'all') && (
+        <div style={{ marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {selectedCategory && (
+            <Tag color="purple" closable onClose={() => setSelectedCategory(null)}>
+              Category: {selectedCategory}
+            </Tag>
+          )}
+          {activeFilter === 'low-stock-risk' && (
+            <Tag color="red" icon={<Clock size={12} />}>
+              Low Stock Risk Items
+            </Tag>
+          )}
+          {activeFilter === 'inventory-value' && (
+            <Tag color="green" icon={<TrendingUp size={12} />}>
+              Inventory Value Analysis
+            </Tag>
+          )}
+        </div>
+      )}
 
-      <Space style={{ marginBottom: 12, flexWrap: 'wrap' }}>
-        <Button type="primary" onClick={onAdd}>Add Item</Button>
-        <Button onClick={() => { 
-          refresh(); 
-          setSelectedCategory(null); 
-          setActiveFilter('all');
-        }}>
-          Refresh All
-        </Button>
-        <Select
-          allowClear={false}
-          value={categoryFilter}
-          style={{ minWidth: 220 }}
-          options={[{ label: 'All Categories', value: 'all' }, ...categoryOptions]}
-          onChange={(v) => { setSelectedCategory(null); setCategoryFilter(v as any); }}
-        />
+      <Space style={{ marginBottom: 12, flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' }}>
+        <Space>
+          <Button type="primary" onClick={onAdd}>Add Item</Button>
+          <Button onClick={() => {
+            refresh();
+            setSelectedCategory(null);
+            setActiveFilter('all');
+          }}>
+            Refresh
+          </Button>
+          <Button
+            icon={<TableIcon size={14} />}
+            onClick={() => openUploadModal('items')}
+          >
+            Import Items
+          </Button>
+          <Button
+            icon={<FileSpreadsheet size={14} />}
+            onClick={() => openUploadModal('consumption')}
+          >
+            Import Consumption
+          </Button>
+        </Space>
+        <Space>
+          <Select
+            allowClear={false}
+            value={categoryFilter}
+            style={{ minWidth: 200 }}
+            options={[{ label: 'All Categories', value: 'all' }, ...categoryOptions]}
+            onChange={(v) => { setSelectedCategory(null); setCategoryFilter(v as any); }}
+          />
+          <Input.Search
+            placeholder="Search items..."
+            allowClear
+            style={{ width: searchFocused ? 300 : 250, transition: 'width 0.3s ease' }}
+            onSearch={handleSearch}
+            onChange={(e) => { if (!e.target.value) setRows(data || []); }}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+          />
+        </Space>
       </Space>
 
-      {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
-
-      {/* Import Items Section */}
-      <Card title="Import Items (CSV/XLSX)" size="small" style={{ marginBottom: 12 }}>
-        <Upload.Dragger {...uploadProps}>
-          <p className="ant-upload-drag-icon">📥</p>
-          <p className="ant-upload-text">Click or drag file to this area to upload</p>
-          <p className="ant-upload-hint">Supports CSV and XLSX formats. Multiple files allowed.</p>
-        </Upload.Dragger>
-      </Card>
+      {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 12 }} />}
 
       <Card
-        title={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-            <span>{getTableTitle()}</span>
-            <Input.Search
-              placeholder="Search by name, description, etc."
-              allowClear
-              style={{ width: 260 }}
-              onSearch={handleSearch}
-              onChange={(e) => { if (!e.target.value) setRows(data || []); }}
-            />
-          </div>
-        }
+        title={getTableTitle()}
       >
         <Table
           loading={loading}
@@ -655,7 +1039,6 @@ const ManageItems: React.FC = () => {
         title={editing ? 'Edit Item' : 'Add Item'}
         okText={editing ? 'Update' : 'Create'}
         width={820}
-        bodyStyle={{ maxHeight: 520, overflowY: 'auto' }}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="itemName" label="Name" rules={[{ required: true }]}>
@@ -690,6 +1073,14 @@ const ManageItems: React.FC = () => {
         item={transactionModal.item}
         type={transactionModal.type}
         loading={transactionModal.loading}
+      />
+
+      {/* Upload Modal */}
+      <UploadModal
+        visible={uploadModalVisible}
+        onCancel={() => setUploadModalVisible(false)}
+        type={uploadType}
+        onRefresh={refresh}
       />
     </div>
   );

@@ -11,32 +11,37 @@ import facility from '../assets/facility.png';
 import iotiq from '../assets/iotiq.png';
 import logo from '../assets/logo.png';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { signIn, storeAuth } from '../api/auth';
+
 
 type Props = {
   onLogin: () => void;
 };
 
+const { login } = useAuth();
+
 const LoginPage: React.FC<Props> = ({ onLogin }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  const onFinish = async (values: any) => {
-    try {
-      setLoading(true);
-      const res = await signIn({
-        email: values.userId, // using the existing field as email
-        password: values.password,
-      });
-      storeAuth(res);
-      message.success('Login successful');
-      onLogin();
-    } catch (err: any) {
-      message.error(err.message || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+ // Replace the existing onFinish function
+const onFinish = async (values: any) => {
+  try {
+    setLoading(true);
+    // Use the context login method
+    await login({
+      email: values.userId, // using the existing field as email
+      password: values.password,
+    });
+    message.success('Login successful');
+    onLogin(); // This should now work properly
+  } catch (err: any) {
+    message.error(err.message || 'Login failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="page-container">

@@ -1,21 +1,64 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Row, Col, Card } from 'antd';
-import { Package, AlertTriangle, Activity } from 'lucide-react';
+import { Row, Col, Card, Tooltip } from 'antd';
+import { Package, AlertTriangle, TrendingUp, Info } from 'lucide-react';
 import { useItems } from '../api/hooks';
-import { AnalyticsAPI, type ConsumptionTrendsResponse, type Item, type DataRangeResponse } from '../api/inventory';
+import { AnalyticsAPI, type TopConsumersResponse } from '../api/inventory';
 
 const numberFmt = new Intl.NumberFormat();
 
-// Props keep compatibility with ManageItems filters
 type CardKey = 'all' | 'sih' | 'low' | 'mostCategory' | 'totalItems';
+
+const formatLastUpdated = (items: any[]): string => {
+  if (!items || items.length === 0) return 'Never';
+  
+  const mostRecentDate = items.reduce((latest, item) => {
+    const itemDate = item.updated_at ? new Date(item.updated_at) : new Date(0);
+    return itemDate > latest ? itemDate : latest;
+  }, new Date(0));
+  
+  if (mostRecentDate.getTime() === 0) return 'Never';
+  
+  const now = new Date();
+  const diffMs = now.getTime() - mostRecentDate.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  
+  return mostRecentDate.toLocaleDateString();
+};
+
+const calculateBinPeriod = (startDate: string, endDate: string) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+  const month = end.getMonth();
+  
+  if (startDay === 1 && endDay <= 15) {
+    return `${monthNames[month]} 1-15`;
+  } else if (startDay === 16) {
+    return `${monthNames[month]} 16-${endDay}`;
+  } else {
+    return `${monthNames[month]} ${startDay}-${endDay}`;
+  }
+};
 
 const ManageItemsCards: React.FC<{ onCardClick?: (key: CardKey) => void }> = ({ onCardClick }) => {
   const { data: items, loading: itemsLoading, error: itemsError } = useItems();
-  const [consumption, setConsumption] = useState<ConsumptionTrendsResponse | null>(null);
+  const [topConsumersData, setTopConsumersData] = useState<TopConsumersResponse | null>(null);
+  const [binLabel, setBinLabel] = useState<string>('Loading...');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch monthly consumption grouped by items
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -23,29 +66,22 @@ const ManageItemsCards: React.FC<{ onCardClick?: (key: CardKey) => void }> = ({ 
         setLoading(true);
         setError(null);
 
-        const dr: DataRangeResponse = await AnalyticsAPI.dataRange();
-        const available = dr?.availableMonths || [];
-        const sorted = [...available].sort();
+        const days = 30;
 
-        let startDate = '2025-01-01';
-        let endDate = '2025-12-31';
-        if (sorted.length > 0) {
-          const lastFive = sorted.slice(-5);
-          startDate = `${lastFive[0]}-01`;
-          endDate = `${lastFive[lastFive.length - 1]}-31`;
+        const res = await AnalyticsAPI.topConsumers(days, 10);
+
+        if (mounted && res) {
+          setTopConsumersData(res);
+          const label = calculateBinPeriod(res.startDate, res.endDate);
+          setBinLabel(label);
+        } else {
+          if (mounted) {
+            setError('No consumption data available');
+            setBinLabel('No Data');
+          }
         }
-
-        const res = await AnalyticsAPI.consumptionTrends(
-          'monthly',
-          'items',
-          undefined,
-          startDate,
-          endDate
-        );
-
-        if (mounted) setConsumption(res);
       } catch (e: any) {
-        if (mounted) setError(e?.message || 'Failed to load consumption');
+        if (mounted) setError(e?.message || 'Failed to load consumption data');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -55,160 +91,78 @@ const ManageItemsCards: React.FC<{ onCardClick?: (key: CardKey) => void }> = ({ 
     };
   }, []);
 
-  // Build price map
-  const priceById = useMemo(() => {
-    const map: Record<number, number> = {};
-    (items || []).forEach((it: Item) => {
-      map[it.id] = Number(it.unitPrice) || 0;
-    });
-    return map;
-  }, [items]);
-
-  // Aggregate monthly totals
-  const monthly = useMemo(() => {
-  const acc: Record<
-    string,
-    { qty: number; cost: number; byCategory: Record<string, number> }
-  > = {};
-
-  if (!consumption?.data) return { keys: [] as string[], data: acc };
-
-  for (const row of consumption.data) {
-    const category =
-      (row as any).categoryName ||
-      (row as any).category?.categoryName ||
-      'Uncategorized';
-    const itemId = (row as any).itemId as number | undefined;
-
-    for (const dp of row.dataPoints || []) {
-      const key = dp?.monthStart
-        ? String(dp.monthStart).slice(0, 7)
-        : dp?.date
-        ? String(dp.date).slice(0, 7)
-        : undefined;
-      if (!key) continue;
-
-      if (!acc[key])
-        acc[key] = { qty: 0, cost: 0, byCategory: {} };
-
-      const qty = Number(dp.consumption) || 0;
-      const unitPrice = itemId ? (priceById[itemId] || 0) : 0;
-
-      // overall totals
-      acc[key].qty += qty;
-      acc[key].cost += qty * unitPrice;
-
-      // category breakdown
-      acc[key].byCategory[category] =
-        (acc[key].byCategory[category] || 0) + qty;
-    }
-  }
-
-  const keys = Object.keys(acc).sort();
-  return { keys, data: acc };
-}, [consumption, priceById]);
-
-
-  const currentKey = monthly.keys.length ? monthly.keys[monthly.keys.length - 1] : undefined;
-
-  // Most consumed category with fallback
-  const mostConsumedCategory = useMemo(() => {
-    let topCat: string | null = null;
-    let maxQty = 0;
-
-    // Calculate total consumption by category over all months
-    const totalByCategory: Record<string, number> = {};
-    for (const key of monthly.keys) {
-      const catMap = monthly.data[key]?.byCategory || {};
-      for (const [cat, qty] of Object.entries(catMap)) {
-        totalByCategory[cat] = (totalByCategory[cat] || 0) + qty;
-      }
+  const topConsumedItem = useMemo(() => {
+    if (!topConsumersData?.topConsumers || topConsumersData.topConsumers.length === 0) {
+      return { name: null, category: null, totalQty: 0, avgDaily: 0 };
     }
 
-    // Find the category with highest total consumption
-    for (const [cat, qty] of Object.entries(totalByCategory)) {
-      if (qty > maxQty) {
-        topCat = cat;
-        maxQty = qty;
-      }
-    }
+    const topItem = topConsumersData.topConsumers[0];
+    
+    const start = new Date(topConsumersData.startDate);
+    const end = new Date(topConsumersData.endDate);
+    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    const consumedQty = Number(topItem.consumedQuantity || 0);
+    const avgDaily = days > 0 ? consumedQty / days : consumedQty;
 
-    if (topCat) return { name: topCat, qty: maxQty };
+    return {
+      name: topItem.itemName || 'Unknown',
+      category: topItem.categoryName || 'Uncategorized',
+      totalQty: consumedQty,
+      avgDaily: avgDaily
+    };
+  }, [topConsumersData]);
 
-    // Fallback to total current quantity if no consumption data
-    const catTotals: Record<string, number> = {};
-    (items || []).forEach((it: Item) => {
-      const cat = it.category?.categoryName || 'Uncategorized';
-      catTotals[cat] = (catTotals[cat] || 0) + (Number(it.currentQuantity) || 0);
-    });
-
-    for (const [cat, qty] of Object.entries(catTotals)) {
-      if (qty > maxQty) {
-        topCat = cat;
-        maxQty = qty;
-      }
-    }
-    return { name: topCat, qty: maxQty };
-  }, [monthly, items]);
-
-  // Average monthly consumption of that category
-  const avgMonthlyConsumption = useMemo(() => {
-    if (!mostConsumedCategory.name || monthly.keys.length === 0) return 0;
-    let total = 0;
-    let months = 0;
-    for (const key of monthly.keys) {
-      const catMap = monthly.data[key]?.byCategory || {};
-      if (catMap[mostConsumedCategory.name] != null) {
-        total += catMap[mostConsumedCategory.name];
-        months++;
-      }
-    }
-    return months > 0 ? total / months : 0;
-  }, [mostConsumedCategory, monthly]);
-
-  // Inventory metrics
   const totalItems = useMemo(() => (items || []).length, [items]);
+  
   const stockMetrics = useMemo(() => {
     const list = items || [];
-    const overallSIH = list.reduce((s: number, i: any) => s + (Number(i.currentQuantity) || 0), 0);
+    const overallSIH = list.reduce((s: number, i: any) => {
+      const qty = Number(i.currentQuantity || i.closingStock || 0);
+      return s + (isNaN(qty) ? 0 : qty);
+    }, 0);
+    
     const lowStock = list.filter(
-      (i: any) => (Number(i.currentQuantity) || 0) <= (Number(i.minStockLevel) || 0)
+      (i: any) => {
+        const currentQty = Number(i.currentQuantity || i.closingStock || 0);
+        const minLevel = Number(i.minStockLevel || 0);
+        return currentQty <= minLevel;
+      }
     ).length;
+    
     return { overallSIH, lowStock };
   }, [items]);
+
+  const lastUpdated = useMemo(() => formatLastUpdated(items || []), [items]);
 
   const cards = useMemo(
     () => [
       {
-        key: 'mostCategory' as const,
-        title: 'Most Consumed Category',
-        // show quantity on top
-        value: numberFmt.format(mostConsumedCategory.qty || 0),
-        // show category name + avg below
-        sub: mostConsumedCategory.name
-          ? `${mostConsumedCategory.name} | Avg: ${numberFmt.format(Math.round(avgMonthlyConsumption))}/month`
-          : '—',
-        color: '#3b82f6',
-        icon: <Activity size={20} />,
-        delta: '',
-        chartData: null,
-        valueFormatter: (v: number) => numberFmt.format(v),
-        onClick: () => {
-          if (mostConsumedCategory.name) {
-            onCardClick?.(`category-${mostConsumedCategory.name}` as any);
-          }
-        },
-      },
-      {
         key: 'totalItems' as const,
         title: 'Total Items',
-        value: numberFmt.format(totalItems),
+        value: numberFmt.format(totalItems || 0),
         sub: 'Unique inventory items',
         color: '#0ea5e9',
         icon: <Package size={20} />,
         delta: '',
         chartData: null,
         valueFormatter: (v: number) => numberFmt.format(v),
+        infoTooltip: 'Total number of unique items in your inventory system',
+        onClick: () => onCardClick?.('all'),
+      },
+      {
+        key: 'topConsumedItem' as const,
+        title: `Top Consumed Item (${binLabel})`,
+        value: topConsumedItem.totalQty > 0 ? numberFmt.format(topConsumedItem.totalQty) : '—',
+        sub: topConsumedItem.name
+          ? `${topConsumedItem.name} | ${topConsumedItem.category} | Avg: ${numberFmt.format(Math.round(topConsumedItem.avgDaily || 0))}/day`
+          : 'No consumption data',
+        color: '#10b981',
+        icon: <TrendingUp size={20} />,
+        delta: '',
+        chartData: null,
+        valueFormatter: (v: number) => numberFmt.format(v),
+        infoTooltip: `The most consumed item in the last available bin period (${binLabel}) with category and average daily consumption`,
         onClick: () => onCardClick?.('all'),
       },
       {
@@ -216,31 +170,31 @@ const ManageItemsCards: React.FC<{ onCardClick?: (key: CardKey) => void }> = ({ 
         title: 'Low Stock Items',
         value: numberFmt.format(stockMetrics.lowStock || 0),
         sub: 'At or below minimum level',
-        color: '#f59e0b',
+        color: '#ef4444',
         icon: <AlertTriangle size={20} />,
         delta: '',
         chartData: null,
         valueFormatter: (v: number) => numberFmt.format(v),
+        infoTooltip: 'Items that have reached or fallen below their minimum stock level and require immediate attention',
         onClick: () => onCardClick?.('low'),
-      },
-      {
-        key: 'sih' as const,
-        title: 'Stock In Hand',
-        value: numberFmt.format(Math.round(stockMetrics.overallSIH || 0)),
-        sub: 'Total quantity in hand',
-        color: '#6366f1',
-        icon: <Package size={20} />,
-        delta: '',
-        chartData: null,
-        valueFormatter: (v: number) => numberFmt.format(v),
-        onClick: () => onCardClick?.('sih'),
-      },
+      }
     ],
-    [mostConsumedCategory, avgMonthlyConsumption, totalItems, stockMetrics, onCardClick]
+    [topConsumedItem, binLabel, totalItems, stockMetrics, onCardClick]
   );
 
   return (
     <div style={{ marginBottom: 12 }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'flex-end', 
+        marginBottom: 8,
+        color: '#6b7280',
+        fontSize: 12,
+        fontWeight: 500
+      }}>
+        Last updated: {lastUpdated}
+      </div>
+
       {(error || itemsError) && (
         <div style={{ color: 'red', marginBottom: 8 }}>
           {String(error || itemsError)}
@@ -248,7 +202,7 @@ const ManageItemsCards: React.FC<{ onCardClick?: (key: CardKey) => void }> = ({ 
       )}
       <Row gutter={[12, 12]}>
         {cards.map((c) => (
-          <Col key={c.key} xs={24} sm={12} md={12} lg={6}>
+          <Col key={c.key} xs={24} sm={12} md={8} lg={8}>
             <Card
               loading={loading || itemsLoading}
               bodyStyle={{ padding: 16 }}
@@ -262,10 +216,26 @@ const ManageItemsCards: React.FC<{ onCardClick?: (key: CardKey) => void }> = ({ 
               onClick={c.onClick}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#475569' }}>
                     <span style={{ color: c.color }}>{c.icon}</span>
                     <span style={{ fontWeight: 600 }}>{c.title}</span>
+                    <Tooltip title={c.infoTooltip} placement="top">
+                      <Info 
+                        size={14} 
+                        style={{ 
+                          color: '#94a3b8', 
+                          cursor: 'help',
+                          transition: 'color 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.target as HTMLElement).style.color = c.color;
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.target as HTMLElement).style.color = '#94a3b8';
+                        }}
+                      />
+                    </Tooltip>
                   </div>
                   <div style={{ fontSize: 26, fontWeight: 800, marginTop: 6 }}>
                     {c.value}

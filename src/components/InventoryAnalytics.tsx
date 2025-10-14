@@ -69,7 +69,7 @@ type ScoreToRiskLabel = {
   [key: number]: string;
 };
 
-const CompleteBMSInventoryDashboard: React.FC = () => {
+const InventoryAnalytics: React.FC = () => {
   const [inventoryData, setInventoryData] = useState<InventoryItem[]>([]);
   const [august2025Data, setAugust2025Data] = useState<InventoryItem[]>([]);
   const [topItemsData, setTopItemsData] = useState<TopItem[]>([]);
@@ -80,14 +80,9 @@ const CompleteBMSInventoryDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedRisk, setSelectedRisk] = useState<string>("All");
   const [viewMode, setViewMode] = useState<"quantity" | "cost">("quantity");
-  const [topItemsCount, setTopItemsCount] = useState<number>(10);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [chartCategory, setChartCategory] = useState<string>("All");
-  const [chartItemsCount, setChartItemsCount] = useState<number>(15);
-  const [selectedYear] = useState<string>("2025");
   const [hoveredItem, setHoveredItem] = useState<DisplayItem | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [selectedMonth, setSelectedMonth] = useState<string>("Aug 25");
 
   // Load and process CSV data
   useEffect(() => {
@@ -268,8 +263,6 @@ const CompleteBMSInventoryDashboard: React.FC = () => {
   }).slice(0, chartItemsCount);
 
   // Calculate totals
-  const totalBin1 = filteredData.reduce((sum, item) => sum + item.bin1, 0);
-  const totalBin2 = filteredData.reduce((sum, item) => sum + item.bin2, 0);
   const totalPredicted = filteredData.reduce((sum, item) => sum + item.total, 0);
   const avgConfidence = filteredData.reduce((sum, item) => sum + item.confidence, 0) / Math.max(filteredData.length, 1);
 
@@ -299,9 +292,7 @@ const CompleteBMSInventoryDashboard: React.FC = () => {
     };
   };
 
-  // Get current and previous month info
-  const currentMonthInfo = availableMonths.find(m => m.value === selectedMonth);
-  const previousMonthInfo = getPreviousMonth(selectedMonth);
+
 
   // Prepare TOP items display data
   const topDisplayData: DisplayItem[] = filteredTopItems
@@ -361,7 +352,6 @@ const CompleteBMSInventoryDashboard: React.FC = () => {
 
   // Data for LineChart
   const riskLevelToScore: Record<string, number> = { Low: 1, Medium: 2, High: 3 };
-  const scoreToRiskLabel: ScoreToRiskLabel = { 1: 'Low', 2: 'Medium', 3: 'High' };
   const lineChartData = filteredData.map(item => ({
     name: item.name,
     riskLevel: item.riskLevel,
@@ -418,16 +408,378 @@ const CompleteBMSInventoryDashboard: React.FC = () => {
   // The render code remains the same, but now all TypeScript errors are fixed
 
   return (
-    <div style={{ 
-      padding: '20px', 
-      backgroundColor: '#f8fafc', 
+    <div style={{
+      padding: '20px',
+      backgroundColor: '#f8fafc',
       minHeight: '100vh',
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
-      {/* Rest of your JSX continues here exactly as before */}
-      {/* I've fixed the TypeScript errors in the logic section above */}
+      {/* Header */}
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{
+          fontSize: '28px',
+          fontWeight: 'bold',
+          color: '#1f2937',
+          marginBottom: '8px'
+        }}>
+          Inventory Analytics Dashboard
+        </h1>
+        <p style={{ color: '#6b7280', fontSize: '14px' }}>
+          Comprehensive analysis of inventory consumption, risk levels, and predictions for {selectedMonth}
+        </p>
+      </div>
+
+      {/* Controls */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        marginBottom: '24px'
+      }}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Search size={16} color="#6b7280" />
+            <input
+              type="text"
+              placeholder="Search items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                minWidth: '200px'
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Filter size={16} color="#6b7280" />
+            <select
+              value={selectedRisk}
+              onChange={(e) => setSelectedRisk(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            >
+              <option value="All">All Risk Levels</option>
+              <option value="Low">Low Risk</option>
+              <option value="Medium">Medium Risk</option>
+              <option value="High">High Risk</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BarChart3 size={16} color="#6b7280" />
+            <select
+              value={chartCategory}
+              onChange={(e) => setChartCategory(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            >
+              <option value="All">All Categories</option>
+              <option value="Pantry Consumables">Pantry Consumables</option>
+              <option value="HK Chemicals">HK Chemicals</option>
+              <option value="HK Consumables">HK Consumables</option>
+              <option value="Toiletries">Toiletries</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '16px',
+        marginBottom: '24px'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          padding: '20px',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Package size={24} color="#3b82f6" />
+            <div>
+              <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Total Items</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>
+                {filteredData.length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: 'white',
+          padding: '20px',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <BarChart3 size={24} color="#10b981" />
+            <div>
+              <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Total Predicted</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>
+                {totalPredicted.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: 'white',
+          padding: '20px',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Package size={24} color="#f59e0b" />
+            <div>
+              <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Avg Confidence</p>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>
+                {avgConfidence.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+        gap: '24px',
+        marginBottom: '24px'
+      }}>
+        {/* Bar Chart */}
+        <div style={{
+          backgroundColor: 'white',
+          padding: '20px',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ margin: '0 0 16px 0', color: '#1f2937' }}>Consumption by Category</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartFilteredData.slice(0, 10)}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
+              <YAxis fontSize={12} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="bin1" stackId="a" fill="#3b82f6" name="Bin 1" />
+              <Bar dataKey="bin2" stackId="a" fill="#10b981" name="Bin 2" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Pie Chart */}
+        <div style={{
+          backgroundColor: 'white',
+          padding: '20px',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ margin: '0 0 16px 0', color: '#1f2937' }}>Cost Distribution by Category</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={categoryWiseData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percentage }) => `${name}: ${percentage.toFixed(1)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="cost"
+              >
+                {categoryWiseData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Cost']} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Top Items Section */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        marginBottom: '24px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ margin: 0, color: '#1f2937' }}>Top Consumed Items</h3>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            >
+              <option value="All">All Categories</option>
+              <option value="Pantry Consumables">Pantry Consumables</option>
+              <option value="HK Chemicals">HK Chemicals</option>
+              <option value="HK Consumables">HK Consumables</option>
+              <option value="Toiletries">Toiletries</option>
+            </select>
+
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button
+                onClick={() => setViewMode('quantity')}
+                style={{
+                  padding: '6px 12px',
+                  border: viewMode === 'quantity' ? '2px solid #3b82f6' : '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: viewMode === 'quantity' ? '#eff6ff' : 'white',
+                  color: viewMode === 'quantity' ? '#3b82f6' : '#6b7280',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Quantity
+              </button>
+              <button
+                onClick={() => setViewMode('cost')}
+                style={{
+                  padding: '6px 12px',
+                  border: viewMode === 'cost' ? '2px solid #3b82f6' : '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: viewMode === 'cost' ? '#eff6ff' : 'white',
+                  color: viewMode === 'cost' ? '#3b82f6' : '#6b7280',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cost
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Rank</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Item</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Category</th>
+                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>
+                  {viewMode === 'quantity' ? 'Consumption' : 'Cost'}
+                </th>
+                <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>% of Total</th>
+                <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topDisplayData.map((item) => (
+                <tr
+                  key={item.rank}
+                  style={{
+                    borderBottom: '1px solid #e5e7eb',
+                    backgroundColor: hoveredItem?.rank === item.rank ? '#f9fafb' : 'transparent'
+                  }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                >
+                  <td style={{ padding: '12px', fontWeight: '600', color: '#3b82f6' }}>
+                    #{item.rank}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: '500', color: '#1f2937' }}>{item.name}</span>
+                      <span style={{
+                        fontSize: '12px',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        backgroundColor: getRiskColor(item.category.split(' ')[0] === 'Low' ? 'Low' :
+                                                    item.category.split(' ')[0] === 'Medium' ? 'Medium' : 'High'),
+                        color: 'white'
+                      }}>
+                        {item.category.split(' ')[0]}
+                      </span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px', color: '#6b7280' }}>
+                    {iconMap[item.category] || '📦'} {item.category}
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#1f2937' }}>
+                    {item.displayLabel}
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'right', color: '#6b7280' }}>
+                    {item.percentageOfTotal}%
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <span style={{
+                      color: item.monthChange.isIncrease ? '#10b981' : '#ef4444',
+                      fontWeight: '500'
+                    }}>
+                      {item.monthChange.isIncrease ? '↗' : '↘'} {item.monthChange.percentage.toFixed(1)}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Risk Analysis Chart */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      }}>
+        <h3 style={{ margin: '0 0 16px 0', color: '#1f2937' }}>Risk vs Confidence Analysis</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={lineChartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
+            <YAxis yAxisId="left" fontSize={12} />
+            <YAxis yAxisId="right" orientation="right" fontSize={12} />
+            <Tooltip />
+            <Legend />
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="riskScore"
+              stroke="#ef4444"
+              strokeWidth={2}
+              name="Risk Score"
+              dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
+            />
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="confidence"
+              stroke="#10b981"
+              strokeWidth={2}
+              name="Confidence %"
+              dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
 
-export default CompleteBMSInventoryDashboard;
+export default InventoryAnalytics;

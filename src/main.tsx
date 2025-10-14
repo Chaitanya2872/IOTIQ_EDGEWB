@@ -14,7 +14,7 @@ createRoot(document.getElementById('root')!).render(
           colorPrimary: '#1677ff',
           borderRadius: 12,
           fontFamily:
-            "Poppins, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
+            "Inter, 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
           colorBgLayout: '#f5f7fa',
           colorBgContainer: '#ffffff',
           boxShadowSecondary: '0 8px 24px rgba(0,0,0,0.08)',

@@ -57,7 +57,7 @@ const GlassPanel: React.FC<GlassPanelProps> = ({
     boxShadow: accentTokens.shadow,
     padding,
     fontFamily:
-      "Poppins, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
+      "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
     color: '#0f172a',
   };
 
