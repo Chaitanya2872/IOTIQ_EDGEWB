@@ -1,515 +1,355 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  DashboardFilled,
-  BankFilled,
-  QuestionCircleFilled,
-  RadarChartOutlined,
-  ThunderboltFilled,
-  LayoutFilled,
-  AppstoreFilled,
-  CalendarFilled,
-  DownOutlined,
-  RightOutlined,
-} from "@ant-design/icons";
+  LayoutDashboard,
+  Package,
+  Boxes,
+  Ticket,
+  Radar,
+  BatteryCharging,
+  Layers,
+  UtensilsCrossed,
+  ChevronDown,
+  ChevronRight,
+  Orbit,
+} from "lucide-react";
+import classNames from "classnames";
 
-import "../styles/inventory.css";
+import styles from "../styles/SidebarMenu.module.css";
 
 interface SidebarMenuProps {
   setSidebarWidth: (width: number) => void;
 }
 
+type TooltipState = {
+  show: boolean;
+  text: string;
+  x: number;
+  y: number;
+};
+
+type MenuConfig = {
+  key: string;
+  label: string;
+  shortLabel?: string;
+  icon?: React.ReactNode;
+  path?: string;
+  children?: MenuConfig[];
+};
+
+const useIsBrowser = () => typeof window !== "undefined";
+
+const useIsDesktop = () => {
+  const isBrowser = useIsBrowser();
+  const [isDesktop, setIsDesktop] = React.useState(() => (isBrowser ? window.innerWidth >= 1024 : true));
+
+  React.useEffect(() => {
+    if (!isBrowser) return;
+    const handler = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, [isBrowser]);
+
+  return isDesktop;
+};
+
+const MENU_ITEMS: MenuConfig[] = [
+  {
+    key: "dashboard",
+    label: "Dashboard",
+    shortLabel: "Dash",
+    icon: <LayoutDashboard size={20} strokeWidth={2} />,
+    path: "/dashboard",
+  },
+  {
+    key: "inventory",
+    label: "Inventory",
+    shortLabel: "Inv",
+    icon: <Package size={20} strokeWidth={2} />,
+    children: [
+      { key: "inventory-categories", label: "Categories", path: "/inventory/categories" },
+      { key: "inventory-items", label: "Items", path: "/inventory/items" },
+      { key: "inventory-analytics", label: "Analytics", path: "/inventory/analytics" },
+      { key: "inventory-consumption", label: "Consumption", path: "/inventory/consumption-inventory" },
+      { key: "inventory-budget", label: "Budget", path: "/inventory/budget-analysis" },
+    ],
+  },
+  {
+    key: "assets",
+    label: "Assets",
+    shortLabel: "Ast",
+    icon: <Boxes size={20} strokeWidth={2} />,
+    path: "/asset-dashboard",
+  },
+  {
+    key: "ticketing",
+    label: "Ticketing",
+    icon: <Ticket size={20} strokeWidth={2} />,
+    path: "/ticketing",
+  },
+  {
+    key: "iot",
+    label: "IoT Sensors",
+    icon: <Radar size={20} strokeWidth={2} />,
+    path: "/iot-sensors",
+  },
+  {
+    key: "energy",
+    label: "Energy",
+    icon: <BatteryCharging size={20} strokeWidth={2} />,
+    path: "/energy-sustainability",
+  },
+  {
+    key: "space",
+    label: "Space",
+    icon: <Layers size={20} strokeWidth={2} />,
+    path: "/space-occupancy",
+  },
+  {
+    key: "meals",
+    label: "Meals",
+    icon: <UtensilsCrossed size={20} strokeWidth={2} />,
+    path: "/meal-forecast",
+  },
+];
+
 const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
   const location = useLocation();
-  const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [tooltip, setTooltip] = useState<{ show: boolean; text: string; x: number; y: number }>({
-    show: false,
-    text: '',
-    x: 0,
-    y: 0
-  });
-
-  const toggleInventory = () => setInventoryOpen(!inventoryOpen);
+  const isDesktop = useIsDesktop();
+  const isBrowser = useIsBrowser();
+  const [openGroups, setOpenGroups] = useState(() => new Set<string>());
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(() => (isBrowser ? window.innerWidth >= 1024 : true));
+  const [tooltip, setTooltip] = useState<TooltipState>({ show: false, text: "", x: 0, y: 0 });
   const selectedKey = location.pathname;
 
   useEffect(() => {
-    setSidebarWidth(sidebarOpen ? 200 : 60);
-  }, [sidebarOpen, setSidebarWidth]);
+    setSidebarWidth(isExpanded ? 240 : 72);
+  }, [isExpanded, setSidebarWidth]);
 
-  const showTooltip = (text: string, e: React.MouseEvent) => {
-    if (!sidebarOpen) {
-      const rect = e.currentTarget.getBoundingClientRect();
+  useEffect(() => {
+    setIsExpanded(isDesktop);
+  }, [isDesktop]);
+
+  // Close all expanded groups when sidebar collapses
+  useEffect(() => {
+    if (!isExpanded) {
+      setOpenGroups(new Set());
+    }
+  }, [isExpanded]);
+
+  useEffect(() => {
+    const match = MENU_ITEMS.find((item) =>
+      item.children?.some((child) => child.path && selectedKey.startsWith(child.path))
+    );
+    if (match?.key) {
+      setOpenGroups((prev) => {
+        const next = new Set(prev);
+        next.add(match.key);
+        return next;
+      });
+    }
+  }, [selectedKey]);
+
+  const handleMouseEnter = (
+    item: MenuConfig,
+    event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>
+  ) => {
+    setHoveredKey(item.key);
+    if (!isExpanded && isBrowser) {
+      const rect = event.currentTarget.getBoundingClientRect();
       setTooltip({
         show: true,
-        text,
-        x: rect.right + 8,
-        y: rect.top + rect.height / 2
+        text: item.label,
+        x: rect.right + 12,
+        y: rect.top + rect.height / 2,
       });
     }
   };
 
-  const hideTooltip = () => {
-    setTooltip(prev => ({ ...prev, show: false }));
+  const handleMouseLeave = () => {
+    setHoveredKey(null);
+    setTooltip((prev) => ({ ...prev, show: false }));
   };
 
-  const menuItemStyle = (path: string) => {
-    const isActive = selectedKey === path || (path === "/inventory" && selectedKey.startsWith("/inventory"));
-    const isHovered = hoveredItem === path;
-
-    return {
-      position: "relative",
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      padding: sidebarOpen ? "10px 14px" : "10px 0",
-      color: isActive ? "#06b6d4" : isHovered ? "#ffffff" : "rgba(255, 255, 255, 0.75)",
-      fontWeight: isActive ? 600 : 500,
-      textDecoration: "none",
-      background: isActive
-        ? "rgba(6, 182, 212, 0.12)"
-        : isHovered
-        ? "rgba(255, 255, 255, 0.06)"
-        : "transparent",
-      transition: "all 0.25s ease",
-      whiteSpace: "nowrap",
-      cursor: "pointer",
-      margin: "1px 0",
-      fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
-      justifyContent: sidebarOpen ? "flex-start" : "center",
-      overflow: "hidden",
-      borderLeft: isActive ? "3px solid #06b6d4" : "3px solid transparent",
-      fontSize: "13px",
-    } as React.CSSProperties;
+  const toggleGroup = (key: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
   };
 
-  const iconContainerStyle = (path: string) => {
-    const isActive = selectedKey === path || (path === "/inventory" && selectedKey.startsWith("/inventory"));
-    const isHovered = hoveredItem === path;
-
-    return {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "36px",
-      height: "36px",
-      borderRadius: "10px",
-      background: isActive
-        ? "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)"
-        : isHovered
-        ? "rgba(255, 255, 255, 0.12)"
-        : "rgba(255, 255, 255, 0.06)",
-      color: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.85)",
-      transition: "all 0.25s ease",
-      boxShadow: isActive
-        ? "0 2px 8px rgba(6, 182, 212, 0.25)"
-        : "none",
-      transform: isActive 
-        ? "scale(1.03)" 
-        : "scale(1)",
-    } as React.CSSProperties;
+  const isRouteActive = (item: MenuConfig) => {
+    if (item.path) return selectedKey === item.path;
+    if (item.children) {
+      return item.children.some((child) => child.path && selectedKey.startsWith(child.path));
+    }
+    return false;
   };
 
-  const subMenuItemStyle = (path: string) => {
-    const isActive = selectedKey === path;
-    const isHovered = hoveredItem === path;
+  const renderMenuItem = (item: MenuConfig) => {
+    const active = isRouteActive(item);
+    const collapsed = !isExpanded;
+    const opened = item.children ? openGroups.has(item.key) : undefined;
 
-    return {
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      padding: "8px 14px 8px 20px",
-      color: isActive ? "#06b6d4" : isHovered ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
-      fontWeight: isActive ? 600 : 500,
-      textDecoration: "none",
-      background: isActive
-        ? "rgba(6, 182, 212, 0.08)"
-        : isHovered
-        ? "rgba(255, 255, 255, 0.04)"
-        : "transparent",
-      borderLeft: isActive ? "3px solid #06b6d4" : "3px solid transparent",
-      margin: "1px 0",
-      fontSize: "12.5px",
-      transition: "all 0.25s ease",
-      fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
-    } as React.CSSProperties;
+    const containerProps = {
+      onMouseEnter: (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) =>
+        handleMouseEnter(item, event),
+      onMouseLeave: handleMouseLeave,
+      className: classNames(
+        styles.menuItemBase,
+        collapsed && styles.menuItemCollapsed,
+        active && styles.menuItemActive,
+      ),
+    } as const;
+
+    const iconClass = classNames(styles.iconWrap, active && styles.iconWrapActive);
+
+    if (item.children) {
+      const maxHeight = opened ? `${item.children.length * 38}px` : "0";
+
+      return (
+        <li key={item.key}>
+          <button
+            type="button"
+            {...containerProps}
+            className={classNames(containerProps.className, styles.buttonReset)}
+            onClick={() => toggleGroup(item.key)}
+          >
+            {item.icon && <span className={iconClass}>{item.icon}</span>}
+            {isExpanded && (
+              <span className={styles.label}>{item.label}</span>
+            )}
+            {isExpanded && (
+              <span
+                className={classNames(
+                  styles.chevron,
+                  opened ? styles.chevronOpen : styles.chevronClosed
+                )}
+              >
+                {opened ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
+              </span>
+            )}
+          </button>
+
+          <div
+            className={styles.submenuWrapper}
+            style={{ maxHeight }}
+          >
+            <ul className={styles.submenuList}>
+              {item.children.map((child) => {
+                const childActive = child.path ? selectedKey === child.path : false;
+                return (
+                  <li key={child.key}>
+                    <Link
+                      to={child.path || "#"}
+                      className={classNames(
+                        styles.submenuItem,
+                        childActive && styles.submenuItemActive
+                      )}
+                      onMouseEnter={(event) => handleMouseEnter(child, event)}
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      {child.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </li>
+      );
+    }
+
+    if (!item.path) {
+      return null;
+    }
+
+    return (
+      <li key={item.key}>
+        <Link
+          to={item.path}
+          {...containerProps}
+        >
+          {item.icon && <span className={iconClass}>{item.icon}</span>}
+          {isExpanded && (
+            <span className={styles.label}>{item.label}</span>
+          )}
+        </Link>
+      </li>
+    );
   };
 
   return (
     <>
       <div
-        onMouseEnter={() => setSidebarOpen(true)}
-        onMouseLeave={() => {
-          setSidebarOpen(false);
-          setInventoryOpen(false);
-          hideTooltip();
-        }}
-        style={{
-          width: sidebarOpen ? 200 : 70,
-          background: "#0f172a",
-          borderRight: "1px solid rgba(6, 182, 212, 0.08)",
-          transition: "all 0.25s ease",
-          overflowX: "hidden",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          minHeight: "100%",
-          position: "relative",
-        }}
-      >
-        {/* Yellow accent strip */}
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: "3px",
-            background: "linear-gradient(180deg, #06b6d4 0%, #0891b2 100%)",
-            boxShadow: "0 0 8px rgba(6, 182, 212, 0.4)",
-          }}
-        />
-
-        {/* Sidebar Header - More compact */}
-        <div
-          style={{
-            padding: sidebarOpen ? "16px 14px 12px 18px" : "16px 0",
-            fontWeight: 700,
-            fontSize: sidebarOpen ? "16px" : "16px",
-            color: "#ffffff",
-            textAlign: sidebarOpen ? "left" : "center",
-            transition: "all 0.25s ease",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            letterSpacing: "0.03em",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-            marginBottom: "8px",
-          }}
-        >
-          {sidebarOpen ? "MENU" : "☰"}
-        </div>
-
-        {/* Dashboard */}
-        <Link 
-          to="/dashboard" 
-          className="sidebar-item"
-          style={menuItemStyle("/dashboard")}
-          onMouseEnter={(e) => {
-            setHoveredItem("/dashboard");
-            showTooltip("Dashboard", e);
-          }}
-          onMouseLeave={() => {
-            setHoveredItem(null);
-            hideTooltip();
-          }}
-        >
-          <span style={iconContainerStyle("/dashboard")}>
-            <DashboardFilled style={{ fontSize: 18 }} />
-          </span>
-          <span style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            fontSize: sidebarOpen ? "13px" : "10px",
-            opacity: sidebarOpen ? 1 : 0.8
-          }}>
-            {sidebarOpen ? "Dashboard" : "Dash"}
-          </span>
-        </Link>
-
-        {/* Inventory Dropdown */}
-        <div
-          onClick={toggleInventory}
-          onMouseEnter={(e) => {
-            setHoveredItem("/inventory");
-            showTooltip("Inventory", e);
-          }}
-          onMouseLeave={() => {
-            setHoveredItem(null);
-            hideTooltip();
-          }}
-          style={menuItemStyle("/inventory")}
-        >
-          <span style={iconContainerStyle("/inventory")}>
-            <AppstoreFilled style={{ fontSize: 18 }} />
-          </span>
-          {sidebarOpen && (
-            <>
-              <span style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                flex: 1,
-                fontSize: sidebarOpen ? "13px" : "10px",
-                opacity: sidebarOpen ? 1 : 0.8
-              }}>
-                {sidebarOpen ? "Inventory" : "Inv"}
-              </span>
-              <span 
-                style={{ 
-                  fontSize: 11, 
-                  marginLeft: 4,
-                  transition: "transform 0.25s ease",
-                  transform: inventoryOpen ? "rotate(0deg)" : "rotate(-90deg)"
-                }}
-              >
-                {inventoryOpen ? <DownOutlined /> : <RightOutlined />}
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Inventory Submenu */}
-        {sidebarOpen && (
-          <div
-            style={{
-              maxHeight: inventoryOpen ? "400px" : "0",
-              overflow: "hidden",
-              transition: "max-height 0.25s ease",
-            }}
-          >
-            <Link 
-              to="/inventory/categories"
-              className="sidebar-item"
-              style={subMenuItemStyle("/inventory/categories")}
-              onMouseEnter={() => setHoveredItem("/inventory/categories")}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Categories</span>
-            </Link>
-
-            <Link 
-              to="/inventory/items" 
-              className="sidebar-item"
-              style={subMenuItemStyle("/inventory/items")}
-              onMouseEnter={() => setHoveredItem("/inventory/items")}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Items</span>
-            </Link>
-
-            <Link
-              to="/inventory/analytics"
-              className="sidebar-item"
-              style={subMenuItemStyle("/inventory/analytics")}
-              onMouseEnter={() => setHoveredItem("/inventory/analytics")}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Analytics</span>
-            </Link>
-
-            <Link
-              to="/inventory/consumption-inventory"
-              className="sidebar-item"
-              style={subMenuItemStyle("/inventory/consumption-inventory")}
-              onMouseEnter={() => setHoveredItem("/inventory/consumption-inventory")}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Consumption</span>
-            </Link>
-
-            <Link 
-              to="/inventory/budget-analysis"
-              className="sidebar-item"
-              style={subMenuItemStyle("/inventory/budget-analysis")}
-              onMouseEnter={() => setHoveredItem("/inventory/budget-analysis")}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Budget</span>
-            </Link>
-          </div>
+        className={classNames(
+          styles.sidebarShell,
+          isExpanded ? styles.expanded : styles.collapsed
         )}
+        onMouseEnter={() => isDesktop && setIsExpanded(true)}
+        onMouseLeave={() => isDesktop && setIsExpanded(false)}
+      >
+        <div className={styles.accentBar} />
 
-        {/* Asset Dashboard */}
-        <Link 
-          to="/asset-dashboard"
-          className="sidebar-item"
-          style={menuItemStyle("/asset-dashboard")}
-          onMouseEnter={(e) => {
-            setHoveredItem("/asset-dashboard");
-            showTooltip("Assets", e);
-          }}
-          onMouseLeave={() => {
-            setHoveredItem(null);
-            hideTooltip();
-          }}
-        >
-          <span style={iconContainerStyle("/asset-dashboard")}>
-            <BankFilled style={{ fontSize: 18 }} />
-          </span>
-          <span style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            fontSize: sidebarOpen ? "13px" : "10px",
-            opacity: sidebarOpen ? 1 : 0.8
-          }}>
-            {sidebarOpen ? "Assets" : "Ast"}
-          </span>
-        </Link>
-
-        {/* Ticketing System */}
-        <Link 
-          to="/ticketing"
-          className="sidebar-item"
-          style={menuItemStyle("/ticketing")}
-          onMouseEnter={(e) => {
-            setHoveredItem("/ticketing");
-            showTooltip("Ticketing", e);
-          }}
-          onMouseLeave={() => {
-            setHoveredItem(null);
-            hideTooltip();
-          }}
-        >
-          <span style={iconContainerStyle("/ticketing")}>
-            <QuestionCircleFilled style={{ fontSize: 18 }} />
-          </span>
-          {sidebarOpen && (
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-              Ticketing
-            </span>
+        <div
+          className={classNames(
+            styles.header,
+            !isExpanded && styles.headerCollapsed
           )}
-        </Link>
-
-        {/* IoT Sensors */}
-        <Link 
-          to="/iot-sensors" 
-          className="sidebar-item"
-          style={menuItemStyle("/iot-sensors")}
-          onMouseEnter={(e) => {
-            setHoveredItem("/iot-sensors");
-            showTooltip("IoT Sensors", e);
-          }}
-          onMouseLeave={() => {
-            setHoveredItem(null);
-            hideTooltip();
-          }}
         >
-          <span style={iconContainerStyle("/iot-sensors")}>
-            <RadarChartOutlined style={{ fontSize: 18 }} />
-          </span>
-          {sidebarOpen && (
-            <span style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              fontSize: sidebarOpen ? "13px" : "10px",
-              opacity: sidebarOpen ? 1 : 0.8
-            }}>
-              IoT Sensors
-            </span>
-          )}
-        </Link>
+          <div className={styles.logoContainer}>
+            <Orbit 
+              size={isExpanded ? 26 : 30} 
+              strokeWidth={2.2} 
+              className={styles.logoIcon}
+            />
+            {isExpanded && (
+              <span className={styles.logoText}>vibes</span>
+            )}
+          </div>
+        </div>
 
-        {/* Energy & Sustainability */}
-        <Link 
-          to="/energy-sustainability"
-          className="sidebar-item" 
-          style={menuItemStyle("/energy-sustainability")}
-          onMouseEnter={(e) => {
-            setHoveredItem("/energy-sustainability");
-            showTooltip("Energy", e);
-          }}
-          onMouseLeave={() => {
-            setHoveredItem(null);
-            hideTooltip();
-          }}
-        >
-          <span style={iconContainerStyle("/energy-sustainability")}>
-            <ThunderboltFilled style={{ fontSize: 18 }} />
-          </span>
-          {sidebarOpen && (
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-              Energy
-            </span>
-          )}
-        </Link>
+        <nav aria-label="Primary Sidebar">
+          <ul className={styles.menuList}>{MENU_ITEMS.map(renderMenuItem)}</ul>
+        </nav>
 
-        {/* Space & Occupancy */}
-        <Link 
-          to="/space-occupancy" 
-          className="sidebar-item"
-          style={menuItemStyle("/space-occupancy")}
-          onMouseEnter={(e) => {
-            setHoveredItem("/space-occupancy");
-            showTooltip("Space", e);
-          }}
-          onMouseLeave={() => {
-            setHoveredItem(null);
-            hideTooltip();
-          }}
-        >
-          <span style={iconContainerStyle("/space-occupancy")}>
-            <LayoutFilled style={{ fontSize: 18 }} />
-          </span>
-          {sidebarOpen && (
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-              Space
-            </span>
-          )}
-        </Link>
-
-        {/* Meal Forecast */}
-        <Link 
-          to="/meal-forecast"
-          className="sidebar-item"
-          style={menuItemStyle("/meal-forecast")}
-          onMouseEnter={(e) => {
-            setHoveredItem("/meal-forecast");
-            showTooltip("Meals", e);
-          }}
-          onMouseLeave={() => {
-            setHoveredItem(null);
-            hideTooltip();
-          }}
-        >
-          <span style={iconContainerStyle("/meal-forecast")}>
-            <CalendarFilled style={{ fontSize: 18 }} />
-          </span>
-          {sidebarOpen && (
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-              Meals
-            </span>
-          )}
-        </Link>
+        {isDesktop && (
+          <button
+            type="button"
+            aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+            className={classNames(styles.toggleButton, !isDesktop && styles.mobileToggle)}
+            onClick={() => setIsExpanded((prev) => !prev)}
+          >
+            {isExpanded ? <ChevronRight size={18} strokeWidth={2} /> : <ChevronDown size={18} strokeWidth={2} />}
+          </button>
+        )}
       </div>
 
-      {/* Compact Tooltip */}
-      {tooltip.show && !sidebarOpen && (
+      {!isExpanded && tooltip.show && (
         <div
+          className={styles.tooltip}
           style={{
-            position: "fixed",
             left: tooltip.x,
             top: tooltip.y,
             transform: "translateY(-50%)",
-            background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-            color: "#06b6d4",
-            padding: "6px 12px",
-            borderRadius: "6px",
-            fontSize: "12px",
-            fontWeight: 600,
-            zIndex: 10000,
-            whiteSpace: "nowrap",
-            fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
-            boxShadow: "0 2px 12px rgba(0, 0, 0, 0.3)",
-            border: "1px solid rgba(6, 182, 212, 0.25)",
-            pointerEvents: "none",
           }}
         >
           {tooltip.text}
-          <div
-            style={{
-              position: "absolute",
-              left: "-5px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: 0,
-              height: 0,
-              borderTop: "5px solid transparent",
-              borderBottom: "5px solid transparent",
-              borderRight: "5px solid #0f172a",
-            }}
-          />
         </div>
+      )}
+
+      {!isDesktop && isExpanded && (
+        <div
+          className={styles.backdrop}
+          role="presentation"
+          onClick={() => setIsExpanded(false)}
+        />
       )}
     </>
   );

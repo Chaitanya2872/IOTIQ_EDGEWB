@@ -1,0 +1,387 @@
+/* Modern Gradient Blue Theme - Gen Z Aesthetic */
+
+:root {
+  --sidebar-bg: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  --sidebar-bg-solid: #1e293b;
+  --sidebar-accent: #334155;
+  --primary-blue: #3b82f6;
+  --primary-blue-light: #60a5fa;
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.75);
+  --text-tertiary: rgba(255, 255, 255, 0.55);
+  --hover-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(139, 92, 246, 0.08));
+  --hover-bg-solid: rgba(59, 130, 246, 0.1);
+  --active-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.15));
+  --active-bg-solid: rgba(59, 130, 246, 0.18);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --accent-line: linear-gradient(180deg, #60a5fa 0%, #8b5cf6 100%);
+}
+
+.sidebarShell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--sidebar-bg);
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebarShell.expanded {
+  width: 240px;
+}
+
+.sidebarShell.collapsed {
+  width: 72px;
+}
+
+.accentBar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-line);
+}
+
+/* Header Styles */
+.header {
+  padding: 20px 16px;
+  border-bottom: 1px solid var(--border-color);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.headerCollapsed {
+  padding: 20px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.logoIcon {
+  color: var(--primary-blue-light);
+  flex-shrink: 0;
+  animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.logoText {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+  text-transform: lowercase;
+}
+
+/* Menu List */
+.menuList {
+  list-style: none;
+  margin: 0;
+  padding: 12px 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.menuList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.menuList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.menuList::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+.menuList::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Menu Items */
+.menuItemBase {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  margin: 2px 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+  cursor: pointer;
+}
+
+.menuItemBase:hover {
+  color: var(--text-primary);
+  background: var(--hover-bg-solid);
+}
+
+.menuItemCollapsed {
+  justify-content: center;
+  padding: 12px 0;
+  margin: 2px 10px;
+  background: transparent !important;
+}
+
+.menuItemCollapsed:hover {
+  background: transparent !important;
+}
+
+.menuItemCollapsed .iconWrap {
+  background: transparent !important;
+}
+
+.menuItemActive {
+  color: var(--text-primary);
+  background: var(--active-bg-solid);
+  font-weight: 600;
+}
+
+.menuItemActive::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: var(--accent-line);
+  border-radius: 0 2px 2px 0;
+}
+
+.collapsed .menuItemActive::before {
+  display: none;
+}
+
+/* Icon Styles */
+.iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.iconWrapActive {
+  color: var(--primary-blue-light);
+}
+
+.collapsed .iconWrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.collapsed .menuItemBase:hover .iconWrap {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.collapsed .iconWrapActive {
+  background: var(--active-bg-solid) !important;
+}
+
+/* Label Styles */
+.label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+/* Button Reset */
+.buttonReset {
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  outline: none;
+}
+
+/* Chevron Styles */
+.chevron {
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+  transform: rotate(0deg);
+}
+
+.chevronClosed {
+  transform: rotate(0deg);
+}
+
+/* Submenu Styles */
+.submenuWrapper {
+  overflow: hidden;
+  transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.submenuList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.submenuItem {
+  display: block;
+  padding: 8px 16px 8px 48px;
+  margin: 0 8px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.submenuItem:hover {
+  color: var(--text-primary);
+  background: var(--hover-bg-solid);
+}
+
+.submenuItemActive {
+  color: var(--primary-blue-light);
+  background: var(--active-bg-solid);
+  font-weight: 500;
+}
+
+/* Toggle Button */
+.toggleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  margin: 12px;
+  background: var(--sidebar-accent);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggleButton:hover {
+  background: var(--hover-bg-solid);
+  color: var(--text-primary);
+  border-color: var(--primary-blue);
+}
+
+.mobileToggle {
+  display: none;
+}
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  background: var(--sidebar-accent);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 9999;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-color);
+  animation: tooltipFadeIn 0.15s ease;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* Backdrop for Mobile */
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 998;
+  animation: backdropFadeIn 0.2s ease;
+}
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 1023px) {
+  .sidebarShell.expanded {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .mobileToggle {
+    display: flex;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .sidebarShell,
+  .menuItemBase,
+  .submenuWrapper,
+  .chevron,
+  .toggleButton {
+    transition: none;
+  }
+
+  .logoIcon {
+    animation: none;
+  }
+}
+
+/* Focus Styles */
+.menuItemBase:focus-visible,
+.buttonReset:focus-visible,
+.toggleButton:focus-visible {
+  outline: 2px solid var(--primary-blue-light);
+  outline-offset: 2px;
+}

@@ -1,95 +1,4 @@
-/* .page-container {
 
-overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background-color: #f0f2f5;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-
-.top-header {
-  display: flex;
-  overflow: hidden;
-
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 40px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-
-.left-logo img,
-.right-logo img {
-  height: 40px;
-}
-
-
-.login-wrapper {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 20px;
-  min-width: 100vw;
-}
-
-
-.login-card {
-  background-color: #ffffff;
-  padding: 40px 30px;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-  width: 100%;
-  max-width: 480px;
-  min-width: 360px;
-  text-align: center;
-}
-
-
-.login-heading {
-  margin-bottom: 20px;
-  font-size: 28px;
-  color: #1e1e1e;
-}
-
-
-.center-logo {
-  width: 120px;
-  height: auto;
-  margin-bottom: 24px;
-}
-
-
-.submit-button {
-  width: 50%;
-  height: 50px;
-  background-color: #1677ff;
-  border: none;
-  color: white;
-  font-weight: 600;
-  border-radius: 50px;
-}
-
-.submit-button:hover {
-  background-color: #0056d2;
-}
-
-
-.login-footer {
-  margin-top: 20px;
-}
-
-.forgot-link {
-  color: #1677ff;
-  text-decoration: none;
-  font-size: 14px;
-}
-
-.forgot-link:hover {
-  text-decoration: underline;
-} */
 
 
  .dashboard-container {
@@ -501,9 +410,7 @@ html, body, #root {
   width: 100%;
 }
 
-/* ===== Responsive Styles ===== */
 
-/* Tablets */
 @media (max-width: 768px) {
   .register-card {
     width: 90%;

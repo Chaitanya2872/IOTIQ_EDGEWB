@@ -1,59 +1,39 @@
 import React, { useState } from "react";
+import { Outlet } from "react-router-dom";
+import classNames from "classnames";
 import Header from "./Header";
 import SidebarMenu from "./SidebarMenu";
-import { Outlet } from "react-router-dom";
+
+import styles from "../styles/SidebarLayout.module.css";
 
 interface SidebarLayoutProps {
   onLogout: () => void;
 }
 
 const SidebarLayout: React.FC<SidebarLayoutProps> = ({ onLogout }) => {
-  const [sidebarWidth, setSidebarWidth] = useState(200); // Compact default width
+  const [sidebarWidth, setSidebarWidth] = useState(240);
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      {/* Sidebar */}
-      <div style={{ position: "fixed", top: 64, left: 0, bottom: 0, zIndex: 900 }}>
-        <SidebarMenu setSidebarWidth={setSidebarWidth} />
-      </div>
+    <div className={styles.appShell}>
+      <Header onLogout={onLogout} />
 
-      {/* Main Area */}
-      <div 
-        style={{ 
-          flex: 1, 
-          marginLeft: sidebarWidth, 
-          transition: "margin-left 0.25s ease" 
-        }}
+      <aside
+        className={styles.sidebarWrapper}
+        style={{ width: sidebarWidth }}
       >
-        {/* Fixed Header */}
-        <div
-          style={{
-            width: "100%",
-            height: "64px",
-            backgroundColor: "transparent",
-            position: "fixed",
-            top: 0,
-            left: 0,
-            zIndex: 1000,
-          }}
-        >
-          <Header onLogout={onLogout} />
-        </div>
+        <SidebarMenu setSidebarWidth={setSidebarWidth} />
+      </aside>
 
-        {/* Page Content - Minimal padding */}
-        <div
-          style={{
-            marginTop: "64px",
-            height: "calc(100vh - 64px)",
-            overflowY: "auto",
-            background: "linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%)",
-            padding: "16px",
-            boxSizing: "border-box",
-          }}
-        >
+      <div
+        className={styles.backdropSpacer}
+        style={{ width: sidebarWidth }}
+      />
+
+      <main className={styles.mainArea}>
+        <section className={styles.contentSurface}>
           <Outlet />
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 };
