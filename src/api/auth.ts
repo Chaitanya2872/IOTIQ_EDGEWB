@@ -1,5 +1,4 @@
-// Simple auth API client
-// Uses Vite env var VITE_AUTH_API_BASE_URL (preferred) or VITE_API_BASE_URL as fallback
+
 
 export type SignInRequest = {
   email: string;
@@ -10,13 +9,13 @@ export type SignUpRequest = {
   fullName: string;
   email: string;
   password: string;
-  roles: string[]; // e.g., ["USER"]
+  roles: string[]; 
 };
 
 export type AuthResponse = {
   accessToken: string;
   refreshToken: string;
-  tokenType: string; // e.g., "Bearer"
+  tokenType: string; 
   userId: number;
   fullName: string;
   email: string;
@@ -24,7 +23,7 @@ export type AuthResponse = {
 };
 
 const VITE_ENV: any = (import.meta as any).env || {};
-const API_BASE = VITE_ENV.VITE_AUTH_API_BASE_URL || VITE_ENV.VITE_API_BASE_URL || ""; // e.g., http://localhost:8084
+const API_BASE = VITE_ENV.VITE_AUTH_API_BASE_URL || VITE_ENV.VITE_API_BASE_URL || "";
 
 async function request<T>(path: string, options: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
