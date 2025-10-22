@@ -643,7 +643,7 @@ const ManageItems: React.FC = () => {
     loading: false
   });
 
-  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => { setRows(data || []); }, [data]);
 
@@ -651,6 +651,17 @@ const ManageItems: React.FC = () => {
 
   const filteredRows = useMemo(() => {
     let r = [...(rows || [])];
+    
+    // Apply search filter first
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      r = r.filter(i => 
+        i.itemName?.toLowerCase().includes(query) ||
+        i.itemCode?.toLowerCase().includes(query) ||
+        i.category?.categoryName?.toLowerCase().includes(query) ||
+        i.itemDescription?.toLowerCase().includes(query)
+      );
+    }
     
     if (selectedCategory) {
       r = r.filter(i => i.category?.categoryName === selectedCategory);
@@ -686,7 +697,7 @@ const ManageItems: React.FC = () => {
     }
     
     return r;
-  }, [rows, categoryFilter, activeFilter, selectedCategory]);
+  }, [rows, categoryFilter, activeFilter, selectedCategory, searchQuery]);
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70, sorter: (a: any, b: any) => a.id - b.id },
@@ -918,9 +929,19 @@ const ManageItems: React.FC = () => {
 
   const handleSearch = async (q?: string) => {
     const query = (q || '').trim();
-    if (!query) { setRows(data || []); return; }
-    try { const results = await search(query); setRows(results); }
-    catch (e: any) { message.error(e?.message || 'Search failed'); }
+    if (!query) { 
+      setSearchQuery('');
+      setRows(data || []); 
+      return; 
+    }
+    setSearchQuery(query);
+    try { 
+      const results = await search(query); 
+      setRows(results); 
+    }
+    catch (e: any) { 
+      message.error(e?.message || 'Search failed'); 
+    }
   };
 
   const openUploadModal = (type: 'items' | 'consumption') => {
@@ -980,6 +1001,7 @@ const ManageItems: React.FC = () => {
             refresh();
             setSelectedCategory(null);
             setActiveFilter('all');
+            setSearchQuery('');
           }}>
             Refresh
           </Button>
@@ -1004,14 +1026,18 @@ const ManageItems: React.FC = () => {
             options={[{ label: 'All Categories', value: 'all' }, ...categoryOptions]}
             onChange={(v) => { setSelectedCategory(null); setCategoryFilter(v as any); }}
           />
-          <Input.Search
+          <Input
             placeholder="Search items..."
+            value={searchQuery}
+            onChange={(e) => { 
+              const value = e.target.value;
+              setSearchQuery(value);
+              if (!value) {
+                setRows(data || []);
+              }
+            }}
+            style={{ width: 200, fontWeight: 700 }}
             allowClear
-            style={{ width: searchFocused ? 300 : 250, transition: 'width 0.3s ease' }}
-            onSearch={handleSearch}
-            onChange={(e) => { if (!e.target.value) setRows(data || []); }}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
           />
         </Space>
       </Space>

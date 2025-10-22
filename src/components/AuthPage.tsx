@@ -40,8 +40,7 @@ const AuthPage: React.FC<Props> = ({ onAuthSuccess }) => {
               <img src={logo} alt="Logo" />
             </div>
 
-            <h1 className="auth-title">Ah, you remembered your password — impressive!</h1>
-            <p className="auth-subtitle">Let’s get you logged in.</p>
+           
           </div>
 
           <Form
