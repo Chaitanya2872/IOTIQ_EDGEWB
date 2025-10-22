@@ -272,7 +272,7 @@ const DynamicCSVDashboard: React.FC = () => {
     };
 
     autoLoadCSVs();
-  }, []);
+  }, [csvPaths.anomalies, csvPaths.correlations, csvPaths.stock]);
 
   // Generate consumption trends from real anomalies data
   const generateConsumptionTrendsFromAnomalies = (data: AnomalyItem[]): void => {
@@ -348,7 +348,7 @@ const DynamicCSVDashboard: React.FC = () => {
     if (!anomaliesLoading && fullAnomaliesData.length > 0) {
       generateConsumptionTrendsFromAnomalies(fullAnomaliesData);
     }
-  }, [selectedItems, anomaliesLoading, fullAnomaliesData]);
+  }, [selectedItems, anomaliesLoading, fullAnomaliesData, generateConsumptionTrendsFromAnomalies]);
 
   // Filter functions
   const getFilteredCorrelationData = (): CorrelationItem[] => {

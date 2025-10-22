@@ -68,6 +68,7 @@ interface StockMovementData {
   name: string;
   value: number;
   color: string;
+  [key: string]: any;
 }
 
 const DynamicCSVDashboard: React.FC = () => {

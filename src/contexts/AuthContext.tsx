@@ -52,37 +52,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (credentials: SignInRequest) => {
-    try {
-      const authResponse = await signIn(credentials);
-      storeAuth(authResponse);
+    const authResponse = await signIn(credentials);
+    storeAuth(authResponse);
 
-      setIsAuthenticated(true);
-      setUser({
-        userId: authResponse.userId,
-        fullName: authResponse.fullName,
-        email: authResponse.email,
-        roles: authResponse.roles
-      });
-    } catch (error) {
-      throw error;
-    }
+    setIsAuthenticated(true);
+    setUser({
+      userId: authResponse.userId,
+      fullName: authResponse.fullName,
+      email: authResponse.email,
+      roles: authResponse.roles
+    });
   };
 
   const register = async (userData: SignUpRequest) => {
-    try {
-      const authResponse = await signUp(userData);
-      storeAuth(authResponse);
+    const authResponse = await signUp(userData);
+    storeAuth(authResponse);
 
-      setIsAuthenticated(true);
-      setUser({
-        userId: authResponse.userId,
-        fullName: authResponse.fullName,
-        email: authResponse.email,
-        roles: authResponse.roles
-      });
-    } catch (error) {
-      throw error;
-    }
+    setIsAuthenticated(true);
+    setUser({
+      userId: authResponse.userId,
+      fullName: authResponse.fullName,
+      email: authResponse.email,
+      roles: authResponse.roles
+    });
   };
 
   const logout = () => {

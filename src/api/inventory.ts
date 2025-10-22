@@ -1,5 +1,6 @@
-// FIXED: Inventory API client with proper Budget Consumption and Cost Distribution structure
-// Addresses 500 server errors by aligning with actual backend implementation
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// OPTIMIZED: Inventory API client with improved authentication performance
+// Fixed slow authentication checks and added request caching
 
 export type Category = {
   id: number;
@@ -24,33 +25,32 @@ export type Item = {
   id: number;
   itemName: string;
   itemDescription: string;
-  itemCode: string;                // ✅ add this if not already in type
+  itemCode: string;
   currentQuantity: number;
   totalReceivedStock?: number;  
   totalConsumedStock? : number;
   totalOpeningStock?: number;
   monthConsumedStock?: number; 
-  monthReceivedStock?: number; // ✅ add
-  openingStock?: number;           // ✅ add
-  closingStock?: number;           // ✅ add
+  monthReceivedStock?: number;
+  openingStock?: number;
+  closingStock?: number;
   oldStockQuantity?: number;
   maxStockLevel: number;
   minStockLevel: number;
-  reorderLevel?: number;           // ✅ optional if backend gives
-  reorderQuantity?: number;        // ✅ optional
+  reorderLevel?: number;
+  reorderQuantity?: number;
   unitOfMeasurement: string;
   unitPrice: number;
   expiryDate?: string;
-  totalValue?: number;             // ✅ backend gives
-  avgDailyConsumption?: number;    // ✅ backend gives
-  coverageDays?: number;           // ✅ backend gives
-  stockAlertLevel?: string;        // ✅ backend gives (SAFE / LOW / CRITICAL)
+  totalValue?: number;
+  avgDailyConsumption?: number;
+  coverageDays?: number;
+  stockAlertLevel?: string;
   last_received_date?: string;
   lastConsumptionDate?: string;
   categoryId: number;
-  updated_at?: string;          // ✅ add if not already in type
+  updated_at?: string;
 };
-
 
 export type ConsumptionRequest = {
   quantity: number;
@@ -66,7 +66,6 @@ export type ReceiptRequest = {
   notes?: string;
 };
 
-// FIXED: Analytics Response Types aligned with backend
 export type ConsumptionTrendsResponse = {
   period: string;
   groupBy: string;
@@ -145,7 +144,6 @@ export type DataRangeResponse = {
   availableMonths: string[];
 };
 
-// FIXED: Simplified Cost Distribution Response (aligned with backend)
 export type CostDistributionResponse = {
   period: string;
   startDate: string;
@@ -184,7 +182,6 @@ export type CostDistributionResponse = {
   }>;
 };
 
-// FIXED: Simplified Budget Consumption Response (aligned with backend implementation)
 export type BudgetConsumptionResponse = {
   totalVariancePercentage: number;
   totalPlannedBudget: any;
@@ -238,10 +235,9 @@ export type BudgetConsumptionResponse = {
   };
 };
 
-// Footfall Types (unchanged)
 export type FootfallData = {
   id: number;
-  date: string; // ISO date
+  date: string;
   employeeCount: number;
   visitorCount: number;
   totalFootfall: number;
@@ -317,19 +313,25 @@ const VITE_ENV: any = (import.meta as any).env || {};
 const API_BASE: string = 
   VITE_ENV.VITE_INVENTORY_API_BASE_URL || 
   VITE_ENV.VITE_API_BASE_URL || 
-  "http://localhost:8080";
+  "http://localhost:8082";
 
-// ENHANCED: HTTP client with better error handling for 500 errors
-// Replace your existing http function with this enhanced version
+// Token refresh state management to avoid multiple concurrent refresh attempts
+let isRefreshing = false;
+let refreshPromise: Promise<any> | null = null;
+
+// OPTIMIZED: HTTP client with improved authentication performance
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;
   
-  console.log(`🔗 API Call: ${init?.method || 'GET'} ${url}`);
+  // Skip detailed logging for performance
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔗 API: ${init?.method || 'GET'} ${path}`);
+  }
   
   // Get auth token
   const accessToken = localStorage.getItem('accessToken');
   
-  // Enhanced headers with authentication
+  // Build headers
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
@@ -337,88 +339,116 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   };
   
   try {
-    let response = await fetch(url, {
+    const response = await fetch(url, {
       ...init,
       headers,
     });
 
-    // Handle 401 unauthorized - try token refresh
+    // Quick success path for performance
+    if (response.ok) {
+      const data = await response.json();
+      return data as T;
+    }
+
+    // Handle 401 with optimized token refresh
     if (response.status === 401 && accessToken) {
-      console.log('🔄 Token expired, attempting refresh...');
+      // Prevent multiple concurrent refresh attempts
+      if (!isRefreshing) {
+        isRefreshing = true;
+        refreshPromise = (async () => {
+          try {
+            const { refreshToken } = await import('./auth');
+            const newAuth = await refreshToken();
+            isRefreshing = false;
+            return newAuth;
+          } catch (error) {
+            isRefreshing = false;
+            refreshPromise = null;
+            // Only redirect if refresh actually fails
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
+            throw new Error('Session expired. Please login again.');
+          }
+        })();
+      }
       
-      try {
-        // Import the refresh function
-        const { refreshToken } = await import('./auth');
-        const newAuth = await refreshToken();
-        
+      // Wait for the refresh to complete
+      if (refreshPromise) {
+        const newAuth = await refreshPromise;
+
         // Retry with new token
         const retryHeaders = {
           ...headers,
           'Authorization': `Bearer ${newAuth.accessToken}`
         };
-        
-        response = await fetch(url, {
+
+        const retryResponse = await fetch(url, {
           ...init,
           headers: retryHeaders,
         });
-      } catch (refreshError) {
-        console.error('🚫 Token refresh failed:', refreshError);
-        // Redirect to login
-        window.location.href = '/login';
-        throw new Error('Session expired. Please login again.');
+
+        if (retryResponse.ok) {
+          return await retryResponse.json() as T;
+        }
       }
     }
 
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const responseText = await response.text();
-      
-      if (responseText.includes('<html>')) {
-        console.error('❌ Received HTML instead of JSON:', responseText.substring(0, 200));
-        throw new Error(`API endpoint not found. Check if ${path} exists in your backend.`);
-      }
-    }
-
-    let data;
+    // Handle other error responses
+    let errorMessage = `Request failed: ${response.status}`;
+    
     try {
-      data = await response.json();
-    } catch (jsonError) {
-      console.error('❌ Failed to parse JSON response:', jsonError);
-      if (response.status >= 500) {
-        throw new Error(`Server error (${response.status}): Internal server error. Check backend logs for details.`);
-      }
-      data = {};
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+    } catch {
+      // JSON parse failed, use default message
     }
     
-    if (!response.ok) {
-      const message = (data && (data.message || data.error)) || `Request failed: ${response.status}`;
-      console.error(`❌ API Error: ${response.status} - ${message}`);
-      
-      // Enhanced error handling for specific status codes
-      if (response.status >= 500) {
-        throw new Error(`Server Error (${response.status}): ${message}. Check backend implementation and logs.`);
-      } else if (response.status === 404) {
-        throw new Error(`Endpoint not found: ${path}. Check if the endpoint exists in your backend.`);
-      } else {
-        throw new Error(message);
-      }
+    if (response.status >= 500) {
+      throw new Error(`Server Error (${response.status}): ${errorMessage}`);
+    } else if (response.status === 404) {
+      throw new Error(`Endpoint not found: ${path}`);
+    } else {
+      throw new Error(errorMessage);
     }
-    
-    console.log(`✅ API Success: ${path}`, { dataType: typeof data, hasData: !!data });
-    return data as T;
     
   } catch (error: any) {
+    // Network errors
     if (error.message.includes('Failed to fetch') || error.name === 'NetworkError') {
-      throw new Error(`Cannot connect to backend server at ${API_BASE}. Check if Spring Boot is running.`);
+      throw new Error(`Cannot connect to backend server at ${API_BASE}`);
     }
-    
     throw error;
   }
 }
 
-// ------- Categories -------
+// Simple cache implementation for frequently accessed data
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 30000; // 30 seconds
+
+async function cachedHttp<T>(path: string, init?: RequestInit): Promise<T> {
+  const cacheKey = `${init?.method || 'GET'}:${path}`;
+  
+  // Only cache GET requests
+  if (!init?.method || init.method === 'GET') {
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data as T;
+    }
+  }
+  
+  const data = await http<T>(path, init);
+  
+  // Cache successful GET responses
+  if (!init?.method || init.method === 'GET') {
+    cache.set(cacheKey, { data, timestamp: Date.now() });
+  }
+  
+  return data;
+}
+
+// Categories API
 export const CategoriesAPI = {
-  list: () => http<Category[]>("/api/categories", { method: "GET" }),
+  list: () => cachedHttp<Category[]>("/api/categories", { method: "GET" }),
   create: (body: { categoryName: string; categoryDescription: string }) =>
     http<Category>("/api/categories", { method: "POST", body: JSON.stringify(body) }),
   update: (id: number, body: { categoryName: string; categoryDescription: string }) =>
@@ -426,25 +456,152 @@ export const CategoriesAPI = {
   remove: (id: number) => http<void>(`/api/categories/${id}`, { method: "DELETE" }),
 };
 
-// ------- Items -------
+// Items API
 export const ItemsAPI = {
-  list: () => http<Item[]>("/api/items", { method: "GET" }),
-  get: (id: number) => http<Item>(`/api/items/${id}`, { method: "GET" }),
+  list: () => cachedHttp<Item[]>("/api/items", { method: "GET" }),
+  get: (id: number) => cachedHttp<Item>(`/api/items/${id}`, { method: "GET" }),
   create: (body: Omit<Item, 'id'>) => http<Item>("/api/items", { method: "POST", body: JSON.stringify(body) }),
   update: (id: number, body: Partial<Omit<Item, 'id'>>) =>
     http<Item>(`/api/items/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   remove: (id: number) => http<void>(`/api/items/${id}`, { method: "DELETE" }),
-  search: (q: string) => http<Item[]>(`/api/items/search?q=${encodeURIComponent(q)}`, { method: "GET" }),
-  lowStock: (threshold: number) => http<Item[]>(`/api/items/low-stock?threshold=${threshold}`, { method: "GET" }),
-  expiring: (days: number) => http<Item[]>(`/api/items/expiring?days=${days}`, { method: "GET" }),
-  expired: () => http<Item[]>(`/api/items/expired`, { method: "GET" }),
+  search: (q: string) => cachedHttp<Item[]>(`/api/items/search?q=${encodeURIComponent(q)}`, { method: "GET" }),
+  lowStock: (threshold: number) => cachedHttp<Item[]>(`/api/items/low-stock?threshold=${threshold}`, { method: "GET" }),
+  expiring: (days: number) => cachedHttp<Item[]>(`/api/items/expiring?days=${days}`, { method: "GET" }),
+  expired: () => cachedHttp<Item[]>(`/api/items/expired`, { method: "GET" }),
   consume: (id: number, body: ConsumptionRequest) =>
     http<{ success: boolean }>(`/api/items/${id}/consume`, { method: "POST", body: JSON.stringify(body) }),
   receive: (id: number, body: ReceiptRequest) =>
     http<{ success: boolean }>(`/api/items/${id}/receive`, { method: "POST", body: JSON.stringify(body) }),
 };
 
-// ------- Footfall API (unchanged) -------
+// Analytics API with caching for dashboard data
+export const AnalyticsAPI = {
+  dashboard: () => cachedHttp<any>("/api/analytics/dashboard", { method: "GET" }),
+  
+  stockAlerts: () => cachedHttp<any>("/api/analytics/stock-alerts", { method: "GET" }),
+  
+  consumptionTrends: (period?: string, groupBy?: string, categoryId?: number, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (groupBy) params.append('groupBy', groupBy);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return cachedHttp<ConsumptionTrendsResponse>(`/api/analytics/consumption-trends${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+  
+  topConsumers: (days?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (days) params.append('days', days.toString());
+    if (limit) params.append('limit', limit.toString());
+    const query = params.toString();
+    return cachedHttp<TopConsumersResponse>(`/api/analytics/top-consuming-items${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+  
+  stockAnalytics: () => cachedHttp<StockAnalyticsResponse>("/api/analytics/stock-analytics", { method: "GET" }),
+  
+  dataRange: () => cachedHttp<DataRangeResponse>("/api/analytics/data-range", { method: "GET" }),
+  
+  verifyData: () => http<any>("/api/analytics/verify-data", { method: "GET" }),
+  
+  inventoryValue: () => cachedHttp<any>("/api/analytics/inventory-value", { method: "GET" }),
+  
+  turnoverRatio: () => cachedHttp<any>("/api/analytics/turnover-ratio", { method: "GET" }),
+  
+  analytics: () => cachedHttp<any>("/api/analytics", { method: "GET" }),
+  
+  costDistribution: (period?: string, startDate?: string, endDate?: string, includeBins?: boolean) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (includeBins) params.append('includeBins', 'true');
+    const query = params.toString();
+    return cachedHttp<CostDistributionResponse>(`/api/analytics/cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+  
+  budgetConsumption: (period?: string, startDate?: string, endDate?: string, budgetType?: string, categoryId?: number, department?: string, includeProjections?: boolean) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (budgetType) params.append('budgetType', budgetType);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (department) params.append('department', department);
+    if (includeProjections !== undefined) params.append('includeProjections', includeProjections.toString());
+    const query = params.toString();
+    return cachedHttp<BudgetConsumptionResponse>(`/api/analytics/budget-consumption${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  enhancedCostDistribution: (period?: string, startDate?: string, endDate?: string, breakdown?: string, includeProjections?: boolean) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (breakdown) params.append('breakdown', breakdown);
+    if (includeProjections !== undefined) params.append('includeProjections', includeProjections.toString());
+    const query = params.toString();
+    return cachedHttp<any>(`/api/analytics/enhanced-cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  budgetVsActual: (year?: number, granularity?: string, categoryId?: number, department?: string, includeForecasts?: boolean, includeVariance?: boolean, quarter?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    if (granularity) params.append('granularity', granularity);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (department) params.append('department', department);
+    if (includeForecasts !== undefined) params.append('includeForecasts', includeForecasts.toString());
+    if (includeVariance !== undefined) params.append('includeVariance', includeVariance.toString());
+    if (quarter) params.append('quarter', quarter.toString());
+    const query = params.toString();
+    return cachedHttp<any>(`/api/analytics/budget-vs-actual${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  itemHeatmap: (itemId: number, period?: string, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return http<any>(`/api/analytics/item-heatmap/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  stockMovements: (period?: string, startDate?: string, endDate?: string, categoryId?: number, itemId?: number) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (itemId) params.append('itemId', itemId.toString());
+    const query = params.toString();
+    return cachedHttp<any>(`/api/analytics/stock-movements${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  stockLevels: (categoryId?: number, alertLevel?: string, sortBy?: string, sortOrder?: string) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (alertLevel) params.append('alertLevel', alertLevel);
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
+    const query = params.toString();
+    return cachedHttp<any>(`/api/analytics/stock-levels${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  costPerEmployee: (period?: string, startDate?: string, endDate?: string, categoryId?: number, department?: string, includeComparisons?: boolean) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (department) params.append('department', department);
+    if (includeComparisons !== undefined) params.append('includeComparisons', includeComparisons.toString());
+    const query = params.toString();
+    return cachedHttp<any>(`/api/analytics/cost-per-employee${query ? `?${query}` : ''}`, { method: "GET" });
+  }
+};
+
+// Footfall API (keeping original implementation as it's less frequently called)
 export const FootfallAPI = {
   list: async (startDate?: string, endDate?: string, department?: string, page = 0, size = 50): Promise<FootfallListResponse> => {
     const params = new URLSearchParams();
@@ -461,13 +618,10 @@ export const FootfallAPI = {
     params.append('sortOrder', 'ASC');
     
     const query = params.toString();
-    console.log(`📋 Fetching footfall list: /api/footfall?${query}`);
-    
     return http<FootfallListResponse>(`/api/footfall?${query}`, { method: "GET" });
   },
 
   getByDate: (date: string) => {
-    console.log(`📦 Fetching footfall for date: ${date}`);
     return http<{ 
       success: boolean;
       found: boolean; 
@@ -487,13 +641,10 @@ export const FootfallAPI = {
     params.append('endDate', endDate);
     
     const query = params.toString();
-    console.log(`📊 Fetching footfall statistics: /api/footfall/statistics?${query}`);
-    
     return http<FootfallStatistics>(`/api/footfall/statistics?${query}`, { method: "GET" });
   },
 
   debug: () => {
-    console.log('🔧 Debugging footfall data');
     return http<{
       totalRecords: number;
       sampleRecords: Array<{
@@ -518,8 +669,6 @@ export const FootfallAPI = {
     if (date) params.append('date', date);
     const query = params.toString();
     
-    console.log(`🔍 Checking footfall exists: /api/footfall/exists${query ? `?${query}` : ''}`);
-    
     return http<{ 
       success: boolean;
       date: string; 
@@ -529,7 +678,6 @@ export const FootfallAPI = {
   },
 
   dataRange: () => {
-    console.log('📅 Fetching footfall data range');
     return http<{ 
       success: boolean;
       totalRecords: number; 
@@ -542,13 +690,19 @@ export const FootfallAPI = {
   },
 
   upload: async (file: File) => {
-    console.log(`📤 Uploading footfall file: ${file.name}`);
     const form = new FormData();
     form.append('file', file);
+    
+    const accessToken = localStorage.getItem('accessToken');
+    const headers: HeadersInit = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
     
     const res = await fetch(`${API_BASE}/api/footfall/upload`, {
       method: 'POST',
       body: form,
+      headers,
     });
     
     if (!res.ok) {
@@ -560,7 +714,6 @@ export const FootfallAPI = {
   },
 
   health: () => {
-    console.log('💗 Checking footfall service health');
     return http<{ 
       status: string; 
       timestamp: string; 
@@ -569,162 +722,12 @@ export const FootfallAPI = {
   },
 };
 
-// ------- FIXED Analytics API with proper Budget & Cost Distribution -------
-export const AnalyticsAPI = {
-  // Basic dashboard stats
-  dashboard: () => http<any>("/api/analytics/dashboard", { method: "GET" }),
-  
-  // Stock alerts
-  stockAlerts: () => http<any>("/api/analytics/stock-alerts", { method: "GET" }),
-  
-  // Consumption trends with filters
-  consumptionTrends: (period?: string, groupBy?: string, categoryId?: number, startDate?: string, endDate?: string) => {
-    const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (groupBy) params.append('groupBy', groupBy);
-    if (categoryId) params.append('categoryId', categoryId.toString());
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    const query = params.toString();
-    return http<ConsumptionTrendsResponse>(`/api/analytics/consumption-trends${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-  
-  // Top consuming items
-  topConsumers: (days?: number, limit?: number) => {
-    const params = new URLSearchParams();
-    if (days) params.append('days', days.toString());
-    if (limit) params.append('limit', limit.toString());
-    const query = params.toString();
-    return http<TopConsumersResponse>(`/api/analytics/top-consuming-items${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-  
-  // Stock analytics (levels and cost distribution)
-  stockAnalytics: () => http<StockAnalyticsResponse>("/api/analytics/stock-analytics", { method: "GET" }),
-  
-  // Get available data date range
-  dataRange: () => http<DataRangeResponse>("/api/analytics/data-range", { method: "GET" }),
-  
-  // Verify imported consumption data
-  verifyData: () => http<any>("/api/analytics/verify-data", { method: "GET" }),
-  
-  // Inventory value analysis
-  inventoryValue: () => http<any>("/api/analytics/inventory-value", { method: "GET" }),
-  
-  // Turnover ratio
-  turnoverRatio: () => http<any>("/api/analytics/turnover-ratio", { method: "GET" }),
-  
-  // Legacy analytics endpoint
-  analytics: () => http<any>("/api/analytics", { method: "GET" }),
-  
-  // FIXED: Cost distribution by category (matches backend implementation)
-  costDistribution: (period?: string, startDate?: string, endDate?: string, includeBins?: boolean) => {
-    const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    if (includeBins) params.append('includeBins', 'true');
-    const query = params.toString();
-    console.log(`💰 Fetching cost distribution: /api/analytics/cost-distribution${query ? `?${query}` : ''}`);
-    return http<CostDistributionResponse>(`/api/analytics/cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-  
-  // FIXED: Budget consumption analysis (simplified to match backend)
-  budgetConsumption: (period?: string, startDate?: string, endDate?: string, budgetType?: string, categoryId?: number, department?: string, includeProjections?: boolean) => {
-    const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    if (budgetType) params.append('budgetType', budgetType);
-    if (categoryId) params.append('categoryId', categoryId.toString());
-    if (department) params.append('department', department);
-    if (includeProjections !== undefined) params.append('includeProjections', includeProjections.toString());
-    const query = params.toString();
-    console.log(`📊 Fetching budget consumption: /api/analytics/budget-consumption${query ? `?${query}` : ''}`);
-    return http<BudgetConsumptionResponse>(`/api/analytics/budget-consumption${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-
-  // ADDITIONAL: Enhanced cost distribution (alternative endpoint)
-  enhancedCostDistribution: (period?: string, startDate?: string, endDate?: string, breakdown?: string, includeProjections?: boolean) => {
-    const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    if (breakdown) params.append('breakdown', breakdown);
-    if (includeProjections !== undefined) params.append('includeProjections', includeProjections.toString());
-    const query = params.toString();
-    console.log(`💰 Fetching enhanced cost distribution: /api/analytics/enhanced-cost-distribution${query ? `?${query}` : ''}`);
-    return http<any>(`/api/analytics/enhanced-cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-
-  // ADDITIONAL: Budget vs Actual comparison
-  budgetVsActual: (year?: number, granularity?: string, categoryId?: number, department?: string, includeForecasts?: boolean, includeVariance?: boolean, quarter?: number) => {
-    const params = new URLSearchParams();
-    if (year) params.append('year', year.toString());
-    if (granularity) params.append('granularity', granularity);
-    if (categoryId) params.append('categoryId', categoryId.toString());
-    if (department) params.append('department', department);
-    if (includeForecasts !== undefined) params.append('includeForecasts', includeForecasts.toString());
-    if (includeVariance !== undefined) params.append('includeVariance', includeVariance.toString());
-    if (quarter) params.append('quarter', quarter.toString());
-    const query = params.toString();
-    return http<any>(`/api/analytics/budget-vs-actual${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-
-  // Item heatmap
-  itemHeatmap: (itemId: number, period?: string, startDate?: string, endDate?: string) => {
-    const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    const query = params.toString();
-    return http<any>(`/api/analytics/item-heatmap/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-
-  // Stock movements
-  stockMovements: (period?: string, startDate?: string, endDate?: string, categoryId?: number, itemId?: number) => {
-    const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    if (categoryId) params.append('categoryId', categoryId.toString());
-    if (itemId) params.append('itemId', itemId.toString());
-    const query = params.toString();
-    return http<any>(`/api/analytics/stock-movements${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-
-  // Stock levels
-  stockLevels: (categoryId?: number, alertLevel?: string, sortBy?: string, sortOrder?: string) => {
-    const params = new URLSearchParams();
-    if (categoryId) params.append('categoryId', categoryId.toString());
-    if (alertLevel) params.append('alertLevel', alertLevel);
-    if (sortBy) params.append('sortBy', sortBy);
-    if (sortOrder) params.append('sortOrder', sortOrder);
-    const query = params.toString();
-    return http<any>(`/api/analytics/stock-levels${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-
-  // Cost per employee
-  costPerEmployee: (period?: string, startDate?: string, endDate?: string, categoryId?: number, department?: string, includeComparisons?: boolean) => {
-    const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    if (categoryId) params.append('categoryId', categoryId.toString());
-    if (department) params.append('department', department);
-    if (includeComparisons !== undefined) params.append('includeComparisons', includeComparisons.toString());
-    const query = params.toString();
-    return http<any>(`/api/analytics/cost-per-employee${query ? `?${query}` : ''}`, { method: "GET" });
-  }
-};
-
-// ------- Upload -------
+// Upload API
 export const UploadAPI = {
   uploadItems: async (file: File) => {
-    console.log(`📤 Uploading items file: ${file.name}`);
     const form = new FormData();
     form.append('file', file);
     
-    // Get auth token for header
     const accessToken = localStorage.getItem('accessToken');
     const headers: HeadersInit = {};
     if (accessToken) {
@@ -742,17 +745,13 @@ export const UploadAPI = {
       throw new Error(`Upload failed: ${res.status} - ${errorText}`);
     }
     
-    const result = await res.json();
-    console.log('✅ Items upload result:', result);
-    return result;
+    return res.json();
   },
   
   uploadConsumption: async (file: File) => {
-    console.log(`📤 Uploading consumption file: ${file.name}`);
     const form = new FormData();
     form.append('file', file);
     
-    // Get auth token for header
     const accessToken = localStorage.getItem('accessToken');
     const headers: HeadersInit = {};
     if (accessToken) {
@@ -770,13 +769,10 @@ export const UploadAPI = {
       throw new Error(`Upload failed: ${res.status} - ${errorText}`);
     }
     
-    const result = await res.json();
-    console.log('✅ Consumption upload result:', result);
-    return result;
+    return res.json();
   },
   
   validateItems: async (file: File) => {
-    console.log(`🔍 Validating items file: ${file.name}`);
     const form = new FormData();
     form.append('file', file);
     
@@ -797,7 +793,6 @@ export const UploadAPI = {
   },
   
   validateConsumption: async (file: File) => {
-    console.log(`🔍 Validating consumption file: ${file.name}`);
     const form = new FormData();
     form.append('file', file);
     
@@ -827,14 +822,17 @@ export function getApiBase() {
   return API_BASE;
 }
 
-// ENHANCED: API connectivity testing with better error reporting
+// Clear cache function
+export function clearApiCache() {
+  cache.clear();
+}
+
+// Test API connectivity
 export async function testApiConnectivity() {
   const results = {
     baseUrl: API_BASE,
     tests: {} as { [key: string]: { success: boolean; error?: string; data?: any } }
   };
-  
-  console.log(`🧪 Testing API connectivity to: ${API_BASE}`);
   
   // Test basic analytics first
   try {
@@ -844,32 +842,21 @@ export async function testApiConnectivity() {
     results.tests.dashboard = { success: false, error: error.message };
   }
   
-  // Test cost distribution with error handling
+  // Test cost distribution
   try {
     const costDist = await AnalyticsAPI.costDistribution('monthly');
     results.tests.costDistribution = { success: true, data: costDist };
   } catch (error: any) {
     results.tests.costDistribution = { success: false, error: error.message };
-    console.warn('Cost distribution failed - this might be due to missing data or backend implementation issues');
   }
   
-  // Test budget consumption with error handling
+  // Test budget consumption
   try {
     const budgetConsump = await AnalyticsAPI.budgetConsumption('monthly');
     results.tests.budgetConsumption = { success: true, data: budgetConsump };
   } catch (error: any) {
     results.tests.budgetConsumption = { success: false, error: error.message };
-    console.warn('Budget consumption failed - this might be due to missing repositories or incomplete implementation');
   }
   
-  // Test footfall health
-  try {
-    const health = await FootfallAPI.health();
-    results.tests.footfallHealth = { success: true, data: health };
-  } catch (error: any) {
-    results.tests.footfallHealth = { success: false, error: error.message };
-  }
-  
-  console.log('🧪 API Connectivity Test Results:', results);
   return results;
 }

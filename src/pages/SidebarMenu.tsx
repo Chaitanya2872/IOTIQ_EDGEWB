@@ -67,11 +67,15 @@ const MENU_ITEMS: MenuConfig[] = [
     shortLabel: "Inv",
     icon: <Package size={20} strokeWidth={2} />,
     children: [
-      { key: "inventory-categories", label: "Categories", path: "/inventory/categories" },
-      { key: "inventory-items", label: "Items", path: "/inventory/items" },
+      { key: "inventory-dashboard", label: "Dashboard", path: "/inventory" },
+      { key: "inventory-stock-usage", label: "Stock Usage", path: "/inventory/stock-usage" },
       { key: "inventory-analytics", label: "Analytics", path: "/inventory/analytics" },
+      { key: "inventory-predictive-inserts", label: "Predictive Inserts", path: "/inventory/predictive-inserts" },
+      { key: "inventory-predictive-analysis", label: "Predictive Analysis", path: "/inventory/predictive-analysis" },
       { key: "inventory-consumption", label: "Consumption", path: "/inventory/consumption-inventory" },
       { key: "inventory-budget", label: "Budget", path: "/inventory/budget-analysis" },
+      { key: "inventory-categories", label: "Categories", path: "/inventory/categories" },
+      { key: "inventory-items", label: "Items", path: "/inventory/items" },
     ],
   },
   {
@@ -118,7 +122,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
   const isDesktop = useIsDesktop();
   const isBrowser = useIsBrowser();
   const [openGroups, setOpenGroups] = useState(() => new Set<string>());
-  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+
   const [isExpanded, setIsExpanded] = useState(() => (isBrowser ? window.innerWidth >= 1024 : true));
   const [tooltip, setTooltip] = useState<TooltipState>({ show: false, text: "", x: 0, y: 0 });
   const selectedKey = location.pathname;
@@ -155,7 +159,6 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
     item: MenuConfig,
     event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>
   ) => {
-    setHoveredKey(item.key);
     if (!isExpanded && isBrowser) {
       const rect = event.currentTarget.getBoundingClientRect();
       setTooltip({
@@ -168,7 +171,6 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
   };
 
   const handleMouseLeave = () => {
-    setHoveredKey(null);
     setTooltip((prev) => ({ ...prev, show: false }));
   };
 
@@ -310,7 +312,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth }) => {
               className={styles.logoIcon}
             />
             {isExpanded && (
-              <span className={styles.logoText}>vibes</span>
+              <span className={styles.logoText}>Menu</span>
             )}
           </div>
         </div>

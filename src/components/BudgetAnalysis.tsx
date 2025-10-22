@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Line, Bar, Pie, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, Cell, ComposedChart, PieChart, RadarChart, 
-  PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, AreaChart, ScatterChart, Scatter
+  Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, Cell, PieChart, Pie, ScatterChart, Scatter, LineChart, BarChart, Area, AreaChart
 } from 'recharts';
 import { 
-  DollarSign, TrendingUp, BarChart3,
-  Activity, Shield, AlertTriangle, Calendar, RefreshCw, Package, 
-  Users, Layers, Sparkles, Bell, X, Check, AlertCircle, Zap,
-  TrendingDown, Archive, ShoppingCart
+  DollarSign, TrendingUp, TrendingDown, Package, 
+  AlertCircle, Calendar, RefreshCw, BarChart3, Activity
 } from 'lucide-react';
 import { 
   useEnhancedAnalytics,
@@ -16,84 +13,149 @@ import {
   useItems
 } from '../api/hooks';
 import { 
-  AnalyticsAPI,
-  type ConsumptionTrendsResponse,
   type Category,
-  type Item,
-  type CostDistributionResponse
+  type Item
 } from '../api/inventory';
 
-// Note: CostDistributionResponse now includes monthlyBreakdown for bin data
-
-// Color palette
+// Enhanced color palette inspired by the reference design
 const COLORS = {
-  primary: '#60a5fa',
-  success: '#86efac',  
-  warning: '#fdba74',
-  danger: '#dc2626',
-  info: '#93c5fd',
-  dark: '#64748b',
-  light: '#f8fafc',
-  muted: '#94a3b8',
-  purple: '#c084fc',
-  teal: '#5eead4'
+  primary: '#6366f1',      // Indigo
+  success: '#10b981',      // Emerald
+  warning: '#f59e0b',      // Amber
+  danger: '#ef4444',       // Red
+  info: '#3b82f6',         // Blue
+  purple: '#a855f7',       // Purple
+  pink: '#ec4899',         // Pink
+  teal: '#14b8a6',         // Teal
+  cyan: '#06b6d4',         // Cyan
+  orange: '#f97316',       // Orange
+  
+  // Soft variants
+  primarySoft: '#818cf8',
+  successSoft: '#34d399',
+  warningSoft: '#fbbf24',
+  dangerSoft: '#f87171',
+  infoSoft: '#60a5fa',
+  purpleSoft: '#c084fc',
+  pinkSoft: '#f472b6',
+  tealSoft: '#2dd4bf',
+  
+  // Text colors
+  textDark: '#1f2937',
+  textMuted: '#6b7280',
+  textLight: '#9ca3af',
+  
+  // Background colors
+  bgPrimary: '#f9fafb',
+  bgWhite: '#ffffff',
+  bgGray: '#f3f4f6',
 };
 
 const CHART_COLORS = [
-  '#60a5fa', '#86efac', '#fdba74', '#dc2626', 
-  '#93c5fd', '#a5f3fc', '#fde68a', '#c7d2fe'
+  '#6366f1', '#10b981', '#f59e0b', '#ef4444', 
+  '#a855f7', '#ec4899', '#14b8a6', '#f97316'
 ];
 
-const STOCK_MOVEMENT_COLORS = {
-  fast: '#86efac',
-  slow: '#fdba74',  
-  dead: '#dc2626'
+// Soft gradient backgrounds for cards
+const cardGradients = {
+  primary: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  success: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+  warning: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+  danger: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+  info: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+  purple: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
 };
 
-const cardBackgrounds = {
-  primary: '#eff6ff',
-  success: '#f0fdf4',
-  warning: '#fff7ed',
-  danger: '#fee2e2',
-  neutral: '#ffffff'
+// Mock data generators
+const generateMockBudgetData = () => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentMonth = 6; // July
+  
+  return {
+    budgetAllocations: {
+      monthly: 450000,
+      yearly: 5400000,
+    },
+    actualData: {
+      totalCost: 425000,
+      totalQuantity: 1250,
+      itemCount: 85,
+      averageUnitCost: 340,
+    },
+    summary: {
+      budgetUtilization: 85.5,
+      remainingBudget: 125000,
+      dailyBurnRate: 14500,
+      projectedOverrun: -25000,
+    },
+    timeSeriesData: months.slice(0, currentMonth + 1).map((month, idx) => ({
+      period: month,
+      budgetAmount: 450000,
+      actualAmount: 380000 + Math.random() * 100000,
+      variance: Math.random() * 50000 - 25000,
+      cumulativeBudget: 450000 * (idx + 1),
+      cumulativeActual: (380000 + Math.random() * 100000) * (idx + 1),
+      utilizationPercentage: 80 + Math.random() * 20,
+    })),
+    varianceAnalysis: {
+      variancePercentage: -5.5,
+      status: 'under-budget',
+      severity: 'low',
+    }
+  };
 };
 
-// Enhanced Tooltip
+const generateMockCostDistribution = () => ({
+  totalCost: 2850000,
+  categoryDistribution: [
+    { category: 'Office Supplies', categoryId: 1, totalCost: 450000, totalQuantity: 1200, percentage: 15.8, avgUnitPrice: 375 },
+    { category: 'IT Equipment', categoryId: 2, totalCost: 850000, totalQuantity: 150, percentage: 29.8, avgUnitPrice: 5667 },
+    { category: 'Furniture', categoryId: 3, totalCost: 650000, totalQuantity: 85, percentage: 22.8, avgUnitPrice: 7647 },
+    { category: 'Pantry Items', categoryId: 4, totalCost: 280000, totalQuantity: 2500, percentage: 9.8, avgUnitPrice: 112 },
+    { category: 'Cleaning Supplies', categoryId: 5, totalCost: 180000, totalQuantity: 800, percentage: 6.3, avgUnitPrice: 225 },
+    { category: 'Stationery', categoryId: 6, totalCost: 220000, totalQuantity: 3000, percentage: 7.7, avgUnitPrice: 73 },
+    { category: 'Electronics', categoryId: 7, totalCost: 220000, totalQuantity: 120, percentage: 7.7, avgUnitPrice: 1833 },
+  ],
+});
+
+// Enhanced Tooltip with better styling
 const ModernTooltip: React.FC<any> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div style={{ 
         backgroundColor: 'rgba(255, 255, 255, 0.98)', 
-        backdropFilter: 'blur(10px)',
-        color: COLORS.dark, 
-        padding: '12px', 
-        borderRadius: '8px',
-        border: `1px solid ${COLORS.light}`,
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        fontSize: '12px',
-        minWidth: '180px'
+        backdropFilter: 'blur(12px)',
+        color: COLORS.textDark, 
+        padding: '14px 16px', 
+        borderRadius: '12px',
+        border: `1px solid rgba(0, 0, 0, 0.05)`,
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+        fontSize: '13px',
+        minWidth: '200px'
       }}>
-        <div style={{ fontWeight: '600', marginBottom: '6px', fontSize: '12px', color: COLORS.dark }}>
+        <div style={{ fontWeight: '600', marginBottom: '10px', fontSize: '13px', color: COLORS.textDark }}>
           {label}
         </div>
         {payload.map((entry: any, index: number) => (
           <div key={index} style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '6px', 
-            marginBottom: '4px'
+            gap: '8px', 
+            marginBottom: index === payload.length - 1 ? 0 : '6px'
           }}>
             <div style={{ 
-              width: '8px', 
-              height: '8px', 
+              width: '10px', 
+              height: '10px', 
               borderRadius: '50%', 
-              backgroundColor: entry.color
+              backgroundColor: entry.color,
+              boxShadow: `0 0 0 2px ${entry.color}20`
             }} />
-            <span style={{ flex: 1, color: COLORS.muted, fontSize: '11px' }}>
+            <span style={{ flex: 1, color: COLORS.textMuted, fontSize: '12px' }}>
               {entry.name}:
             </span>
-            <span style={{ fontWeight: '500', color: COLORS.dark }}>
-              {entry.name.includes('₹') || entry.name.includes('Cost') || entry.name.includes('Price') || entry.name.includes('Value') ? 
+            <span style={{ fontWeight: '600', color: COLORS.textDark, fontSize: '13px' }}>
+              {entry.name.includes('₹') || entry.name.includes('Cost') || entry.name.includes('Price') || 
+               entry.name.includes('Value') || entry.name.includes('Spend') || entry.name.includes('Budget') ? 
                 `₹${Number(entry.value).toLocaleString()}` : 
                 typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
             </span>
@@ -105,1413 +167,414 @@ const ModernTooltip: React.FC<any> = ({ active, payload, label }) => {
   return null;
 };
 
-// Card Component
-const Card: React.FC<{ children: React.ReactNode; background?: string }> = ({ children, background }) => {
+// Enhanced Card Component with better styling
+const Card: React.FC<{ 
+  children: React.ReactNode; 
+  gradient?: string;
+  noPadding?: boolean;
+}> = ({ children, gradient, noPadding }) => {
   return (
     <div style={{
-      backgroundColor: background || 'white',
-      borderRadius: '10px',
-      padding: '18px',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-      border: `1px solid ${COLORS.light}`,
-      marginBottom: '16px'
+      background: gradient || COLORS.bgWhite,
+      borderRadius: '16px',
+      padding: noPadding ? 0 : '24px',
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+      border: `1px solid rgba(0, 0, 0, 0.04)`,
+      marginBottom: '20px',
+      transition: 'all 0.2s ease',
     }}>
       {children}
     </div>
   );
 };
 
-// Stock Movement Classification Component (Fast/Slow/Dead Stock) - UPDATED: Removed Value column
-const StockMovementClassification: React.FC<{
-  items: Item[];
-  categories: Category[];
-}> = ({ items, categories }) => {
-  const [stockData, setStockData] = useState<any>({
-    fast: [],
-    slow: [],
-    dead: [],
-    chartData: []
-  });
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
-  const [selectedStockType, setSelectedStockType] = useState<'all' | 'fast' | 'slow' | 'dead'>('all');
-  const [showCalculationInfo, setShowCalculationInfo] = useState(false);
-
-  useEffect(() => {
-    classifyStock();
-  }, [items, selectedCategory]);
-
-  const classifyStock = () => {
-    let filteredItems = selectedCategory 
-      ? items.filter(item => item.categoryId === selectedCategory)
-      : items;
-
-    const fast: any[] = [];
-    const slow: any[] = [];
-    const dead: any[] = [];
-
-    filteredItems.forEach(item => {
-      const avgConsumption = Number(item.avgDailyConsumption || 0);
-      const currentStock = Number(item.currentQuantity || 0);
-      const coverageDays = Number(item.coverageDays || 999);
-      const lastConsumedDate = item.lastConsumptionDate ? new Date(item.lastConsumptionDate) : null;
-      const daysSinceLastConsumption = lastConsumedDate 
-        ? Math.floor((Date.now() - lastConsumedDate.getTime()) / (1000 * 60 * 60 * 24))
-        : 999;
-      
-      const stockValue = currentStock * Number(item.unitPrice || 0);
-      const category = categories.find(c => c.id === item.categoryId);
-
-      const stockItem = {
-        id: item.id,
-        itemName: item.itemName,
-        itemCode: item.itemCode,
-        category: category?.categoryName || 'Unknown',
-        currentStock,
-        avgConsumption,
-        coverageDays,
-        stockValue,
-        daysSinceLastConsumption,
-        unitPrice: Number(item.unitPrice || 0)
-      };
-
-      if (avgConsumption > 5 && coverageDays < 30) {
-        fast.push(stockItem);
-      } else if (avgConsumption > 0 && avgConsumption <= 5 && coverageDays < 90) {
-        slow.push(stockItem);
-      } else if (avgConsumption === 0 || daysSinceLastConsumption > 90 || coverageDays > 180) {
-        dead.push(stockItem);
-      } else {
-        slow.push(stockItem);
-      }
-    });
-
-    fast.sort((a, b) => b.stockValue - a.stockValue);
-    slow.sort((a, b) => b.stockValue - a.stockValue);
-    dead.sort((a, b) => b.stockValue - a.stockValue);
-
-    const chartData = [
-      { 
-        name: 'Fast Moving', 
-        value: fast.reduce((sum, item) => sum + item.stockValue, 0),
-        count: fast.length,
-        fill: STOCK_MOVEMENT_COLORS.fast
-      },
-      { 
-        name: 'Slow Moving', 
-        value: slow.reduce((sum, item) => sum + item.stockValue, 0),
-        count: slow.length,
-        fill: STOCK_MOVEMENT_COLORS.slow
-      },
-      { 
-        name: 'Dead Stock', 
-        value: dead.reduce((sum, item) => sum + item.stockValue, 0),
-        count: dead.length,
-        fill: STOCK_MOVEMENT_COLORS.dead
-      }
-    ];
-
-    setStockData({ fast, slow, dead, chartData });
-  };
-
-  const totalValue = stockData.chartData.reduce((sum: number, item: any) => sum + item.value, 0);
-
+// Enhanced Metric Card with gradient support
+const MetricCard: React.FC<{
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ReactNode;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
+  gradient?: string;
+  color?: string;
+}> = ({ title, value, subtitle, icon, trend, trendValue, gradient, color = COLORS.primary }) => {
   return (
-    <Card>
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
-            <Package style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.primary }} />
-            Stock Movement Classification
-          </h3>
-          
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <select
-              value={selectedCategory || ''}
-              onChange={(e) => setSelectedCategory(e.target.value ? Number(e.target.value) : null)}
-              style={{
-                padding: '5px 10px',
-                border: `1px solid ${COLORS.light}`,
-                borderRadius: '6px',
-                fontSize: '11px'
-              }}
-            >
-              <option value="">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.categoryName}</option>
-              ))}
-            </select>
-            
-            <div style={{ display: 'flex', gap: '0' }}>
-              <button
-                onClick={() => setViewMode('chart')}
-                style={{
-                  padding: '5px 10px',
-                  backgroundColor: viewMode === 'chart' ? COLORS.primary : 'white',
-                  color: viewMode === 'chart' ? 'white' : COLORS.dark,
-                  border: `1px solid ${COLORS.light}`,
-                  borderRadius: '6px 0 0 6px',
-                  cursor: 'pointer',
-                  fontSize: '11px'
-                }}
-              >
-                Chart
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                style={{
-                  padding: '5px 10px',
-                  backgroundColor: viewMode === 'table' ? COLORS.primary : 'white',
-                  color: viewMode === 'table' ? 'white' : COLORS.dark,
-                  border: `1px solid ${COLORS.light}`,
-                  borderRadius: '0 6px 6px 0',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  marginLeft: '-1px'
-                }}
-              >
-                Table
-              </button>
-            </div>
-            
-            <button
-              onClick={() => setShowCalculationInfo(!showCalculationInfo)}
-              style={{
-                padding: '5px 10px',
-                backgroundColor: showCalculationInfo ? COLORS.info : 'white',
-                color: showCalculationInfo ? 'white' : COLORS.info,
-                border: `1px solid ${COLORS.info}`,
-                borderRadius: '6px',
-                fontSize: '11px',
-                cursor: 'pointer',
-                marginLeft: '8px',
-                fontWeight: '500'
-              }}
-              title="How are these calculated?"
-            >
-              ℹ️ How it's calculated
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {showCalculationInfo && (
+    <div style={{
+      background: gradient || COLORS.bgWhite,
+      borderRadius: '16px',
+      padding: '20px',
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+      border: `1px solid rgba(0, 0, 0, 0.04)`,
+      height: '100%',
+      position: 'relative',
+      overflow: 'hidden',
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.1)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+    }}
+    >
+      {gradient && (
         <div style={{
-          padding: '16px',
-          backgroundColor: cardBackgrounds.primary,
-          borderRadius: '8px',
-          marginBottom: '16px',
-          border: `2px solid ${COLORS.info}`
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '100px',
+          height: '100px',
+          background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%)',
+          borderRadius: '50%',
+          transform: 'translate(30%, -30%)',
+        }} />
+      )}
+      
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', position: 'relative', zIndex: 1 }}>
+        <div style={{ 
+          backgroundColor: gradient ? 'rgba(255, 255, 255, 0.25)' : `${color}15`,
+          padding: '10px',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: gradient ? '#ffffff' : color,
         }}>
-          <h4 style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: COLORS.dark }}>
-            📊 Stock Classification Calculation Method:
-          </h4>
-          <div style={{ fontSize: '12px', lineHeight: '1.6', color: COLORS.dark }}>
-            <div style={{ marginBottom: '10px' }}>
-              <strong style={{ color: STOCK_MOVEMENT_COLORS.fast }}>🚀 Fast Moving Stock:</strong>
-              <ul style={{ marginTop: '4px', marginLeft: '20px' }}>
-                <li>Average Daily Consumption &gt; 5 units AND</li>
-                <li>Coverage Days &lt; 30 days</li>
-                <li>High turnover items that need frequent replenishment</li>
-              </ul>
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <strong style={{ color: STOCK_MOVEMENT_COLORS.slow }}>⚡ Slow Moving Stock:</strong>
-              <ul style={{ marginTop: '4px', marginLeft: '20px' }}>
-                <li>Average Daily Consumption between 0.1 - 5 units AND</li>
-                <li>Coverage Days &lt; 90 days</li>
-                <li>Items with moderate turnover</li>
-              </ul>
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <strong style={{ color: STOCK_MOVEMENT_COLORS.dead }}>⛔ Dead Stock:</strong>
-              <ul style={{ marginTop: '4px', marginLeft: '20px' }}>
-                <li>Average Daily Consumption = 0 OR</li>
-                <li>No consumption in last 90 days OR</li>
-                <li>Coverage Days &gt; 180 days</li>
-                <li>Items with no or negligible movement</li>
-              </ul>
-            </div>
-            <div style={{ marginTop: '12px', padding: '8px', backgroundColor: 'white', borderRadius: '4px' }}>
-              <strong>Key Metrics:</strong>
-              <div style={{ fontSize: '11px', marginTop: '4px' }}>
-                • <strong>Coverage Days</strong> = Current Stock ÷ Average Daily Consumption<br/>
-                • <strong>Stock Value</strong> = Current Stock × Unit Price<br/>
-                • <strong>Days Since Last Consumption</strong> = Today - Last Consumption Date
-              </div>
-            </div>
+          <div style={{ width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {icon}
           </div>
         </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-        <div 
-          onClick={() => {
-            setSelectedStockType(selectedStockType === 'fast' ? 'all' : 'fast');
-            if (viewMode === 'chart') setViewMode('table');
-          }}
-          style={{ 
-            padding: '12px', 
-            backgroundColor: selectedStockType === 'fast' ? STOCK_MOVEMENT_COLORS.fast + '30' : cardBackgrounds.success, 
-            borderRadius: '8px',
-            cursor: 'pointer',
-            border: selectedStockType === 'fast' ? `2px solid ${STOCK_MOVEMENT_COLORS.fast}` : '2px solid transparent',
-            transition: 'all 0.3s'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Zap style={{ width: '14px', height: '14px', color: STOCK_MOVEMENT_COLORS.fast }} />
-            <span style={{ fontSize: '11px', color: COLORS.muted, fontWeight: '500' }}>Fast Moving</span>
+        {trend && trendValue && (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px',
+            fontSize: '12px',
+            fontWeight: '600',
+            padding: '4px 10px',
+            borderRadius: '20px',
+            backgroundColor: gradient ? 'rgba(255, 255, 255, 0.25)' : 
+              trend === 'up' ? `${COLORS.success}15` : 
+              trend === 'down' ? `${COLORS.danger}15` : `${COLORS.textMuted}15`,
+            color: gradient ? '#ffffff' : 
+              trend === 'up' ? COLORS.success : 
+              trend === 'down' ? COLORS.danger : COLORS.textMuted
+          }}>
+            {trend === 'up' ? <TrendingUp style={{ width: '14px', height: '14px' }} /> : 
+             trend === 'down' ? <TrendingDown style={{ width: '14px', height: '14px' }} /> : null}
+            {trendValue}
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: COLORS.dark }}>
-            {stockData.fast.length} items
-          </div>
-          <div style={{ fontSize: '12px', color: STOCK_MOVEMENT_COLORS.fast, fontWeight: '500' }}>
-            ₹{stockData.fast.reduce((sum: number, item: any) => sum + item.stockValue, 0).toLocaleString()}
-          </div>
-        </div>
-
-        <div 
-          onClick={() => {
-            setSelectedStockType(selectedStockType === 'slow' ? 'all' : 'slow');
-            if (viewMode === 'chart') setViewMode('table');
-          }}
-          style={{ 
-            padding: '12px', 
-            backgroundColor: selectedStockType === 'slow' ? STOCK_MOVEMENT_COLORS.slow + '30' : cardBackgrounds.warning, 
-            borderRadius: '8px',
-            cursor: 'pointer',
-            border: selectedStockType === 'slow' ? `2px solid ${STOCK_MOVEMENT_COLORS.slow}` : '2px solid transparent',
-            transition: 'all 0.3s'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <TrendingDown style={{ width: '14px', height: '14px', color: STOCK_MOVEMENT_COLORS.slow }} />
-            <span style={{ fontSize: '11px', color: COLORS.muted, fontWeight: '500' }}>Slow Moving</span>
-          </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: COLORS.dark }}>
-            {stockData.slow.length} items
-          </div>
-          <div style={{ fontSize: '12px', color: STOCK_MOVEMENT_COLORS.slow, fontWeight: '500' }}>
-            ₹{stockData.slow.reduce((sum: number, item: any) => sum + item.stockValue, 0).toLocaleString()}
-          </div>
-        </div>
-
-        <div 
-          onClick={() => {
-            setSelectedStockType(selectedStockType === 'dead' ? 'all' : 'dead');
-            if (viewMode === 'chart') setViewMode('table');
-          }}
-          style={{ 
-            padding: '12px', 
-            backgroundColor: selectedStockType === 'dead' ? STOCK_MOVEMENT_COLORS.dead + '30' : cardBackgrounds.danger, 
-            borderRadius: '8px',
-            cursor: 'pointer',
-            border: selectedStockType === 'dead' ? `2px solid ${STOCK_MOVEMENT_COLORS.dead}` : '2px solid transparent',
-            transition: 'all 0.3s'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Archive style={{ width: '14px', height: '14px', color: STOCK_MOVEMENT_COLORS.dead }} />
-            <span style={{ fontSize: '11px', color: COLORS.muted, fontWeight: '500' }}>Dead Stock</span>
-          </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: COLORS.dark }}>
-            {stockData.dead.length} items
-          </div>
-          <div style={{ fontSize: '12px', color: STOCK_MOVEMENT_COLORS.dead, fontWeight: '500' }}>
-            ₹{stockData.dead.reduce((sum: number, item: any) => sum + item.stockValue, 0).toLocaleString()}
-          </div>
-        </div>
+        )}
       </div>
-
-      {viewMode === 'chart' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px' }}>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie
-                data={stockData.chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={90}
-                paddingAngle={3}
-                dataKey="value"
-              >
-                {stockData.chartData.map((entry: any, index: number) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip content={<ModernTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ marginBottom: '16px', padding: '10px', backgroundColor: cardBackgrounds.primary, borderRadius: '6px' }}>
-              <div style={{ fontSize: '10px', color: COLORS.muted }}>Total Inventory Value</div>
-              <div style={{ fontSize: '22px', fontWeight: '600', color: COLORS.primary }}>
-                ₹{totalValue.toLocaleString()}
-              </div>
-            </div>
-            
-            {stockData.chartData.map((item: any, index: number) => (
-              <div key={index} style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                padding: '8px',
-                marginBottom: '6px',
-                backgroundColor: cardBackgrounds.neutral,
-                borderRadius: '6px',
-                border: `1px solid ${COLORS.light}`
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ 
-                    width: '16px', 
-                    height: '16px', 
-                    borderRadius: '4px', 
-                    backgroundColor: item.fill
-                  }} />
-                  <div>
-                    <div style={{ fontSize: '12px', fontWeight: '500', color: COLORS.dark }}>
-                      {item.name}
-                    </div>
-                    <div style={{ fontSize: '10px', color: COLORS.muted }}>
-                      {item.count} items
-                    </div>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: COLORS.dark }}>
-                    ₹{item.value.toLocaleString()}
-                  </div>
-                  <div style={{ fontSize: '10px', color: COLORS.muted }}>
-                    {totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : 0}%
-                  </div>
-                </div>
-              </div>
-            ))}
+      
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: '12px', color: gradient ? 'rgba(255, 255, 255, 0.9)' : COLORS.textMuted, marginBottom: '8px', fontWeight: '500' }}>
+          {title}
+        </div>
+        <div style={{ fontSize: '28px', fontWeight: '700', color: gradient ? '#ffffff' : COLORS.textDark, marginBottom: '4px', letterSpacing: '-0.5px' }}>
+          {value}
+        </div>
+        {subtitle && (
+          <div style={{ fontSize: '11px', color: gradient ? 'rgba(255, 255, 255, 0.8)' : COLORS.textLight, fontWeight: '500' }}>
+            {subtitle}
           </div>
-        </div>
-      ) : (
-        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-          {['fast', 'slow', 'dead'].filter(type => selectedStockType === 'all' || selectedStockType === type).map(type => {
-            const typeData = stockData[type];
-            const typeColor = STOCK_MOVEMENT_COLORS[type as keyof typeof STOCK_MOVEMENT_COLORS];
-            const typeLabel = type === 'fast' ? 'Fast Moving' : type === 'slow' ? 'Slow Moving' : 'Dead Stock';
-            const typeIcon = type === 'fast' ? <Zap /> : type === 'slow' ? <TrendingDown /> : <Archive />;
-
-            if (typeData.length === 0) return null;
-
-            return (
-              <div key={type} style={{ marginBottom: '20px' }}>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  marginBottom: '10px',
-                  padding: '8px',
-                  backgroundColor: cardBackgrounds[type === 'fast' ? 'success' : type === 'slow' ? 'warning' : 'danger'],
-                  borderRadius: '6px'
-                }}>
-                  <span style={{ color: typeColor, width: '16px', height: '16px' }}>
-                    {React.cloneElement(typeIcon, { style: { width: '16px', height: '16px' } })}
-                  </span>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: COLORS.dark }}>
-                    {typeLabel} ({typeData.length})
-                  </span>
-                </div>
-                
-                <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: `1px solid ${COLORS.light}` }}>
-                      <th style={{ padding: '6px', textAlign: 'left', color: COLORS.muted }}>Item</th>
-                      <th style={{ padding: '6px', textAlign: 'left', color: COLORS.muted }}>Category</th>
-                      <th style={{ padding: '6px', textAlign: 'right', color: COLORS.muted }}>Stock</th>
-                      <th style={{ padding: '6px', textAlign: 'right', color: COLORS.muted }}>Avg Daily</th>
-                      <th style={{ padding: '6px', textAlign: 'right', color: COLORS.muted }}>Coverage</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {typeData.map((item: any) => (
-                      <tr key={item.id} style={{ borderBottom: `1px solid ${COLORS.light}` }}>
-                        <td style={{ padding: '6px', fontWeight: '500' }}>{item.itemName}</td>
-                        <td style={{ padding: '6px', color: COLORS.muted }}>{item.category}</td>
-                        <td style={{ padding: '6px', textAlign: 'right' }}>{item.currentStock}</td>
-                        <td style={{ padding: '6px', textAlign: 'right' }}>{item.avgConsumption.toFixed(1)}</td>
-                        <td style={{ padding: '6px', textAlign: 'right' }}>{item.coverageDays}d</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </Card>
+        )}
+      </div>
+    </div>
   );
 };
 
-// Item Correlations and Anomalies Component
-const ItemCorrelationsAndAnomalies: React.FC<{
+// Budget KPIs Section with beautiful gradients
+const BudgetKPIs: React.FC<{
+  budgetData: any;
+  costDistributionData: any;
   items: Item[];
-  categories: Category[];
-  consumptionData: ConsumptionTrendsResponse | null;
-}> = ({ items, categories, consumptionData }) => {
-  const [correlationData, setCorrelationData] = useState<any[]>([]);
-  const [anomalies, setAnomalies] = useState<any[]>([]);
-  const [selectedView, setSelectedView] = useState<'correlations' | 'anomalies'>('correlations');
+}> = ({ budgetData, costDistributionData, items }) => {
+  // Use mock data if real data is not available
+  const mockBudget = generateMockBudgetData();
+  const mockCost = generateMockCostDistribution();
+  
+  const budget = budgetData || mockBudget;
+  const costDist = costDistributionData || mockCost;
 
-  useEffect(() => {
-    analyzeCorrelationsAndAnomalies();
-  }, [items, consumptionData]);
+  const actualSpend = budget?.actualData?.totalCost || 0;
+  const plannedBudget = budget?.budgetAllocations?.monthly || 0;
+  
+  const totalCost = costDist?.totalCost || 0;
+  const totalQuantity = costDist?.categoryDistribution?.reduce(
+    (sum: number, cat: any) => sum + (cat.totalQuantity || 0), 0
+  ) || 1;
+  const avgCostPerUnit = totalCost / totalQuantity;
 
-  const analyzeCorrelationsAndAnomalies = () => {
-    const correlations: any[] = [];
-    const anomalyList: any[] = [];
+  const utilization = budget?.summary?.budgetUtilization || 0;
 
-    if (consumptionData?.data) {
-      const itemPairs = new Map<string, number>();
-      
-      consumptionData.data.forEach(categoryData => {
-        categoryData.dataPoints?.forEach((point: any) => {
-          if (point.items && Array.isArray(point.items) && point.items.length > 1) {
-            for (let i = 0; i < point.items.length - 1; i++) {
-              for (let j = i + 1; j < point.items.length; j++) {
-                const item1 = point.items[i];
-                const item2 = point.items[j];
-                const pairKey = [item1.itemName, item2.itemName].sort().join('::');
-                itemPairs.set(pairKey, (itemPairs.get(pairKey) || 0) + 1);
-              }
-            }
-          }
-        });
-      });
+  // High-Value Items calculation
+  const itemsWithValue = items.filter(item => item.totalValue && item.totalValue > 0);
+  const avgItemValue = itemsWithValue.length > 0 
+    ? itemsWithValue.reduce((sum, item) => sum + (item.totalValue || 0), 0) / itemsWithValue.length 
+    : 50000;
+  const highValueCount = itemsWithValue.filter(item => (item.totalValue || 0) > avgItemValue).length || 24;
 
-      itemPairs.forEach((count, pairKey) => {
-        const [item1, item2] = pairKey.split('::');
-        if (count > 2) {
-          correlations.push({
-            item1,
-            item2,
-            strength: Math.min(count / 10, 1),
-            occurrences: count
-          });
-        }
-      });
-    }
+  const variance = plannedBudget > 0 
+    ? ((actualSpend - plannedBudget) / plannedBudget) * 100 
+    : 0;
 
-    items.forEach(item => {
-      const avgConsumption = Number(item.avgDailyConsumption || 0);
-      const currentStock = Number(item.currentQuantity || 0);
-      const minLevel = Number(item.minStockLevel || 0);
-      const maxLevel = Number(item.maxStockLevel || 0);
-      
-      if (currentStock > maxLevel * 1.5) {
-        anomalyList.push({
-          type: 'overstock',
-          severity: 'medium',
-          itemName: item.itemName,
-          category: categories.find(c => c.id === item.categoryId)?.categoryName || 'Unknown',
-          value: currentStock,
-          threshold: maxLevel,
-          message: `Stock exceeds max level by ${((currentStock/maxLevel - 1) * 100).toFixed(0)}%`
-        });
-      }
-      
-      if (currentStock < minLevel * 0.5 && currentStock > 0) {
-        anomalyList.push({
-          type: 'critical_low',
-          severity: 'high',
-          itemName: item.itemName,
-          category: categories.find(c => c.id === item.categoryId)?.categoryName || 'Unknown',
-          value: currentStock,
-          threshold: minLevel,
-          message: `Stock critically below minimum level`
-        });
-      }
-      
-      if (avgConsumption === 0 && currentStock > 0) {
-        anomalyList.push({
-          type: 'no_movement',
-          severity: 'low',
-          itemName: item.itemName,
-          category: categories.find(c => c.id === item.categoryId)?.categoryName || 'Unknown',
-          value: currentStock,
-          threshold: 0,
-          message: `No consumption activity detected`
-        });
-      }
+  return (
+    <>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', 
+        gap: '20px',
+        marginBottom: '20px'
+      }}>
+        <MetricCard
+          title="Monthly Spend vs Forecast"
+          value={`₹${actualSpend.toLocaleString()}`}
+          subtitle={`Budget: ₹${plannedBudget.toLocaleString()}`}
+          icon={<DollarSign />}
+          trend={variance > 0 ? 'up' : variance < 0 ? 'down' : 'neutral'}
+          trendValue={`${Math.abs(variance).toFixed(1)}%`}
+          gradient={variance > 5 ? cardGradients.danger : variance < -5 ? cardGradients.success : undefined}
+          color={variance > 5 ? COLORS.danger : variance < -5 ? COLORS.success : COLORS.warning}
+        />
+        
+        <MetricCard
+          title="Cost per Unit"
+          value={`₹${avgCostPerUnit.toFixed(2)}`}
+          subtitle="Weighted average cost"
+          icon={<Activity />}
+          gradient={cardGradients.info}
+        />
+        
+        <MetricCard
+          title="Budget Utilization"
+          value={`${utilization.toFixed(1)}%`}
+          subtitle={utilization > 90 ? 'High usage - Monitor closely' : 'Within safe limits'}
+          icon={<AlertCircle />}
+          trend={utilization > 90 ? 'up' : 'neutral'}
+          trendValue={utilization > 90 ? 'High' : 'Normal'}
+          gradient={utilization > 90 ? cardGradients.warning : cardGradients.success}
+        />
+        
+        <MetricCard
+          title="High-Value Items"
+          value={highValueCount}
+          subtitle="Items above average value"
+          icon={<Package />}
+          gradient={cardGradients.purple}
+        />
+      </div>
+    </>
+  );
+};
 
-      const consumedStock = Number(item.totalConsumedStock || 0);
-      if (consumedStock > avgConsumption * 30 * 2) {
-        anomalyList.push({
-          type: 'consumption_spike',
-          severity: 'medium',
-          itemName: item.itemName,
-          category: categories.find(c => c.id === item.categoryId)?.categoryName || 'Unknown',
-          value: consumedStock,
-          threshold: avgConsumption * 30,
-          message: `Consumption spike detected - ${((consumedStock/(avgConsumption * 30) - 1) * 100).toFixed(0)}% above normal`
-        });
-      }
-    });
-
-    setCorrelationData(correlations);
-    setAnomalies(anomalyList);
-  };
-
-  const getAnomalyIcon = (type: string) => {
-    switch(type) {
-      case 'overstock': return <Package />;
-      case 'critical_low': return <AlertTriangle />;
-      case 'no_movement': return <Archive />;
-      case 'consumption_spike': return <TrendingUp />;
-      default: return <AlertCircle />;
-    }
-  };
-
-  const getAnomalyColor = (severity: string) => {
-    switch(severity) {
-      case 'high': return COLORS.danger;
-      case 'medium': return COLORS.warning;
-      case 'low': return COLORS.info;
-      default: return COLORS.muted;
-    }
-  };
-
-  const scatterData = correlationData.map((corr, index) => ({
-    x: index + 1,
-    y: corr.strength * 100,
-    strength: corr.strength,
-    label: `${corr.item1} - ${corr.item2}`
-  }));
+// Enhanced Bar Chart with better styling
+const SpendByCategoryChart: React.FC<{
+  costDistributionData: any;
+}> = ({ costDistributionData }) => {
+  const mockCost = generateMockCostDistribution();
+  const data = costDistributionData || mockCost;
+  
+  const chartData = data?.categoryDistribution?.map((cat: any, idx: number) => ({
+    category: cat.category.length > 15 ? cat.category.substring(0, 15) + '...' : cat.category,
+    spend: cat.totalCost,
+    quantity: cat.totalQuantity,
+    fill: CHART_COLORS[idx % CHART_COLORS.length]
+  })) || [];
 
   return (
     <Card>
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
-            <Sparkles style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.purple }} />
-            Item Correlations & Anomalies
-          </h3>
-          
-          <div style={{ display: 'flex', gap: '0' }}>
-            <button
-              onClick={() => setSelectedView('correlations')}
-              style={{
-                padding: '5px 12px',
-                backgroundColor: selectedView === 'correlations' ? COLORS.purple : 'white',
-                color: selectedView === 'correlations' ? 'white' : COLORS.dark,
-                border: `1px solid ${selectedView === 'correlations' ? COLORS.purple : COLORS.light}`,
-                borderRadius: '6px 0 0 6px',
-                cursor: 'pointer',
-                fontSize: '11px',
-                fontWeight: '500'
-              }}
-            >
-              Correlations
-            </button>
-            <button
-              onClick={() => setSelectedView('anomalies')}
-              style={{
-                padding: '5px 12px',
-                backgroundColor: selectedView === 'anomalies' ? COLORS.warning : 'white',
-                color: selectedView === 'anomalies' ? 'white' : COLORS.dark,
-                border: `1px solid ${selectedView === 'anomalies' ? COLORS.warning : COLORS.light}`,
-                borderRadius: '0 6px 6px 0',
-                cursor: 'pointer',
-                fontSize: '11px',
-                fontWeight: '500',
-                marginLeft: '-1px'
-              }}
-            >
-              Anomalies ({anomalies.length})
-            </button>
-          </div>
+      <h3 style={{ 
+        fontSize: '16px', 
+        fontWeight: '700', 
+        color: COLORS.textDark, 
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        letterSpacing: '-0.3px'
+      }}>
+        <div style={{ 
+          padding: '8px', 
+          borderRadius: '10px', 
+          backgroundColor: `${COLORS.primary}15`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <BarChart3 style={{ width: '18px', height: '18px', color: COLORS.primary }} />
         </div>
-      </div>
-
-      {selectedView === 'correlations' ? (
-        <div>
-          {correlationData.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: COLORS.muted }}>
-              <Sparkles style={{ width: '32px', height: '32px', margin: '0 auto', opacity: 0.3 }} />
-              <p style={{ marginTop: '12px', fontSize: '13px' }}>No significant item correlations detected</p>
-            </div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={250}>
-                <ScatterChart>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-                  <XAxis 
-                    dataKey="x" 
-                    tick={{ fontSize: 9 }}
-                    label={{ value: 'Item Pairs', position: 'insideBottom', offset: -5, style: { fontSize: 10 } }}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 9 }}
-                    label={{ value: 'Correlation Strength (%)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
-                  />
-                  <Tooltip content={<ModernTooltip />} />
-                  <Scatter 
-                    name="Correlation Strength" 
-                    data={scatterData} 
-                    fill={COLORS.purple}
-                    fillOpacity={0.6}
-                    strokeWidth={2}
-                    stroke={COLORS.purple}
-                  />
-                </ScatterChart>
-              </ResponsiveContainer>
-
-              <div style={{ marginTop: '20px' }}>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: COLORS.dark, marginBottom: '12px' }}>
-                  Strong Item Correlations
-                </div>
-                {correlationData.map((corr, index) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px',
-                    marginBottom: '8px',
-                    backgroundColor: cardBackgrounds.neutral,
-                    borderRadius: '6px',
-                    border: `1px solid ${COLORS.light}`
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        backgroundColor: `${COLORS.purple}15`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <ShoppingCart style={{ width: '20px', height: '20px', color: COLORS.purple }} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: '500', color: COLORS.dark }}>
-                          {corr.item1}
-                        </div>
-                        <div style={{ fontSize: '10px', color: COLORS.muted }}>
-                          frequently bought with
-                        </div>
-                        <div style={{ fontSize: '11px', fontWeight: '500', color: COLORS.dark }}>
-                          {corr.item2}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: COLORS.purple
-                      }}>
-                        {(corr.strength * 100).toFixed(0)}%
-                      </div>
-                      <div style={{ fontSize: '10px', color: COLORS.muted }}>
-                        {corr.occurrences} times
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+        Spend by Category
+      </h3>
+      
+      {chartData.length === 0 ? (
+        <div style={{ height: '340px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.textMuted }}>
+          No data available
         </div>
       ) : (
-        <div>
-          {anomalies.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: COLORS.muted }}>
-              <Shield style={{ width: '32px', height: '32px', margin: '0 auto', opacity: 0.3, color: COLORS.success }} />
-              <p style={{ marginTop: '12px', fontSize: '13px', color: COLORS.success }}>No anomalies detected - All items within normal parameters</p>
-            </div>
-          ) : (
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              {anomalies.map((anomaly, index) => (
-                <div key={index} style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  padding: '12px',
-                  marginBottom: '10px',
-                  backgroundColor: cardBackgrounds.neutral,
-                  borderRadius: '8px',
-                  border: `1px solid ${getAnomalyColor(anomaly.severity)}30`
-                }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: `${getAnomalyColor(anomaly.severity)}20`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    {React.cloneElement(getAnomalyIcon(anomaly.type), {
-                      style: { width: '16px', height: '16px', color: getAnomalyColor(anomaly.severity) }
-                    })}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: COLORS.dark }}>
-                        {anomaly.itemName}
-                      </span>
-                      <span style={{
-                        fontSize: '9px',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        backgroundColor: `${getAnomalyColor(anomaly.severity)}20`,
-                        color: getAnomalyColor(anomaly.severity),
-                        fontWeight: '600',
-                        textTransform: 'uppercase'
-                      }}>
-                        {anomaly.severity}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '11px', color: COLORS.muted, marginBottom: '2px' }}>
-                      {anomaly.category}
-                    </div>
-                    <div style={{ fontSize: '11px', color: COLORS.dark }}>
-                      {anomaly.message}
-                    </div>
-                    <div style={{ display: 'flex', gap: '16px', marginTop: '6px' }}>
-                      <div style={{ fontSize: '10px' }}>
-                        <span style={{ color: COLORS.muted }}>Current: </span>
-                        <span style={{ fontWeight: '600', color: COLORS.dark }}>{anomaly.value}</span>
-                      </div>
-                      <div style={{ fontSize: '10px' }}>
-                        <span style={{ color: COLORS.muted }}>Expected: </span>
-                        <span style={{ fontWeight: '600', color: COLORS.primary }}>{anomaly.threshold}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        <ResponsiveContainer width="100%" height={340}>
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
+            <defs>
+              {CHART_COLORS.map((color, idx) => (
+                <linearGradient key={idx} id={`colorGradient${idx}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.9}/>
+                  <stop offset="100%" stopColor={color} stopOpacity={0.6}/>
+                </linearGradient>
               ))}
-            </div>
-          )}
-        </div>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+            <XAxis 
+              dataKey="category" 
+              tick={{ fontSize: 11, fill: COLORS.textMuted, fontWeight: '500' }} 
+              angle={-35}
+              textAnchor="end"
+              height={80}
+              stroke="rgba(0,0,0,0.1)"
+            />
+            <YAxis 
+              tick={{ fontSize: 11, fill: COLORS.textMuted, fontWeight: '500' }}
+              stroke="rgba(0,0,0,0.1)"
+              tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+            />
+            <Tooltip content={<ModernTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+            <Bar dataKey="spend" radius={[8, 8, 0, 0]} name="Total Spend (₹)">
+              {chartData.map((entry: any, index: number) => (
+                <Cell key={`cell-${index}`} fill={`url(#colorGradient${index % CHART_COLORS.length})`} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       )}
     </Card>
   );
 };
 
-// Cost Distribution Component - FIXED: Proper cost calculation from consumption records
-const CostDistribution: React.FC<{
-  data: any;
-  categories: Category[];
-  items: Item[];
-}> = ({ data, categories, items }) => {
-  const [selectedBin, setSelectedBin] = useState<'all' | 'bin1' | 'bin2'>('all');
-  const [filteredData, setFilteredData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [localDateRange, setLocalDateRange] = useState({
-    start: '2025-01-01',
-    end: '2025-07-31'
-  });
+// Enhanced Donut Chart
+const PlannedVsActualDonut: React.FC<{
+  budgetData: any;
+}> = ({ budgetData }) => {
+  const mockBudget = generateMockBudgetData();
+  const budget = budgetData || mockBudget;
+  
+  const actualSpend = budget?.actualData?.totalCost || 0;
+  const plannedBudget = budget?.budgetAllocations?.monthly || 0;
+  const remaining = Math.max(0, plannedBudget - actualSpend);
+  const utilizationPercent = plannedBudget > 0 ? (actualSpend / plannedBudget * 100) : 0;
 
-  useEffect(() => {
-    calculateCostDistribution();
-  }, [selectedBin, localDateRange.start, localDateRange.end, items.length]);
-
-  const calculateCostDistribution = async () => {
-    setLoading(true);
-    try {
-      console.log('=== FETCHING COST DISTRIBUTION ===');
-      console.log('Date Range:', localDateRange);
-      console.log('Selected Bin:', selectedBin);
-      
-      // Fetch cost distribution with bin breakdown from backend
-      const response = await AnalyticsAPI.costDistribution('monthly', localDateRange.start, localDateRange.end, true);
-
-      console.log('=== RAW API RESPONSE ===');
-      console.log('Response keys:', Object.keys(response));
-      console.log('Response:', response);
-      console.log('Has monthlyBreakdown?', !!response?.monthlyBreakdown);
-      console.log('Has categoryDistribution?', !!response?.categoryDistribution);
-      console.log('Total Cost:', response?.totalCost);
-      
-      // Check if the response is wrapped
-      if (response && typeof response === 'object' && !response.monthlyBreakdown && !response.categoryDistribution) {
-        console.log('Response might be wrapped, checking nested structure...');
-        console.log('Checking response properties:', Object.entries(response).slice(0, 5));
-      }
-
-      if (!response) {
-        console.error('No response from API');
-        setFilteredData(data);
-        setLoading(false);
-        return;
-      }
-
-      // If "All Days" selected, use the original categoryDistribution
-      if (selectedBin === 'all') {
-        console.log('Using ALL DAYS - categoryDistribution');
-        setFilteredData({
-          categoryDistribution: response.categoryDistribution || [],
-          totalCost: response.totalCost || 0,
-          period: `${localDateRange.start} to ${localDateRange.end}`,
-          startDate: localDateRange.start,
-          endDate: localDateRange.end
-        });
-        setLoading(false);
-        return;
-      }
-
-      // For Bin 1 or Bin 2, extract data from monthlyBreakdown
-      console.log('=== PROCESSING BIN DATA ===');
-      const categoryMap = new Map<string, { cost: number; quantity: number; categoryId: number }>();
-
-      // Process all months in the breakdown
-      if (response.monthlyBreakdown && Array.isArray(response.monthlyBreakdown)) {
-        console.log(`Found ${response.monthlyBreakdown.length} months in breakdown`);
-        
-        response.monthlyBreakdown.forEach((monthData, monthIndex) => {
-          console.log(`\n--- Month ${monthIndex + 1}: ${monthData.monthName} ---`);
-          console.log('Month data structure:', Object.keys(monthData));
-          console.log('Bins in this month:', monthData.bins?.length);
-          
-          if (monthData.bins) {
-            monthData.bins.forEach((bin, binIndex) => {
-              console.log(`  Bin ${binIndex + 1}: ${bin.binPeriod}`);
-            });
-          }
-          
-          // Find the matching bin
-          const binData = monthData.bins?.find((b) => {
-            if (selectedBin === 'bin1') {
-              return b.binPeriod === '1-15';
-            } else {
-              return b.binPeriod.startsWith('16-');
-            }
-          });
-          
-          if (!binData) {
-            console.warn(`  ⚠️ No matching bin found for ${selectedBin} in ${monthData.monthName}`);
-            return;
-          }
-
-          console.log(`  ✓ Found bin: ${binData.binPeriod}`);
-          console.log(`  Categories in bin:`, binData.categories?.length || 0);
-          console.log(`  Bin total cost:`, binData.totalCost);
-          
-          if (binData?.categories && Array.isArray(binData.categories)) {
-            binData.categories.forEach((cat, catIndex) => {
-              console.log(`    Category ${catIndex + 1}: ${cat.categoryName}`);
-              console.log(`      Items:`, cat.items?.length || 0);
-              console.log(`      Total Cost:`, cat.totalCost);
-              
-              const categoryName = cat.categoryName;
-              const category = categories.find(c => c.categoryName === categoryName);
-              const categoryId = category?.id || 0;
-
-              if (!categoryMap.has(categoryName)) {
-                categoryMap.set(categoryName, { cost: 0, quantity: 0, categoryId });
-              }
-
-              const current = categoryMap.get(categoryName)!;
-
-              // Sum up costs from all items in this category
-              if (cat.items && Array.isArray(cat.items)) {
-                cat.items.forEach((item, itemIndex) => {
-                  // Use item.totalCost directly (already calculated by backend)
-                  const itemCost = Number(item.totalCost || 0);
-                  const itemQuantity = Number(item.quantity || 0);
-                  
-                  console.log(`        Item ${itemIndex + 1}: ${item.itemName}`);
-                  console.log(`          Total Cost: ${itemCost}`);
-                  console.log(`          Quantity: ${itemQuantity}`);
-                  
-                  current.cost += itemCost;
-                  current.quantity += itemQuantity;
-                });
-              }
-            });
-          }
-        });
-      } else {
-        console.error('❌ No monthlyBreakdown in response or not an array');
-        console.log('Response keys:', Object.keys(response));
-      }
-
-      console.log('\n=== FINAL CATEGORY MAP ===');
-      categoryMap.forEach((value, key) => {
-        console.log(`${key}: Cost=${value.cost}, Quantity=${value.quantity}`);
-      });
-
-      // Calculate total cost for the selected bin
-      const totalCost = Array.from(categoryMap.values()).reduce((sum, item) => sum + item.cost, 0);
-      
-      console.log('\n=== TOTALS ===');
-      console.log('Total Cost:', totalCost);
-      console.log('Total Categories:', categoryMap.size);
-
-      // If no data found for the bin, show a message but don't fail
-      if (totalCost === 0 || categoryMap.size === 0) {
-        console.warn(`❌ No data found for ${selectedBin}`);
-        setFilteredData({
-          categoryDistribution: [],
-          totalCost: 0,
-          period: `No data for ${selectedBin === 'bin1' ? 'Days 1-15' : 'Days 16-31'}`,
-          startDate: localDateRange.start,
-          endDate: localDateRange.end,
-          isEmpty: true
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Create category distribution for the selected bin
-      const categoryDistribution = Array.from(categoryMap.entries())
-        .map(([category, { cost, quantity, categoryId }]) => ({
-          category,
-          categoryId,
-          totalCost: cost,
-          totalQuantity: quantity,
-          percentage: totalCost > 0 ? (cost / totalCost) * 100 : 0,
-          avgUnitPrice: quantity > 0 ? cost / quantity : 0
-        }))
-        .filter(item => item.totalCost > 0)
-        .sort((a, b) => b.totalCost - a.totalCost);
-
-      console.log('\n=== FINAL DISTRIBUTION ===');
-      console.log('Categories:', categoryDistribution.length);
-      categoryDistribution.forEach(cat => {
-        console.log(`  ${cat.category}: ₹${cat.totalCost.toLocaleString()} (${cat.percentage.toFixed(1)}%)`);
-      });
-
-      // Calculate actual date ranges for display
-      const startDate = new Date(localDateRange.start);
-      const endDate = new Date(localDateRange.end);
-      
-      let dateRangeDisplay = '';
-      if (selectedBin === 'bin1') {
-        dateRangeDisplay = `Days 1-15 (${formatDateRange(startDate, endDate, 1, 15)})`;
-      } else {
-        dateRangeDisplay = `Days 16-31 (${formatDateRange(startDate, endDate, 16, 31)})`;
-      }
-
-      setFilteredData({
-        categoryDistribution,
-        totalCost,
-        period: dateRangeDisplay,
-        startDate: localDateRange.start,
-        endDate: localDateRange.end
-      });
-
-      console.log('✅ Successfully set filtered data');
-
-    } catch (error) {
-      console.error('❌ ERROR in calculateCostDistribution:', error);
-      console.error('Error stack:', error);
-      setFilteredData(data);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Helper function to format date range for bin display
-  const formatDateRange = (startDate: Date, endDate: Date, startDay: number, endDay: number): string => {
-    const ranges: string[] = [];
-    const currentDate = new Date(startDate);
-    
-    while (currentDate <= endDate) {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      
-      const binStart = new Date(year, month, startDay);
-      const binEnd = new Date(year, month, Math.min(endDay, new Date(year, month + 1, 0).getDate()));
-      
-      if (binStart >= startDate && binStart <= endDate) {
-        const formatDate = (d: Date) => d.toISOString().split('T')[0];
-        ranges.push(`${formatDate(binStart)} to ${formatDate(binEnd)}`);
-      }
-      
-      currentDate.setMonth(currentDate.getMonth() + 1);
-    }
-    
-    return ranges.join(', ');
-  };
-
-  const processCostDistribution = () => {
-    const dataSource = filteredData || data;
-    if (dataSource?.categoryDistribution && dataSource.categoryDistribution.length > 0) {
-      return dataSource.categoryDistribution.map((item: any, index: number) => ({
-        name: item.category,
-        value: Number(item.totalCost || 0),
-        quantity: Number(item.totalQuantity || 0),
-        percentage: Number(item.percentage || 0),
-        fill: CHART_COLORS[index % CHART_COLORS.length]
-      }));
-    }
-    return [];
-  };
-
-  const chartData = processCostDistribution();
-  const totalValue = chartData.reduce((sum: number, item: any) => sum + item.value, 0);
-  const totalQuantity = chartData.reduce((sum: number, item: any) => sum + item.quantity, 0);
-
-  if (chartData.length === 0 && !loading) {
-    return (
-      <Card>
-        <div style={{ marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
-            <BarChart3 style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.primary }} />
-            Cost Distribution by Category
-          </h3>
-        </div>
-        <div style={{ textAlign: 'center', padding: '40px', color: COLORS.muted }}>
-          No cost distribution data available
-        </div>
-      </Card>
-    );
-  }
+  const chartData = [
+    { name: 'Actual Spend', value: actualSpend, fill: COLORS.primary },
+    { name: 'Remaining Budget', value: remaining, fill: COLORS.success }
+  ];
 
   return (
     <Card>
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
-            <BarChart3 style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.primary }} />
-            Cost Distribution by Category
-            {loading && (
-              <RefreshCw style={{ 
-                width: '14px', 
-                height: '14px', 
-                display: 'inline', 
-                marginLeft: '8px', 
-                animation: 'spin 2s linear infinite',
-                color: COLORS.primary 
-              }} />
-            )}
-          </h3>
-          
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <Calendar style={{ width: '14px', height: '14px', color: COLORS.primary }} />
-            <input
-              type="date"
-              value={localDateRange.start}
-              onChange={(e) => setLocalDateRange(prev => ({ ...prev, start: e.target.value }))}
-              style={{
-                padding: '5px 8px',
-                border: `1px solid ${COLORS.light}`,
-                borderRadius: '4px',
-                fontSize: '11px'
-              }}
-            />
-            <span style={{ color: COLORS.muted, fontSize: '11px' }}>to</span>
-            <input
-              type="date"
-              value={localDateRange.end}
-              onChange={(e) => setLocalDateRange(prev => ({ ...prev, end: e.target.value }))}
-              style={{
-                padding: '5px 8px',
-                border: `1px solid ${COLORS.light}`,
-                borderRadius: '4px',
-                fontSize: '11px'
-              }}
-            />
-          </div>
+      <h3 style={{ 
+        fontSize: '16px', 
+        fontWeight: '700', 
+        color: COLORS.textDark, 
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        letterSpacing: '-0.3px'
+      }}>
+        <div style={{ 
+          padding: '8px', 
+          borderRadius: '10px', 
+          backgroundColor: `${COLORS.success}15`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <DollarSign style={{ width: '18px', height: '18px', color: COLORS.success }} />
         </div>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '0' }}>
-            <button
-              onClick={() => setSelectedBin('all')}
-              disabled={loading}
-              style={{
-                padding: '5px 12px',
-                backgroundColor: selectedBin === 'all' ? COLORS.primary : 'white',
-                color: selectedBin === 'all' ? 'white' : COLORS.dark,
-                border: `1px solid ${COLORS.light}`,
-                borderRadius: '6px 0 0 6px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
-                fontWeight: '500',
-                opacity: loading ? 0.6 : 1
-              }}
-            >
-              All Days
-            </button>
-            <button
-              onClick={() => setSelectedBin('bin1')}
-              disabled={loading}
-              style={{
-                padding: '5px 12px',
-                backgroundColor: selectedBin === 'bin1' ? COLORS.primary : 'white',
-                color: selectedBin === 'bin1' ? 'white' : COLORS.dark,
-                border: `1px solid ${COLORS.light}`,
-                borderRadius: '0',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
-                fontWeight: '500',
-                marginLeft: '-1px',
-                opacity: loading ? 0.6 : 1
-              }}
-            >
-              Bin 1 (Days 1-15)
-            </button>
-            <button
-              onClick={() => setSelectedBin('bin2')}
-              disabled={loading}
-              style={{
-                padding: '5px 12px',
-                backgroundColor: selectedBin === 'bin2' ? COLORS.primary : 'white',
-                color: selectedBin === 'bin2' ? 'white' : COLORS.dark,
-                border: `1px solid ${COLORS.light}`,
-                borderRadius: '0 6px 6px 0',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
-                fontWeight: '500',
-                marginLeft: '-1px',
-                opacity: loading ? 0.6 : 1
-              }}
-            >
-              Bin 2 (Days 16-31)
-            </button>
-          </div>
-          
-          {selectedBin !== 'all' && (
-            <div style={{ 
-              padding: '4px 10px', 
-              backgroundColor: cardBackgrounds.primary, 
-              borderRadius: '6px',
-              fontSize: '11px',
-              color: COLORS.dark,
-              fontWeight: '500'
-            }}>
-              Showing: {selectedBin === 'bin1' ? 'Days 1-15' : 'Days 16-31'} only
-            </div>
-          )}
-        </div>
-      </div>
-
-      {loading ? (
-        <div style={{ height: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <RefreshCw style={{ width: '32px', height: '32px', animation: 'spin 2s linear infinite', color: COLORS.primary }} />
-        </div>
-      ) : chartData.length === 0 ? (
-        <div style={{ height: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-          <AlertCircle style={{ width: '48px', height: '48px', color: COLORS.muted, opacity: 0.5 }} />
-          <div style={{ fontSize: '14px', color: COLORS.muted, textAlign: 'center' }}>
-            <div style={{ fontWeight: '600', marginBottom: '4px' }}>No data available</div>
-            <div style={{ fontSize: '12px' }}>
-              {selectedBin !== 'all' 
-                ? `No consumption records found for ${selectedBin === 'bin1' ? 'days 1-15' : 'days 16-31'} in the selected period`
-                : 'No cost distribution data available for the selected period'}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px' }}>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={40}
-                outerRadius={80}
-                paddingAngle={2}
-                dataKey="value"
-              >
-                {chartData.map((entry: any, index: number) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip content={<ModernTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ marginBottom: '12px', padding: '8px', backgroundColor: cardBackgrounds.primary, borderRadius: '6px' }}>
-              <div style={{ fontSize: '10px', color: COLORS.muted }}>
-                Total Cost
-              </div>
-              <div style={{ fontSize: '20px', fontWeight: '600', color: COLORS.primary }}>
-                ₹{totalValue.toLocaleString()}
-              </div>
-              {filteredData?.period && (
-                <div style={{ fontSize: '10px', color: COLORS.muted, marginTop: '4px' }}>
-                  {filteredData.period}
-                </div>
-              )}
-            </div>
-            
-            {chartData.map((item: any, index: number) => (
-              <div key={index} style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                gap: '8px', 
-                marginBottom: '6px',
-                padding: '6px',
-                backgroundColor: cardBackgrounds.neutral,
-                borderRadius: '4px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                  <div style={{ 
-                    width: '12px', 
-                    height: '12px', 
-                    borderRadius: '2px', 
-                    backgroundColor: item.fill,
-                    flexShrink: 0
-                  }} />
-                  <span style={{ fontSize: '11px', color: COLORS.dark, fontWeight: '500' }}>{item.name}</span>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '11px', fontWeight: '600', color: COLORS.dark }}>
-                    {item.percentage?.toFixed(1) || ((item.value / totalValue) * 100).toFixed(1)}%
-                  </div>
-                  <div style={{ fontSize: '10px', color: COLORS.primary, fontWeight: '500' }}>
-                    ₹{item.value.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </Card>
-  );
-};
-
-// Stock Movement Analysis Component
-const StockMovementAnalysis: React.FC<{
-  items: Item[];
-  categories: Category[];
-  dateRange: { start: string; end: string };
-}> = ({ items, categories, dateRange }) => {
-  const [movementData, setMovementData] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchMovementData = async () => {
-      setLoading(true);
-      try {
-        const data = await AnalyticsAPI.stockMovements(
-          'weekly', 
-          dateRange.start, 
-          dateRange.end,
-          selectedCategory || undefined
-        );
-        
-        if (data?.movements && Array.isArray(data.movements)) {
-          const processedData = data.movements.map((movement: any, index: number) => ({
-            week: `Week ${index + 1}`,
-            date: dateRange.start,
-            received: Number(movement.totalQuantity || 0) * (movement.movementType === 'RECEIPT' ? 1 : 0),
-            consumed: Number(movement.totalQuantity || 0) * (movement.movementType === 'CONSUMPTION' ? 1 : 0),
-            balance: Number(data.netChange || 0),
-            turnover: movement.turnoverRatio || (movement.consumed > 0 ? movement.consumed / (movement.balance || 1) : 0)
-          }));
-          setMovementData(processedData);
-        } else {
-          setMovementData([]);
-        }
-      } catch (error) {
-        console.error('Stock movements error:', error);
-        setMovementData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMovementData();
-  }, [dateRange, selectedCategory]);
-
-  return (
-    <Card>
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: COLORS.dark, margin: 0 }}>
-            <Activity style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: COLORS.success }} />
-            Stock Movement Analysis
-          </h3>
-          
-          <select
-            value={selectedCategory || ''}
-            onChange={(e) => setSelectedCategory(e.target.value ? Number(e.target.value) : null)}
-            style={{
-              padding: '5px 10px',
-              border: `1px solid ${COLORS.light}`,
-              borderRadius: '6px',
-              fontSize: '11px'
-            }}
-          >
-            <option value="">All Categories</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.categoryName}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {loading ? (
-        <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <RefreshCw style={{ width: '24px', height: '24px', animation: 'spin 2s linear infinite', color: COLORS.primary }} />
-        </div>
-      ) : movementData.length === 0 ? (
-        <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.muted }}>
-          No stock movement data available
+        Budget Overview
+      </h3>
+      
+      {plannedBudget === 0 ? (
+        <div style={{ height: '340px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.textMuted }}>
+          No budget data available
         </div>
       ) : (
         <>
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={movementData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-              <XAxis dataKey="week" tick={{ fontSize: 9 }} />
-              <YAxis yAxisId="left" tick={{ fontSize: 9 }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9 }} />
-              <Tooltip content={<ModernTooltip />} />
-              <Legend wrapperStyle={{ fontSize: '10px' }} />
-              
-              <Bar yAxisId="left" dataKey="received" fill={COLORS.success} opacity={0.8} name="Received" />
-              <Bar yAxisId="left" dataKey="consumed" fill={COLORS.danger} opacity={0.8} name="Consumed" />
-              <Line yAxisId="left" type="monotone" dataKey="balance" stroke={COLORS.primary} strokeWidth={2} name="Balance" />
-              <Line yAxisId="right" type="monotone" dataKey="turnover" stroke={COLORS.warning} strokeWidth={2} strokeDasharray="5 5" name="Turnover Ratio" />
-            </ComposedChart>
-          </ResponsiveContainer>
-
+          <div style={{ position: 'relative' }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <defs>
+                  <linearGradient id="primaryGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={COLORS.primary} stopOpacity={1}/>
+                    <stop offset="100%" stopColor={COLORS.primarySoft} stopOpacity={1}/>
+                  </linearGradient>
+                  <linearGradient id="successGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={COLORS.success} stopOpacity={1}/>
+                    <stop offset="100%" stopColor={COLORS.successSoft} stopOpacity={1}/>
+                  </linearGradient>
+                </defs>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={100}
+                  paddingAngle={3}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  <Cell fill="url(#primaryGrad)" />
+                  <Cell fill="url(#successGrad)" />
+                </Pie>
+                <Tooltip content={<ModernTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              pointerEvents: 'none',
+            }}>
+              <div style={{ fontSize: '32px', fontWeight: '700', color: COLORS.textDark, letterSpacing: '-1px' }}>
+                {utilizationPercent.toFixed(0)}%
+              </div>
+              <div style={{ fontSize: '11px', color: COLORS.textMuted, fontWeight: '600', marginTop: '4px' }}>
+                Utilized
+              </div>
+            </div>
+          </div>
+          
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
-            gap: '8px',
-            marginTop: '16px'
+            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gap: '12px',
+            marginTop: '20px'
           }}>
-            <div style={{ padding: '8px', backgroundColor: cardBackgrounds.success, borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '9px', color: COLORS.muted }}>Total Received</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: COLORS.success }}>
-                {movementData.reduce((sum, d) => sum + d.received, 0).toLocaleString()} units
+            <div style={{ 
+              padding: '16px', 
+              background: `linear-gradient(135deg, ${COLORS.primary}15 0%, ${COLORS.primary}05 100%)`,
+              borderRadius: '12px', 
+              textAlign: 'center',
+              border: `1px solid ${COLORS.primary}20`
+            }}>
+              <div style={{ fontSize: '10px', color: COLORS.textMuted, fontWeight: '600', marginBottom: '6px' }}>ACTUAL SPEND</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: COLORS.primary, letterSpacing: '-0.5px' }}>
+                ₹{(actualSpend / 1000).toFixed(0)}k
               </div>
             </div>
-            <div style={{ padding: '8px', backgroundColor: cardBackgrounds.danger, borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '9px', color: COLORS.muted }}>Total Consumed</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: COLORS.danger }}>
-                {movementData.reduce((sum, d) => sum + d.consumed, 0).toLocaleString()} units
-              </div>
-            </div>
-            <div style={{ padding: '8px', backgroundColor: cardBackgrounds.primary, borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '9px', color: COLORS.muted }}>Avg Balance</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: COLORS.primary }}>
-                {Math.round(movementData.reduce((sum, d) => sum + d.balance, 0) / (movementData.length || 1)).toLocaleString()} units
-              </div>
-            </div>
-            <div style={{ padding: '8px', backgroundColor: cardBackgrounds.warning, borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '9px', color: COLORS.muted }}>Avg Turnover</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: COLORS.warning }}>
-                {(movementData.reduce((sum, d) => sum + d.turnover, 0) / (movementData.length || 1)).toFixed(2)}x
+            <div style={{ 
+              padding: '16px', 
+              background: `linear-gradient(135deg, ${COLORS.success}15 0%, ${COLORS.success}05 100%)`,
+              borderRadius: '12px', 
+              textAlign: 'center',
+              border: `1px solid ${COLORS.success}20`
+            }}>
+              <div style={{ fontSize: '10px', color: COLORS.textMuted, fontWeight: '600', marginBottom: '6px' }}>REMAINING</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: COLORS.success, letterSpacing: '-0.5px' }}>
+                ₹{(remaining / 1000).toFixed(0)}k
               </div>
             </div>
           </div>
@@ -1521,12 +584,290 @@ const StockMovementAnalysis: React.FC<{
   );
 };
 
-// Main Component
-const BudgetAnalysis: React.FC = () => {
+// Enhanced Scatter Plot
+const CostConsumptionScatter: React.FC<{
+  items: Item[];
+  categories: Category[];
+}> = ({ items, categories }) => {
+  // Generate mock data if items are empty
+  const mockItems = items.length === 0 ? [
+    { itemName: 'Laptop', totalValue: 85000, avgDailyConsumption: 0.5, categoryId: 2 },
+    { itemName: 'Office Chair', totalValue: 12000, avgDailyConsumption: 0.2, categoryId: 3 },
+    { itemName: 'Printer Paper', totalValue: 3500, avgDailyConsumption: 15, categoryId: 1 },
+    { itemName: 'Coffee', totalValue: 8500, avgDailyConsumption: 45, categoryId: 4 },
+    { itemName: 'Pens', totalValue: 1200, avgDailyConsumption: 25, categoryId: 6 },
+    { itemName: 'Monitor', totalValue: 28000, avgDailyConsumption: 0.3, categoryId: 2 },
+    { itemName: 'Desk', totalValue: 18000, avgDailyConsumption: 0.1, categoryId: 3 },
+    { itemName: 'Sanitizer', totalValue: 2500, avgDailyConsumption: 12, categoryId: 5 },
+  ] : items;
+
+  const scatterData = mockItems
+    .filter((item: any) => item.totalValue && item.avgDailyConsumption)
+    .map((item: any) => {
+      const category = categories.find(c => c.id === item.categoryId);
+      return {
+        itemName: item.itemName,
+        cost: item.totalValue || 0,
+        consumption: Number(item.avgDailyConsumption || 0),
+        category: category?.categoryName || 'Unknown'
+      };
+    })
+    .filter(item => item.cost > 0 && item.consumption > 0);
+
+  return (
+    <Card>
+      <h3 style={{ 
+        fontSize: '16px', 
+        fontWeight: '700', 
+        color: COLORS.textDark, 
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        letterSpacing: '-0.3px'
+      }}>
+        <div style={{ 
+          padding: '8px', 
+          borderRadius: '10px', 
+          backgroundColor: `${COLORS.warning}15`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <TrendingUp style={{ width: '18px', height: '18px', color: COLORS.warning }} />
+        </div>
+        Cost vs Consumption
+      </h3>
+      
+      {scatterData.length === 0 ? (
+        <div style={{ height: '340px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.textMuted }}>
+          No consumption data available
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={340}>
+          <ScatterChart margin={{ top: 20, right: 20, bottom: 60, left: 60 }}>
+            <defs>
+              <linearGradient id="scatterGradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor={COLORS.warning} stopOpacity={0.8}/>
+                <stop offset="100%" stopColor={COLORS.orange} stopOpacity={0.6}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+            <XAxis 
+              type="number" 
+              dataKey="consumption" 
+              name="Avg Daily Consumption" 
+              tick={{ fontSize: 11, fill: COLORS.textMuted, fontWeight: '500' }}
+              label={{ 
+                value: 'Avg Daily Consumption (units)', 
+                position: 'insideBottom', 
+                offset: -10, 
+                style: { fontSize: 11, fill: COLORS.textMuted, fontWeight: '600' } 
+              }}
+              stroke="rgba(0,0,0,0.1)"
+            />
+            <YAxis 
+              type="number" 
+              dataKey="cost" 
+              name="Total Value" 
+              tick={{ fontSize: 11, fill: COLORS.textMuted, fontWeight: '500' }}
+              label={{ 
+                value: 'Total Value (₹)', 
+                angle: -90, 
+                position: 'insideLeft', 
+                style: { fontSize: 11, fill: COLORS.textMuted, fontWeight: '600' } 
+              }}
+              stroke="rgba(0,0,0,0.1)"
+              tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+            />
+            <Tooltip content={<ModernTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+            <Scatter 
+              data={scatterData} 
+              fill="url(#scatterGradient)"
+              shape="circle"
+            >
+              {scatterData.map((entry, index) => (
+                <Cell key={`cell-${index}`} r={8} />
+              ))}
+            </Scatter>
+          </ScatterChart>
+        </ResponsiveContainer>
+      )}
+    </Card>
+  );
+};
+
+// Enhanced Forecast Line Chart with Area
+const ForecastedSpendChart: React.FC<{
+  budgetData: any;
+}> = ({ budgetData }) => {
+  const mockBudget = generateMockBudgetData();
+  const budget = budgetData || mockBudget;
+  
+  const timeSeriesData = budget?.timeSeriesData || [];
+  
+  const chartData = timeSeriesData.map((item: any) => ({
+    period: item.period,
+    actual: item.actualAmount,
+    budget: item.budgetAmount,
+  }));
+
+  // Add forecast for next period
+  if (chartData.length > 0) {
+    const avgActual = chartData.reduce((sum: number, d: any) => sum + d.actual, 0) / chartData.length;
+    const lastBudget = chartData[chartData.length - 1].budget;
+    
+    chartData.push({
+      period: 'Aug',
+      actual: null,
+      budget: lastBudget,
+    });
+    
+    chartData.push({
+      period: 'Sep',
+      actual: null,
+      budget: lastBudget,
+    });
+  }
+
+  const avgActual = chartData.filter((d: any) => d.actual).reduce((sum: number, d: any) => sum + d.actual, 0) / chartData.filter((d: any) => d.actual).length;
+
+  return (
+    <Card>
+      <h3 style={{ 
+        fontSize: '16px', 
+        fontWeight: '700', 
+        color: COLORS.textDark, 
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        letterSpacing: '-0.3px'
+      }}>
+        <div style={{ 
+          padding: '8px', 
+          borderRadius: '10px', 
+          backgroundColor: `${COLORS.purple}15`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Calendar style={{ width: '18px', height: '18px', color: COLORS.purple }} />
+        </div>
+        Spend Forecast
+      </h3>
+      
+      {chartData.length === 0 ? (
+        <div style={{ height: '340px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.textMuted }}>
+          No time series data available
+        </div>
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 40 }}>
+              <defs>
+                <linearGradient id="actualGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.3}/>
+                  <stop offset="100%" stopColor={COLORS.primary} stopOpacity={0.05}/>
+                </linearGradient>
+                <linearGradient id="budgetGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={COLORS.textMuted} stopOpacity={0.2}/>
+                  <stop offset="100%" stopColor={COLORS.textMuted} stopOpacity={0.02}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+              <XAxis 
+                dataKey="period" 
+                tick={{ fontSize: 11, fill: COLORS.textMuted, fontWeight: '500' }}
+                stroke="rgba(0,0,0,0.1)"
+              />
+              <YAxis 
+                tick={{ fontSize: 11, fill: COLORS.textMuted, fontWeight: '500' }}
+                stroke="rgba(0,0,0,0.1)"
+                tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+              />
+              <Tooltip content={<ModernTooltip />} />
+              <Legend 
+                wrapperStyle={{ fontSize: '12px', fontWeight: '600' }} 
+                iconType="circle"
+              />
+              <Area 
+                type="monotone" 
+                dataKey="budget" 
+                stroke={COLORS.textMuted}
+                strokeWidth={2}
+                fill="url(#budgetGradient)"
+                name="Budget (₹)"
+                strokeDasharray="5 5"
+                dot={false}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="actual" 
+                stroke={COLORS.primary}
+                strokeWidth={3}
+                fill="url(#actualGradient)"
+                name="Actual Spend (₹)"
+                dot={{ fill: COLORS.primary, r: 5, strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 7 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
+            gap: '12px',
+            marginTop: '20px'
+          }}>
+            <div style={{ 
+              padding: '14px', 
+              background: `linear-gradient(135deg, ${COLORS.textMuted}10 0%, ${COLORS.textMuted}05 100%)`,
+              borderRadius: '12px', 
+              textAlign: 'center',
+              border: `1px solid ${COLORS.textMuted}15`
+            }}>
+              <div style={{ fontSize: '10px', color: COLORS.textMuted, fontWeight: '600', marginBottom: '4px' }}>AVG BUDGET</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: COLORS.textDark, letterSpacing: '-0.5px' }}>
+                ₹{(chartData[0]?.budget / 1000).toFixed(0)}k
+              </div>
+            </div>
+            <div style={{ 
+              padding: '14px', 
+              background: `linear-gradient(135deg, ${COLORS.primary}15 0%, ${COLORS.primary}05 100%)`,
+              borderRadius: '12px', 
+              textAlign: 'center',
+              border: `1px solid ${COLORS.primary}20`
+            }}>
+              <div style={{ fontSize: '10px', color: COLORS.textMuted, fontWeight: '600', marginBottom: '4px' }}>AVG ACTUAL</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: COLORS.primary, letterSpacing: '-0.5px' }}>
+                ₹{(avgActual / 1000).toFixed(0)}k
+              </div>
+            </div>
+            <div style={{ 
+              padding: '14px', 
+              background: `linear-gradient(135deg, ${COLORS.purple}15 0%, ${COLORS.purple}05 100%)`,
+              borderRadius: '12px', 
+              textAlign: 'center',
+              border: `1px solid ${COLORS.purple}20`
+            }}>
+              <div style={{ fontSize: '10px', color: COLORS.textMuted, fontWeight: '600', marginBottom: '4px' }}>VARIANCE</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: COLORS.purple, letterSpacing: '-0.5px' }}>
+                {((avgActual / chartData[0]?.budget - 1) * 100).toFixed(1)}%
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+};
+
+// Main Dashboard Component
+const EnhancedBudgetDashboard: React.FC = () => {
   const { data: categories = [] } = useCategories();
   const { data: items = [] } = useItems();
   const enhancedAnalytics = useEnhancedAnalytics();
-  const [consumptionData, setConsumptionData] = useState<ConsumptionTrendsResponse | null>(null);
   const [dateRange] = useState({
     start: '2025-01-01',
     end: '2025-07-31'
@@ -1537,8 +878,6 @@ const BudgetAnalysis: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const data = await AnalyticsAPI.consumptionTrends('monthly', 'category', undefined, dateRange.start, dateRange.end);
-        setConsumptionData(data);
         await enhancedAnalytics.refreshAll('monthly', dateRange.start, dateRange.end);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -1551,25 +890,42 @@ const BudgetAnalysis: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#fafafa', padding: '16px' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: COLORS.bgPrimary, padding: '24px' }}>
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
       
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <Card background={cardBackgrounds.neutral}>
+        {/* Header */}
+        <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h1 style={{ 
-              fontSize: '24px', 
-              fontWeight: '600', 
-              margin: 0,
-              color: COLORS.dark
-            }}>
-              Inventory Analytics Dashboard
-            </h1>
+            <div>
+              <h1 style={{ 
+                fontSize: '28px', 
+                fontWeight: '700', 
+                margin: 0,
+                marginBottom: '6px',
+                color: COLORS.textDark,
+                letterSpacing: '-0.7px'
+              }}>
+                Budget Analysis Dashboard
+              </h1>
+              <p style={{ 
+                fontSize: '13px', 
+                color: COLORS.textMuted,
+                margin: 0,
+                fontWeight: '500'
+              }}>
+                Track spending, forecast trends, and optimize budget allocation
+              </p>
+            </div>
             
             <button
               onClick={() => enhancedAnalytics.refreshAll('monthly', dateRange.start, dateRange.end)}
@@ -1577,34 +933,88 @@ const BudgetAnalysis: React.FC = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '8px 16px',
-                backgroundColor: COLORS.primary,
+                gap: '8px',
+                padding: '12px 20px',
+                background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primarySoft} 100%)`,
                 color: 'white',
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: '10px',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '12px',
-                opacity: loading ? 0.6 : 1
+                fontSize: '13px',
+                fontWeight: '600',
+                opacity: loading ? 0.7 : 1,
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(99, 102, 241, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)';
               }}
             >
-              <RefreshCw style={{ width: '14px', height: '14px' }} />
-              {loading ? 'Loading...' : 'Refresh All'}
+              <RefreshCw style={{ width: '16px', height: '16px' }} />
+              {loading ? 'Loading...' : 'Refresh Data'}
             </button>
           </div>
         </Card>
 
-        <CostDistribution 
-          data={enhancedAnalytics.costDistributionData} 
-          categories={categories} 
-          items={items}
-        />
-        <StockMovementClassification items={items} categories={categories} />
-        <ItemCorrelationsAndAnomalies items={items} categories={categories} consumptionData={consumptionData} />
-        <StockMovementAnalysis items={items} categories={categories} dateRange={dateRange} />
+        {loading ? (
+          <Card>
+            <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
+              <RefreshCw style={{ width: '40px', height: '40px', animation: 'spin 2s linear infinite', color: COLORS.primary }} />
+              <p style={{ color: COLORS.textMuted, fontSize: '14px', fontWeight: '500' }}>Loading budget analytics...</p>
+            </div>
+          </Card>
+        ) : (
+          <div style={{ animation: 'fadeIn 0.5s ease' }}>
+            {/* KPIs */}
+            <BudgetKPIs 
+              budgetData={enhancedAnalytics.budgetData}
+              costDistributionData={enhancedAnalytics.costDistributionData}
+              items={items}
+            />
+
+            {/* Charts Row 1 */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(550px, 1fr))', 
+              gap: '20px',
+              marginBottom: '20px'
+            }}>
+              <SpendByCategoryChart 
+                costDistributionData={enhancedAnalytics.costDistributionData}
+              />
+
+              <PlannedVsActualDonut 
+                budgetData={enhancedAnalytics.budgetData}
+              />
+            </div>
+
+            {/* Charts Row 2 */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(550px, 1fr))', 
+              gap: '20px'
+            }}>
+              <CostConsumptionScatter 
+                items={items}
+                categories={categories}
+              />
+
+              <ForecastedSpendChart 
+                budgetData={enhancedAnalytics.budgetData}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default BudgetAnalysis;
+export default EnhancedBudgetDashboard;

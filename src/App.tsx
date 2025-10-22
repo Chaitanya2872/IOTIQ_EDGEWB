@@ -12,8 +12,9 @@ import Dashboard from "./components/Dashboard";
 import AssetDashboard from "./components/AssetDashboard";
 import TicketingSystem from "./components/TicketingSystem";
 import MealForecastDashboard from "./components/MealForecastDashboard";
+import InventoryHealthDashboard from './components/InventoryDashboard';
 
-import InventoryDashboard from "./components/InventoryDashboard";
+
 import InventoryStockUsage from "./components/InventoryStockUsage";
 import InventoryAnalytics from "./components/InventoryAnalytics";
 import ManageCategories from "./components/ManageCategories";
@@ -102,7 +103,7 @@ const AppContent: React.FC = () => {
             {/* Inventory Management */}
             <Route path="inventory/categories" element={<ManageCategories />} />
             <Route path="inventory/items" element={<ManageItems />} />
-            <Route path="inventory" element={<InventoryDashboard />} />
+            <Route path="inventory" element={<InventoryHealthDashboard />} />
             <Route path="inventory/stock-usage" element={<InventoryStockUsage />} />
             <Route path="inventory/analytics" element={<InventoryAnalytics />} />
             <Route path="inventory/predictive-inserts" element={<PredictiveInserts />} />

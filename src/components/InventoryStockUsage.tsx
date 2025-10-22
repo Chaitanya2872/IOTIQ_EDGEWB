@@ -1455,7 +1455,7 @@ const InventoryStockUsage: React.FC = () => {
       // Show all categories by default, ensuring HK Chemicals is included
       setVisibleCategories(categories.map(cat => cat.id));
     }
-  }, [categories]);
+  }, [categories, visibleCategories.length]);
 
   // FIXED: Helper function to aggregate footfall data by week
   const aggregateFootfallByWeek = (footfallRecords: FootfallRecord[]) => {

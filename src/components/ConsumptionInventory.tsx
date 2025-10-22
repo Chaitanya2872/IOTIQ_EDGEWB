@@ -1,12 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ComposedChart, Area, AreaChart
 } from 'recharts';
 import {
-  TrendingUp, TrendingDown, Package, AlertCircle,
+  TrendingUp, TrendingDown, Package,
   Calendar, Filter, X, ChevronDown, Activity,
-  Zap, Clock, Target, DollarSign, ArrowUp, ArrowDown,
+  Zap, ArrowUp, ArrowDown,
   RefreshCw, Layers
 } from 'lucide-react';
 import {
@@ -327,7 +328,7 @@ const HeatmapRightPanel: React.FC<{
     const start = new Date(dateRange.start);
     const end = new Date(dateRange.end);
     
-    let current = new Date(start.getFullYear(), start.getMonth(), 1);
+    const current = new Date(start.getFullYear(), start.getMonth(), 1);
     while (current <= end) {
       months.push(new Date(current));
       current.setMonth(current.getMonth() + 1);
