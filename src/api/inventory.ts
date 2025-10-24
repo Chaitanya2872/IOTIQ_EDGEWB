@@ -696,7 +696,9 @@ export type PerEmployeeConsumptionResponse = {
   }>;
 };
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8082";
+// const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8082";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://inventoryservice-jwh6.onrender.com";
+
 
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 30000; // 30 seconds
