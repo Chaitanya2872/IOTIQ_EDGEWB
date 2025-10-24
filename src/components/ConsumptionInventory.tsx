@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
@@ -2000,8 +2001,10 @@ const ConsumptionChart: React.FC<{
   );
 };
 
+
+
 const ConsumptionInventory: React.FC = () => {
-  const { data: categoriesData = [], loading: categoriesLoading } = useCategories();
+   const { data: categoriesData = [], loading: categoriesLoading } = useCategories();
   const { data: itemsData = [], loading: itemsLoading } = useItems();
   
   const categories = (categoriesData || []) as Category[];
@@ -2246,6 +2249,10 @@ const ConsumptionInventory: React.FC = () => {
               
               <SmartInsightsFeed items={items} categories={categories} dateRange={dateRange} />
             </div>
+
+            <div style={{ marginTop: '20px' }}>
+              <CoreInventoryTable items={items} categories={categories} initialRows={6} dateRange={dateRange} />
+            </div>
           </>
         )}
       </div>
@@ -2277,3 +2284,96 @@ const ConsumptionInventory: React.FC = () => {
 };
 
 export default ConsumptionInventory;
+
+/* New component — CoreInventoryTable */
+const CoreInventoryTable: React.FC<{
+  items: Item[];
+  categories: Category[];
+  initialRows?: number;
+  dateRange: { start: string; end: string };
+}> = ({ items, categories, initialRows = 5, dateRange }) => {
+  const [expanded, setExpanded] = useState(false);
+  const visibleItems = expanded ? items : items.slice(0, initialRows);
+
+  const computeAvgDaily = (item: Item) => {
+    const records = (item.consumptionRecords || []) as any[];
+    if (records.length === 0) return 0;
+    // use last 30 days or available range
+    const last30 = records.slice(-30);
+    const total = last30.reduce((s, r) => s + Number(r.consumedQuantity || 0), 0);
+    return +(total / Math.max(1, last30.length)).toFixed(1);
+  };
+
+  return (
+    <Card>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.dark, margin: 0 }}>Core Inventory</h3>
+          <div style={{ fontSize: 12, color: COLORS.gray }}>{items.length} items</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ fontSize: 12, color: COLORS.gray }}>{expanded ? 'Showing all' : `Showing ${visibleItems.length}`}</div>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            style={{
+              padding: '8px 12px',
+              backgroundColor: expanded ? COLORS.primary : COLORS.white,
+              color: expanded ? COLORS.white : COLORS.dark,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontWeight: 700
+            }}
+          >
+            {expanded ? 'Show less' : `Show all (${items.length})`}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ width: '100%', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ textAlign: 'left', color: COLORS.gray, fontSize: 12 }}>
+              <th style={{ padding: '10px 8px' }}>Item</th>
+              <th style={{ padding: '10px 8px' }}>Category</th>
+              <th style={{ padding: '10px 8px', textAlign: 'right' }}>Current Stock</th>
+              <th style={{ padding: '10px 8px', textAlign: 'right' }}>Avg /day</th>
+              <th style={{ padding: '10px 8px', textAlign: 'right' }}>Days Coverage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleItems.map((it) => {
+              const avg = computeAvgDaily(it);
+              const current = Number(it.currentQuantity || it.closingStock || 0);
+              const coverage = avg > 0 ? Math.floor(current / avg) : Infinity;
+              const categoryName = categories.find(c => c.id === it.categoryId)?.categoryName || 'Unknown';
+
+              return (
+                <tr key={it.id} style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                  <td style={{ padding: '12px 8px', verticalAlign: 'middle' }}>
+                    <div style={{ fontWeight: 700, color: COLORS.dark }}>{it.itemName}</div>
+                    {it.itemCode && <div style={{ fontSize: 11, color: COLORS.gray }}>{it.itemCode}</div>}
+                  </td>
+                  <td style={{ padding: '12px 8px', verticalAlign: 'middle', color: COLORS.gray }}>{categoryName}</td>
+                  <td style={{ padding: '12px 8px', verticalAlign: 'middle', textAlign: 'right', fontWeight: 700 }}>{current.toLocaleString()}</td>
+                  <td style={{ padding: '12px 8px', verticalAlign: 'middle', textAlign: 'right' }}>{avg}</td>
+                  <td style={{ padding: '12px 8px', verticalAlign: 'middle', textAlign: 'right', color: coverage <= 7 ? COLORS.danger : COLORS.dark }}>
+                    {coverage === Infinity ? '∞' : `${coverage}d`}
+                  </td>
+                </tr>
+              );
+            })}
+
+            {visibleItems.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: COLORS.gray }}>
+                  No items to display
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+};

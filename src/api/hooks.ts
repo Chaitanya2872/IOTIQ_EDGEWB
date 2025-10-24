@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { 
   CategoriesAPI, 
   ItemsAPI, 
@@ -9,7 +7,32 @@ import {
   type Category, 
   type Item,
   type BudgetConsumptionResponse,
-  type CostDistributionResponse
+  type CostDistributionResponse,
+  type DashboardBulkResponse,
+  type StockUsageResponse,
+  type StockLevelsResponse,
+  type StockDistributionCategoryResponse,
+  type MonthlyStockValueTrendResponse,
+  type MonthlyForecastResponse,
+  type ForecastVsActualBinsResponse,
+  type BinVarianceAnalysisResponse,
+  type ItemHeatmapResponse,
+  type ConsumptionPatternsResponse,
+  type PriceTrendsResponse,
+  type LeadTimeAnalysisResponse,
+  type BudgetKPIResponse,
+  type BudgetComparisonResponse,
+  type InventoryTurnoverResponse,
+  type SupplierPerformanceResponse,
+  type ReorderRecommendationsResponse,
+  type ExpiryAnalysisResponse,
+  type DepartmentCostAnalysisResponse,
+  type FootfallTrendsResponse,
+  type PerEmployeeConsumptionResponse,
+  type ConsumptionTrendsResponse,
+  type TopConsumersResponse,
+  type AvailableDateResponse,
+  type costConsumptionResponse
 } from '../api/inventory';
 
 // ============================================================================
@@ -33,18 +56,18 @@ async function optimizedRequest<T>(
   // Check response cache first
   const cached = responseCache.get(key);
   if (cached && Date.now() - cached.timestamp < cacheDuration) {
-    console.log(`✅ Cache hit: ${key}`);
+    console.log(`âœ… Cache hit: ${key}`);
     return cached.data;
   }
 
   // Check if request is already in flight
   if (requestCache.has(key)) {
-    console.log(`⏳ Request in flight, waiting: ${key}`);
+    console.log(`â³ Request in flight, waiting: ${key}`);
     return requestCache.get(key)!;
   }
 
   // Make new request
-  console.log(`🔄 Making new request: ${key}`);
+  console.log(`ðŸ”„ Making new request: ${key}`);
   const promise = requestFn()
     .then(data => {
       responseCache.set(key, { data, timestamp: Date.now() });
@@ -66,7 +89,13 @@ async function optimizedRequest<T>(
 export function clearAllCaches() {
   requestCache.clear();
   responseCache.clear();
-  console.log('🧹 All caches cleared');
+  console.log('ðŸ§¹ All caches cleared');
+}
+
+export function clearCache(key: string) {
+  responseCache.delete(key);
+  requestCache.delete(key);
+  console.log(`🗑️ Cleared cache: ${key}`);
 }
 
 // ============================================================================
@@ -128,22 +157,22 @@ export function useItems() {
     setLoading(true); 
     setError(null);
     try { 
-      console.log('📦 Fetching items...');
+      console.log('ðŸ“¦ Fetching items...');
       const items = await optimizedRequest(
         'items-list',
         () => ItemsAPI.list()
       );
-      console.log(`✅ Items loaded: ${items.length} items`);
+      console.log(`âœ… Items loaded: ${items.length} items`);
       setData(items); 
     }
     catch (e: any) { 
-      console.error('❌ Items fetch error:', e);
+      console.error('âŒ Items fetch error:', e);
       const errorMessage = e?.message || 'Failed to load items';
       setError(errorMessage);
       
       // Check if it's an auth error
       if (errorMessage.includes('Session expired') || errorMessage.includes('401')) {
-        console.log('🔐 Redirecting to login due to auth error');
+        console.log('ðŸ” Redirecting to login due to auth error');
       }
     }
     finally { 
@@ -199,28 +228,28 @@ export function useAnalytics() {
     setLoading(true); 
     setError(null);
     try {
-      console.log('📊 Fetching analytics data...');
+      console.log('ðŸ“Š Fetching analytics data...');
       
       // Fetch both in parallel with caching
       const [dashboardData, stockData] = await Promise.all([
         optimizedRequest('analytics-dashboard', () => AnalyticsAPI.dashboard())
           .catch(err => {
-            console.warn('⚠️ Dashboard data failed:', err);
+            console.warn('âš ï¸ Dashboard data failed:', err);
             return null;
           }),
         optimizedRequest('analytics-stock', () => AnalyticsAPI.stockAnalytics())
           .catch(err => {
-            console.warn('⚠️ Stock analytics failed:', err);
+            console.warn('âš ï¸ Stock analytics failed:', err);
             return null;
           })
       ]);
       
       setDashboard(dashboardData);
       setStockAnalytics(stockData);
-      console.log('✅ Analytics loaded');
+      console.log('âœ… Analytics loaded');
     }
     catch (e: any) {
-      console.error('❌ Analytics fetch error:', e);
+      console.error('âŒ Analytics fetch error:', e);
       setError(e?.message || 'Failed to load analytics');
     }
     finally { 
@@ -245,8 +274,442 @@ export function useAnalytics() {
 }
 
 // ============================================================================
-// ENHANCED ANALYTICS HOOKS WITH CACHING
+// NEW ANALYTICS HOOKS - Dashboard & Basic Stats
 // ============================================================================
+
+export function useDashboardBulk(year?: number, month?: number, categoryId?: number) {
+  const [data, setData] = useState<DashboardBulkResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `dashboard-bulk-${year}-${month}-${categoryId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.dashboardBulk(year, month, categoryId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load dashboard bulk data');
+    } finally {
+      setLoading(false);
+    }
+  }, [year, month, categoryId]);
+
+  useEffect(() => { refresh(); }, [year, month, categoryId, refresh]);
+
+  return { data, loading, error, refresh };
+}
+
+// ============================================================================
+// NEW ANALYTICS HOOKS - Consumption & Trends
+// ============================================================================
+
+export function useConsumptionTrends(period?: string, groupBy?: string, categoryId?: number) {
+  const [data, setData] = useState<ConsumptionTrendsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `consumption-trends-${period}-${groupBy}-${categoryId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.consumptionTrends(period, groupBy, categoryId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load consumption trends');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [period, groupBy, categoryId]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useTopConsumingItems(days?: number, limit?: number) {
+  const [data, setData] = useState<TopConsumersResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `top-consuming-items-${days}-${limit}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.topConsumingItems(days, limit)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load top consuming items');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [days, limit]);
+
+  return { data, loading, error, refresh };
+}
+
+// ============================================================================
+// NEW ANALYTICS HOOKS - Stock Analysis
+// ============================================================================
+
+export function useStockUsage(categoryId?: number) {
+  const [data, setData] = useState<StockUsageResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `stock-usage-${categoryId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.stockUsage(categoryId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load stock usage');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [categoryId]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useStockLevels(categoryId?: number, alertLevel?: string, sortBy?: string, sortOrder?: string) {
+  const [data, setData] = useState<StockLevelsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `stock-levels-${categoryId}-${alertLevel}-${sortBy}-${sortOrder}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.stockLevels(categoryId, alertLevel, sortBy, sortOrder)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load stock levels');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [categoryId, alertLevel, sortBy, sortOrder]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useStockDistributionCategory() {
+  const [data, setData] = useState<StockDistributionCategoryResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await optimizedRequest(
+        'stock-distribution-category',
+        () => AnalyticsAPI.stockDistributionCategory()
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load stock distribution');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  return { data, loading, error, refresh };
+}
+
+export function useMonthlyStockValueTrend(startDate?: string, endDate?: string, categoryId?: number) {
+  const [data, setData] = useState<MonthlyStockValueTrendResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cacheKey = useMemo(() => {
+    const start = startDate || 'all';
+    const end = endDate || 'all';
+    const cat = categoryId || 'all';
+    return `monthly-stock-value-trend-${start}-${end}-${cat}`;
+  }, [startDate, endDate, categoryId]);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('📊 Fetching monthly stock trend data...');
+      
+      clearCache(cacheKey);
+      
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.monthlyStockValueTrend(startDate, endDate, categoryId),
+        0
+      );
+      
+      if (result?.trendData) {
+        console.log(`✅ Received ${result.trendData.length} months of data`);
+      }
+      
+      setData(result);
+    } catch (e: any) {
+      console.error('❌ Error:', e);
+      setError(e?.message || 'Failed to load stock value trend');
+    } finally {
+      setLoading(false);
+    }
+  }, [startDate, endDate, categoryId, cacheKey]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { data, loading, error, refresh };
+}
+
+
+
+export function useMonthlyForecast(year?: number, month?: number, categoryId?: number) {
+  const [data, setData] = useState<MonthlyForecastResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `monthly-forecast-${year}-${month}-${categoryId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.monthlyForecast(year, month, categoryId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load monthly forecast');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [year, month, categoryId]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useForecastVsActualBins(year?: number, month?: number, categoryId?: number) {
+  const [data, setData] = useState<ForecastVsActualBinsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `forecast-vs-actual-bins-${year}-${month}-${categoryId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.forecastVsActualBins(year, month, categoryId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load forecast vs actual');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [year, month, categoryId]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useBinVarianceAnalysis() {
+  const [data, setData] = useState<BinVarianceAnalysisResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await optimizedRequest(
+        'bin-variance-analysis',
+        () => AnalyticsAPI.binVarianceAnalysis()
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load bin variance analysis');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  return { data, loading, error, refresh };
+}
+
+export function useItemHeatmap(itemId: number, period?: string) {
+  const [data, setData] = useState<ItemHeatmapResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `item-heatmap-${itemId}-${period}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.itemHeatmap(itemId, period)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load item heatmap');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { if (itemId) refresh(); }, [itemId, period]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useConsumptionPatterns(itemId: number, startDate?: string, endDate?: string) {
+  const [data, setData] = useState<ConsumptionPatternsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `consumption-patterns-${itemId}-${startDate}-${endDate}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.consumptionPatterns(itemId, startDate, endDate)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load consumption patterns');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { if (itemId) refresh(); }, [itemId, startDate, endDate]);
+
+  return { data, loading, error, refresh };
+}
+
+// Add this hook in hooks.ts
+
+export function useCostConsumption(startDate?: string, endDate?: string) {
+  const [data, setData] = useState<costConsumptionResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `cost-consumption-${startDate}-${endDate}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.costConsumption(startDate, endDate)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load cost consumption data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [startDate, endDate]);
+
+  return { data, loading, error, refresh };
+}
+
+export function usePriceTrends(itemId: number, startDate?: string, endDate?: string) {
+  const [data, setData] = useState<PriceTrendsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `price-trends-${itemId}-${startDate}-${endDate}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.priceTrends(itemId, startDate, endDate)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load price trends');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { if (itemId) refresh(); }, [itemId, startDate, endDate]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useLeadTimeAnalysis(supplierId?: number) {
+  const [data, setData] = useState<LeadTimeAnalysisResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `lead-time-analysis-${supplierId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.leadTimeAnalysis(supplierId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load lead time analysis');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [supplierId]);
+
+  return { data, loading, error, refresh };
+}
+
+
 
 export function useBudgetConsumption(
   period?: string, 
@@ -262,111 +725,354 @@ export function useBudgetConsumption(
   const [error, setError] = useState<string | null>(null);
 
   const refresh = async () => {
-    setLoading(true); 
+    setLoading(true);
     setError(null);
-    
     try {
-      const cacheKey = `budget-${period}-${startDate}-${endDate}-${budgetType}-${categoryId}-${department}`;
-      
-      const budgetData = await optimizedRequest(
+      const cacheKey = `budget-consumption-${period}-${startDate}-${endDate}-${budgetType}-${categoryId}-${department}-${includeProjections}`;
+      const result = await optimizedRequest(
         cacheKey,
-        () => AnalyticsAPI.budgetConsumption(
-          period || 'monthly', 
-          startDate, 
-          endDate, 
-          budgetType || 'category',
-          categoryId,
-          department,
-          includeProjections || false
-        ),
-        60000 // Cache for 1 minute (budget data changes less frequently)
+        () => AnalyticsAPI.budgetConsumption(period, startDate, endDate, budgetType, categoryId, department, includeProjections)
       );
-      
-      setData(budgetData);
-      console.log('✅ Budget consumption loaded');
+      setData(result);
     } catch (e: any) {
-      const errorMessage = e?.message || 'Failed to load budget consumption data';
-      setError(errorMessage);
-      console.error('❌ Budget consumption error:', e);
+      setError(e?.message || 'Failed to load budget consumption');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    refresh();
-  }, [period, startDate, endDate, budgetType, categoryId, department, includeProjections]);
+  useEffect(() => { refresh(); }, [period, startDate, endDate, budgetType, categoryId, department, includeProjections]);
 
-  return { 
-    data, 
-    loading, 
-    error, 
-    refresh 
-  };
+  return { data, loading, error, refresh };
 }
 
-export function useCostDistribution(period?: string, startDate?: string, endDate?: string) {
+export function useBudgetKPIs() {
+  const [data, setData] = useState<BudgetKPIResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await optimizedRequest(
+        'budget-kpis',
+        () => AnalyticsAPI.budgetKPIs()
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load budget KPIs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  return { data, loading, error, refresh };
+}
+
+export function useBudgetComparison(startDate?: string, endDate?: string) {
+  const [data, setData] = useState<BudgetComparisonResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `budget-comparison-${startDate}-${endDate}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.budgetComparison(startDate, endDate)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load budget comparison');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [startDate, endDate]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useCostDistribution(
+  period?: string,
+  startDate?: string,
+  endDate?: string,
+  categoryId?: number,
+  groupBy?: string
+) {
   const [data, setData] = useState<CostDistributionResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = async () => {
-    setLoading(true); 
+    setLoading(true);
     setError(null);
-    
     try {
-      const cacheKey = `cost-dist-${period}-${startDate}-${endDate}`;
-      
-      const costData = await optimizedRequest(
+      const cacheKey = `cost-distribution-${period}-${startDate}-${endDate}-${categoryId}-${groupBy}`;
+      const result = await optimizedRequest(
         cacheKey,
-        () => AnalyticsAPI.costDistribution(period || 'monthly', startDate, endDate),
-        60000 // Cache for 1 minute
+        () => AnalyticsAPI.costDistribution(period, startDate, endDate, categoryId, groupBy)
       );
-      
-      setData(costData);
-      console.log('✅ Cost distribution loaded');
+      setData(result);
     } catch (e: any) {
-      const errorMessage = e?.message || 'Failed to load cost distribution data';
-      setError(errorMessage);
-      console.error('❌ Cost distribution error:', e);
+      setError(e?.message || 'Failed to load cost distribution');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    refresh();
-  }, [period, startDate, endDate]);
+  useEffect(() => { refresh(); }, [period, startDate, endDate, categoryId, groupBy]);
 
-  return { 
-    data, 
-    loading, 
-    error, 
-    refresh 
-  };
+  return { data, loading, error, refresh };
 }
 
 // ============================================================================
-// ENHANCED ANALYTICS WITH BATCH LOADING
+// NEW ANALYTICS HOOKS - Performance Metrics
+// ============================================================================
+
+export function useDataRange() {
+  const [data, setData] = useState<AvailableDateResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await optimizedRequest(
+        'data-range',
+        () => AnalyticsAPI.availableDateRange()
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load data range');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  return { data, loading, error, refresh };
+}
+
+export function useInventoryTurnover(period?: string, categoryId?: number) {
+  const [data, setData] = useState<InventoryTurnoverResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `inventory-turnover-${period}-${categoryId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.inventoryTurnover(period, categoryId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load inventory turnover');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [period, categoryId]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useSupplierPerformance(startDate?: string, endDate?: string, supplierId?: number) {
+  const [data, setData] = useState<SupplierPerformanceResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `supplier-performance-${startDate}-${endDate}-${supplierId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.supplierPerformance(startDate, endDate, supplierId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load supplier performance');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [startDate, endDate, supplierId]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useReorderRecommendations(categoryId?: number, urgencyLevel?: string) {
+  const [data, setData] = useState<ReorderRecommendationsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `reorder-recommendations-${categoryId}-${urgencyLevel}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.reorderRecommendations(categoryId, urgencyLevel)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load reorder recommendations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [categoryId, urgencyLevel]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useExpiryAnalysis(daysThreshold?: number, categoryId?: number) {
+  const [data, setData] = useState<ExpiryAnalysisResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `expiry-analysis-${daysThreshold}-${categoryId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.expiryAnalysis(daysThreshold, categoryId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load expiry analysis');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [daysThreshold, categoryId]);
+
+  return { data, loading, error, refresh };
+}
+
+// ============================================================================
+// NEW ANALYTICS HOOKS - Department & Footfall
+// ============================================================================
+
+export function useDepartmentCostAnalysis(period?: string, startDate?: string, endDate?: string, department?: string) {
+  const [data, setData] = useState<DepartmentCostAnalysisResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `department-cost-analysis-${period}-${startDate}-${endDate}-${department}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.departmentCostAnalysis(period, startDate, endDate, department)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load department cost analysis');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [period, startDate, endDate, department]);
+
+  return { data, loading, error, refresh };
+}
+
+export function useFootfallTrends(period?: string, startDate?: string, endDate?: string) {
+  const [data, setData] = useState<FootfallTrendsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `footfall-trends-${period}-${startDate}-${endDate}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.footfallTrends(period, startDate, endDate)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load footfall trends');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [period, startDate, endDate]);
+
+  return { data, loading, error, refresh };
+}
+
+export function usePerEmployeeConsumption(startDate?: string, endDate?: string, categoryId?: number, itemId?: number) {
+  const [data, setData] = useState<PerEmployeeConsumptionResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `per-employee-consumption-${startDate}-${endDate}-${categoryId}-${itemId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.perEmployeeConsumption(startDate, endDate, categoryId, itemId)
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load per-employee consumption');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [startDate, endDate, categoryId, itemId]);
+
+  return { data, loading, error, refresh };
+}
+
+// ============================================================================
+// COMPOSITE HOOK - Enhanced Analytics (Backward Compatibility)
 // ============================================================================
 
 export function useEnhancedAnalytics() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Basic analytics with caching
   const analytics = useAnalytics();
-  
-  // Individual hooks for enhanced features
   const budgetHook = useBudgetConsumption('monthly');
   const costDistHook = useCostDistribution('monthly');
   
-  const refreshAll = async (_period?: string, startDate?: string, endDate?: string) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshAll = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      console.log('🔄 Refreshing all analytics...');
+      console.log('ðŸ”„ Refreshing all analytics...');
       
       // Refresh basic analytics first
       await analytics.refresh();
@@ -377,11 +1083,11 @@ export function useEnhancedAnalytics() {
         costDistHook.refresh()
       ]);
       
-      console.log('✅ All analytics refreshed');
+      console.log('âœ… All analytics refreshed');
     } catch (e: any) {
       const errorMessage = e?.message || 'Failed to load enhanced analytics';
       setError(errorMessage);
-      console.error('❌ Enhanced analytics error:', e);
+      console.error('âŒ Enhanced analytics error:', e);
     } finally {
       setLoading(false);
     }
@@ -619,3 +1325,5 @@ export function usePerformanceMonitoring() {
 
   return metrics;
 }
+
+// Removed stray local stub for useCallback; using React's useCallback imported from 'react' instead.

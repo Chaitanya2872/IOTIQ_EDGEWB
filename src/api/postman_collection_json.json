@@ -1,0 +1,1212 @@
+{
+  "info": {
+    "name": "Analytics API - Complete Collection",
+    "description": "Complete collection of all Analytics endpoints for Inventory Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8082",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Dashboard & Basic Stats",
+      "item": [
+        {
+          "name": "Get Basic Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics"]
+            }
+          }
+        },
+        {
+          "name": "Get Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get Bulk Dashboard Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/dashboard-bulk?year=2025&month=7&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "dashboard-bulk"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2025",
+                  "description": "Year (default: 2025)"
+                },
+                {
+                  "key": "month",
+                  "value": "7",
+                  "description": "Month (default: 7)"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Category filter",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Consumption & Trends",
+      "item": [
+        {
+          "name": "Get Consumption Trends",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/consumption-trends?period=daily&groupBy=category&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "consumption-trends"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily",
+                  "description": "daily, weekly, monthly (default: daily)"
+                },
+                {
+                  "key": "groupBy",
+                  "value": "category",
+                  "description": "category, items (default: category)"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Top Consuming Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/top-consuming-items?days=30&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "top-consuming-items"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30",
+                  "description": "Number of days (default: 30)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of items (default: 10)"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Stock Analysis",
+      "item": [
+        {
+          "name": "Get Stock Usage Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/stock-usage?categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "stock-usage"],
+              "query": [
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stock Levels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/stock-levels?categoryId=1&alertLevel=CRITICAL&sortBy=coverageDays&sortOrder=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "stock-levels"],
+              "query": [
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "alertLevel",
+                  "value": "CRITICAL",
+                  "description": "CRITICAL, WARNING, NORMAL",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "coverageDays",
+                  "description": "coverageDays, currentQuantity, totalValue, stockAlertLevel"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc",
+                  "description": "asc, desc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stock Distribution by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/stock-distribution-category",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "stock-distribution-category"]
+            }
+          }
+        },
+        {
+          "name": "Get Monthly Stock Value Trend",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/monthly-stock-value-trend?startDate=2025-01-01&endDate=2025-07-31&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "monthly-stock-value-trend"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stock Movement Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/stock-movements?period=monthly&startDate=2025-01-01&endDate=2025-07-31&categoryId=1&itemId=15",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "stock-movements"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly",
+                  "description": "daily, weekly, monthly"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "itemId",
+                  "value": "15",
+                  "description": "Filter by item",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Budget & Cost Analysis",
+      "item": [
+        {
+          "name": "Get Budget KPIs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/budget-kpis?startDate=2025-01-01&endDate=2025-07-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "budget-kpis"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Budget vs Actual Spend by Month",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/budget-vs-actual-spend-monthly?year=2025&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "budget-vs-actual-spend-monthly"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2025",
+                  "description": "Year (default: 2025)"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Budget Consumption Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/budget-consumption?period=monthly&budgetType=category&categoryId=1&includeProjections=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "budget-consumption"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly",
+                  "description": "daily, weekly, monthly"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                },
+                {
+                  "key": "budgetType",
+                  "value": "category",
+                  "description": "category, department"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "",
+                  "description": "Filter by department",
+                  "disabled": true
+                },
+                {
+                  "key": "includeProjections",
+                  "value": "true",
+                  "description": "true/false"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Budget vs Actual Comparison",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/budget-vs-actual?year=2025&granularity=monthly&includeForecasts=true&includeVariance=true&quarter=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "budget-vs-actual"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2025",
+                  "description": "Year (default: 2025)"
+                },
+                {
+                  "key": "granularity",
+                  "value": "monthly",
+                  "description": "monthly, quarterly"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "",
+                  "description": "Filter by department",
+                  "disabled": true
+                },
+                {
+                  "key": "includeForecasts",
+                  "value": "true",
+                  "description": "true/false"
+                },
+                {
+                  "key": "includeVariance",
+                  "value": "true",
+                  "description": "true/false"
+                },
+                {
+                  "key": "quarter",
+                  "value": "2",
+                  "description": "1, 2, 3, 4",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cost Distribution by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/cost-distribution?period=monthly&startDate=2025-01-01&endDate=2025-07-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "cost-distribution"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly",
+                  "description": "daily, weekly, monthly"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Enhanced Cost Distribution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/enhanced-cost-distribution?breakdown=detailed&includeProjections=true&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "enhanced-cost-distribution"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly",
+                  "description": "daily, weekly, monthly",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                },
+                {
+                  "key": "breakdown",
+                  "value": "detailed",
+                  "description": "summary, detailed"
+                },
+                {
+                  "key": "includeProjections",
+                  "value": "true",
+                  "description": "true/false"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "",
+                  "description": "Filter by department",
+                  "disabled": true
+                },
+                {
+                  "key": "costCenter",
+                  "value": "",
+                  "description": "Filter by cost center",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Forecasting & Predictions",
+      "item": [
+        {
+          "name": "Get Forecast vs Actual with Bins",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/forecast-vs-actual-bins?year=2025&month=7&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "forecast-vs-actual-bins"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2025",
+                  "description": "Year (default: 2025)"
+                },
+                {
+                  "key": "month",
+                  "value": "7",
+                  "description": "Month (default: 7)"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Bin Variance Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/bin-variance-analysis?categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "bin-variance-analysis"],
+              "query": [
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Planned vs Actual",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/planned-vs-actual?startDate=2025-01-01&endDate=2025-07-31&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "planned-vs-actual"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Seasonal Cost Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/seasonal-cost-analysis?years=2&includeForecasts=true&categoryId=1&granularity=monthly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "seasonal-cost-analysis"],
+              "query": [
+                {
+                  "key": "years",
+                  "value": "2",
+                  "description": "Number of years (default: 2)"
+                },
+                {
+                  "key": "includeForecasts",
+                  "value": "true",
+                  "description": "true/false"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "granularity",
+                  "value": "monthly",
+                  "description": "monthly, quarterly"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cost Optimization Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/cost-optimization?analysisType=variance&threshold=0.15&categoryId=1&minSavings=100&includeAlternatives=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "cost-optimization"],
+              "query": [
+                {
+                  "key": "analysisType",
+                  "value": "variance",
+                  "description": "variance, volume, seasonal"
+                },
+                {
+                  "key": "threshold",
+                  "value": "0.15",
+                  "description": "Variance threshold (default: 0.10)"
+                },
+                {
+                  "key": "period",
+                  "value": "monthly",
+                  "description": "daily, weekly, monthly",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "minSavings",
+                  "value": "100",
+                  "description": "Minimum savings amount"
+                },
+                {
+                  "key": "includeAlternatives",
+                  "value": "true",
+                  "description": "true/false"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Burn Rate Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/burn-rate-analysis?targetDate=2025-12-31&includeTrends=true&categoryId=1&alertThreshold=0.80",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "burn-rate-analysis"],
+              "query": [
+                {
+                  "key": "targetDate",
+                  "value": "2025-12-31",
+                  "description": "Target projection date",
+                  "disabled": true
+                },
+                {
+                  "key": "includeTrends",
+                  "value": "true",
+                  "description": "true/false"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "",
+                  "description": "Filter by department",
+                  "disabled": true
+                },
+                {
+                  "key": "alertThreshold",
+                  "value": "0.80",
+                  "description": "Alert threshold percentage"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Cost & Employee Analysis",
+      "item": [
+        {
+          "name": "Get Cost/Consumption Scatter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/cost-consumption-scatter?startDate=2025-01-01&endDate=2025-07-31&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "cost-consumption-scatter"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cost Per Employee",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/cost-per-employee?period=monthly&includeComparisons=true&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "cost-per-employee"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly",
+                  "description": "daily, weekly, monthly"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "",
+                  "description": "Filter by department",
+                  "disabled": true
+                },
+                {
+                  "key": "includeComparisons",
+                  "value": "true",
+                  "description": "true/false"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cost Variance Alerts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/cost-variance-alerts?severity=high&activeOnly=true&categoryId=1&threshold=0.10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "cost-variance-alerts"],
+              "query": [
+                {
+                  "key": "severity",
+                  "value": "high",
+                  "description": "all, low, medium, high"
+                },
+                {
+                  "key": "activeOnly",
+                  "value": "true",
+                  "description": "true/false"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "",
+                  "description": "Filter by department",
+                  "disabled": true
+                },
+                {
+                  "key": "threshold",
+                  "value": "0.10",
+                  "description": "Variance threshold"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Item Heatmap & Utilities",
+      "item": [
+        {
+          "name": "Get Item Heatmap",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/item-heatmap/15?period=daily&startDate=2025-01-01&endDate=2025-07-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "item-heatmap", "15"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily",
+                  "description": "daily, weekly, monthly"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Available Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/available-date-range",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "available-date-range"]
+            }
+          }
+        },
+        {
+          "name": "Search Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/item-search?query=cleaner&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "item-search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "cleaner",
+                  "description": "Search term",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Footfall Integration",
+      "item": [
+        {
+          "name": "Get Footfall Trends",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/footfall-trends?period=daily&startDate=2025-01-01&endDate=2025-07-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "footfall-trends"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily",
+                  "description": "daily, weekly, monthly"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Footfall Data",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "CSV file with footfall data"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/footfall/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "footfall", "upload"]
+            }
+          }
+        },
+        {
+          "name": "Check Footfall Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/footfall/check?date=2025-07-15",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "footfall", "check"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2025-07-15",
+                  "description": "Specific date to check",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Footfall Data Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/footfall/data-range",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "footfall", "data-range"]
+            }
+          }
+        },
+        {
+          "name": "Get Per-Employee Consumption",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/footfall/per-employee-consumption?startDate=2025-01-01&endDate=2025-07-31&categoryId=1&itemId=15",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "footfall", "per-employee-consumption"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Start date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-07-31",
+                  "description": "End date",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "itemId",
+                  "value": "15",
+                  "description": "Filter by item",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚀 Quick Test Sequence",
+      "item": [
+        {
+          "name": "1. Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "2. Consumption Trends (Monthly)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/consumption-trends?period=monthly&groupBy=category",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "consumption-trends"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly"
+                },
+                {
+                  "key": "groupBy",
+                  "value": "category"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Stock Levels (Critical)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/stock-levels?alertLevel=CRITICAL",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "stock-levels"],
+              "query": [
+                {
+                  "key": "alertLevel",
+                  "value": "CRITICAL"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Budget KPIs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/budget-kpis",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "budget-kpis"]
+            }
+          }
+        },
+        {
+          "name": "5. Cost Distribution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/cost-distribution?period=monthly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "cost-distribution"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Forecast vs Actual",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/forecast-vs-actual-bins?year=2025&month=7",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "forecast-vs-actual-bins"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2025"
+                },
+                {
+                  "key": "month",
+                  "value": "7"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Bin Variance Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/bin-variance-analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "bin-variance-analysis"]
+            }
+          }
+        },
+        {
+          "name": "8. Item Heatmap",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/item-heatmap/15?period=daily",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "item-heatmap", "15"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

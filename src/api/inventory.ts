@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// OPTIMIZED: Inventory API client with improved authentication performance
-// Fixed slow authentication checks and added request caching
-
 export type Category = {
   id: number;
   categoryName: string;
@@ -120,6 +116,28 @@ export type StockAnalyticsResponse = {
   };
 };
 
+export type StockDistributionCategoryResponse = {
+  totalStockValue: number;
+  totalCategories: number;
+  distributionData: Array<{
+    stockValue: number;
+    percentage: number;
+    categoryName: string;
+    categoryId: number;
+  }>;
+};
+
+export type MonthlyStockValueTrendResponse = {
+  trendData: Array<{
+    stockValue: number;
+    month: string;
+    monthName: string;
+  }>;
+  totalMonths: number;
+  startDate: string;
+  endDate: string;
+};
+
 export type TopConsumersResponse = {
   period: string;
   startDate: string;
@@ -137,11 +155,14 @@ export type TopConsumersResponse = {
   }>;
 };
 
-export type DataRangeResponse = {
-  minDate: string;
-  maxDate: string;
-  totalDays: number;
-  availableMonths: string[];
+
+
+export type AvailableDateResponse = {
+
+    minDate: string,
+    availableMonths: number,
+    maxDate: string
+
 };
 
 export type CostDistributionResponse = {
@@ -295,276 +316,550 @@ export type FootfallListResponse = {
     size: number;
     totalElements: number;
     totalPages: number;
-    hasNext: boolean;
-    hasPrevious: boolean;
   };
-  filters: {
+  period: {
     startDate: string;
     endDate: string;
-    department: string;
-    sortBy: string;
-    sortOrder: string;
   };
-  error?: string;
 };
 
-// API Base URL configuration
-const VITE_ENV: any = (import.meta as any).env || {};
-const API_BASE: string = 
-  VITE_ENV.VITE_INVENTORY_API_BASE_URL || 
-  VITE_ENV.VITE_API_BASE_URL || 
-  "http://localhost:8082";
+// ============================================================================
+// NEW TYPES FOR ADDITIONAL ENDPOINTS
+// ============================================================================
 
-// Token refresh state management to avoid multiple concurrent refresh attempts
-let isRefreshing = false;
-let refreshPromise: Promise<any> | null = null;
-
-// OPTIMIZED: HTTP client with improved authentication performance
-async function http<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${API_BASE}${path}`;
-  
-  // Skip detailed logging for performance
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`🔗 API: ${init?.method || 'GET'} ${path}`);
-  }
-  
-  // Get auth token
-  const accessToken = localStorage.getItem('accessToken');
-  
-  // Build headers
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-    ...(init?.headers || {}),
+export type DashboardBulkResponse = {
+  year: number;
+  month: number;
+  categoryId?: number;
+  summary: {
+    totalItems: number;
+    totalCategories: number;
+    totalStockValue: number;
+    totalConsumption: number;
   };
-  
-  try {
-    const response = await fetch(url, {
-      ...init,
-      headers,
-    });
+  stockLevels: any[];
+  consumptionTrends: any[];
+  topConsumingItems: any[];
+};
 
-    // Quick success path for performance
-    if (response.ok) {
-      const data = await response.json();
-      return data as T;
-    }
+export type StockUsageResponse = {
+  categoryId?: number;
+  items: Array<{
+    itemId: number;
+    itemName: string;
+    categoryName: string;
+    currentQuantity: number;
+    avgDailyConsumption: number;
+    coverageDays: number;
+    stockAlertLevel: string;
+    reorderRecommended: boolean;
+  }>;
+};
 
-    // Handle 401 with optimized token refresh
-    if (response.status === 401 && accessToken) {
-      // Prevent multiple concurrent refresh attempts
-      if (!isRefreshing) {
-        isRefreshing = true;
-        refreshPromise = (async () => {
-          try {
-            const { refreshToken } = await import('./auth');
-            const newAuth = await refreshToken();
-            isRefreshing = false;
-            return newAuth;
-          } catch (error) {
-            isRefreshing = false;
-            refreshPromise = null;
-            // Only redirect if refresh actually fails
-            if (window.location.pathname !== '/login') {
-              window.location.href = '/login';
-            }
-            throw new Error('Session expired. Please login again.');
-          }
-        })();
-      }
-      
-      // Wait for the refresh to complete
-      if (refreshPromise) {
-        const newAuth = await refreshPromise;
+export type StockLevelsResponse = {
+  items: Array<{
+    itemId: number;
+    itemName: string;
+    categoryName: string;
+    currentQuantity: number;
+    minStockLevel: number;
+    maxStockLevel: number;
+    reorderLevel?: number;
+    coverageDays?: number;
+    totalValue: number;
+    stockAlertLevel: string;
+    unitPrice: number;
+  }>;
+  summary: {
+    totalItems: number;
+    criticalItems: number;
+    warningItems: number;
+    normalItems: number;
+  };
+};
 
-        // Retry with new token
-        const retryHeaders = {
-          ...headers,
-          'Authorization': `Bearer ${newAuth.accessToken}`
-        };
 
-        const retryResponse = await fetch(url, {
-          ...init,
-          headers: retryHeaders,
-        });
+export type MonthlyForecastResponse = {
+  year: number;
+  month: number;
+  categoryId?: number;
+  forecast: {
+    predictedConsumption: number;
+    predictedCost: number;
+    confidence: number;
+  };
+  historical: {
+    avgConsumption: number;
+    avgCost: number;
+  };
+  items: Array<{
+    itemId: number;
+    itemName: string;
+    predictedQuantity: number;
+    predictedCost: number;
+  }>;
+};
 
-        if (retryResponse.ok) {
-          return await retryResponse.json() as T;
-        }
-      }
-    }
 
-    // Handle other error responses
-    let errorMessage = `Request failed: ${response.status}`;
-    
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-    } catch {
-      // JSON parse failed, use default message
-    }
-    
-    if (response.status >= 500) {
-      throw new Error(`Server Error (${response.status}): ${errorMessage}`);
-    } else if (response.status === 404) {
-      throw new Error(`Endpoint not found: ${path}`);
-    } else {
-      throw new Error(errorMessage);
-    }
-    
-  } catch (error: any) {
-    // Network errors
-    if (error.message.includes('Failed to fetch') || error.name === 'NetworkError') {
-      throw new Error(`Cannot connect to backend server at ${API_BASE}`);
-    }
-    throw error;
-  }
-}
 
-// Simple cache implementation for frequently accessed data
+export type ForecastVsActualBinsResponse = {
+  year: number;
+  month: number;
+  categoryId?: number;
+  bins: Array<{
+    binNumber: number;
+    binPeriod: string;
+    dateRange: { start: string; end: string };
+    forecast: { quantity: number; cost: number };
+    actual: { quantity: number; cost: number };
+    variance: { quantity: number; cost: number; percentage: number };
+  }>;
+};
+
+export type BinVarianceAnalysisResponse = {
+  allMonths: Array<{
+    bin1: {
+      cost: number;
+      recordCount: number;
+      period: string;
+      consumption: number;
+    };
+    bin2: {
+      cost: number;
+      recordCount: number;
+      period: string;
+      consumption: number;
+    };
+    month: number;
+    variance: {
+      cost: number;
+      costPercent: number;
+      consumptionPercent: number;
+      consumption: number;
+    };
+    monthName: string;
+    totalMonth: {
+      consumption: number;
+      cost: number;
+    };
+    year: number;
+  }>;
+  lastMonth: {
+    bin1: {
+      cost: number;
+      recordCount: number;
+      period: string;
+      consumption: number;
+    };
+    bin2: {
+      cost: number;
+      recordCount: number;
+      period: string;
+      consumption: number;
+    };
+    month: number;
+    variance: {
+      cost: number;
+      costPercent: number;
+      consumptionPercent: number;
+      consumption: number;
+    };
+    monthName: string;
+    totalMonth: {
+      consumption: number;
+      cost: number;
+    };
+    year: number;
+  };
+};
+
+export type ItemHeatmapResponse = {
+  itemId: number;
+  itemName: string;
+  period: string;
+  heatmapData: Array<{
+    date: string;
+    dayOfWeek: string;
+    consumption: number;
+    intensity: number;
+  }>;
+};
+
+export type ConsumptionPatternsResponse = {
+  itemId: number;
+  itemName: string;
+  patterns: {
+    daily: { avgConsumption: number; peakDay: string };
+    weekly: { avgConsumption: number; peakWeek: string };
+    monthly: { avgConsumption: number; peakMonth: string };
+  };
+  trends: {
+    increasing: boolean;
+    trendPercentage: number;
+  };
+};
+
+export type PriceTrendsResponse = {
+  itemId: number;
+  itemName: string;
+  priceHistory: Array<{
+    date: string;
+    unitPrice: number;
+  }>;
+  statistics: {
+    currentPrice: number;
+    avgPrice: number;
+    minPrice: number;
+    maxPrice: number;
+    priceVolatility: number;
+  };
+};
+
+export type LeadTimeAnalysisResponse = {
+  suppliers: Array<{
+    supplierName: string;
+    avgLeadTime: number;
+    minLeadTime: number;
+    maxLeadTime: number;
+    reliability: number;
+  }>;
+  overallStats: {
+    avgLeadTime: number;
+    recommendedBufferDays: number;
+  };
+};
+
+
+
+export type BudgetKPIResponse = {
+  predictions: any;
+  reorderAlerts: number;
+  totalStockValue: number;
+  totalItems: number;
+  stockoutItems: Array<{
+    itemId: number;
+    itemName: string;
+    coverageDays: number;
+    currentStock: number;
+    categoryName: string;
+  }>;
+  forecastAccuracy: number;
+  predictedStockOuts: number;
+};
+
+export type BudgetComparisonResponse = {
+  periods: Array<{
+    period: string;
+    budget: number;
+    actual: number;
+    variance: number;
+  }>;
+  categoryComparison: Array<{
+    categoryName: string;
+    budget: number;
+    actual: number;
+    variance: number;
+  }>;
+};
+
+export type InventoryTurnoverResponse = {
+  period: string;
+  overallTurnover: {
+    turnoverRatio: number;
+    daysOfInventory: number;
+  };
+  byCategory: Array<{
+    categoryName: string;
+    turnoverRatio: number;
+    daysOfInventory: number;
+    fastMoving: boolean;
+  }>;
+};
+
+export type SupplierPerformanceResponse = {
+  suppliers: Array<{
+    supplierName: string;
+    totalOrders: number;
+    onTimeDeliveries: number;
+    lateDeliveries: number;
+    onTimePercentage: number;
+    avgLeadTime: number;
+    qualityScore: number;
+  }>;
+};
+
+export type costConsumptionResponse = {
+  scatterData: Array<{
+    unitPrice: number;
+    itemId: number;
+    itemName: string;
+    cost: number;
+    consumption: number;
+    avgDailyConsumption: number;
+    categoryName: string;
+  }>;
+  endDate: string;
+  totalPoints: number;
+  startDate: string;
+};
+
+export type ReorderRecommendationsResponse = {
+  recommendations: Array<{
+    itemId: number;
+    itemName: string;
+    categoryName: string;
+    currentStock: number;
+    reorderLevel: number;
+    reorderQuantity: number;
+    urgency: string;
+    estimatedStockoutDate: string;
+  }>;
+};
+
+export type ExpiryAnalysisResponse = {
+  expiringSoon: Array<{
+    itemId: number;
+    itemName: string;
+    currentQuantity: number;
+    expiryDate: string;
+    daysUntilExpiry: number;
+    totalValue: number;
+  }>;
+  expired: Array<{
+    itemId: number;
+    itemName: string;
+    quantity: number;
+    expiryDate: string;
+    totalValue: number;
+  }>;
+  summary: {
+    totalExpiringSoon: number;
+    totalExpired: number;
+    totalValueAtRisk: number;
+  };
+};
+
+export type DepartmentCostAnalysisResponse = {
+  period: string;
+  startDate: string;
+  endDate: string;
+  departments: Array<{
+    departmentName: string;
+    totalCost: number;
+    totalQuantity: number;
+    percentage: number;
+    topItems: Array<{
+      itemName: string;
+      cost: number;
+      quantity: number;
+    }>;
+  }>;
+  totalCost: number;
+};
+
+export type FootfallTrendsResponse = {
+  period: string;
+  startDate: string;
+  endDate: string;
+  trends: Array<{
+    date: string;
+    period: string;
+    employeeCount: number;
+    visitorCount: number;
+    totalFootfall: number;
+  }>;
+  statistics: {
+    avgEmployees: number;
+    avgVisitors: number;
+    avgTotal: number;
+    peakFootfall: number;
+    peakDate: string;
+  };
+};
+
+export type PerEmployeeConsumptionResponse = {
+  startDate: string;
+  endDate: string;
+  categoryId?: number;
+  itemId?: number;
+  perEmployeeMetrics: {
+    avgConsumptionPerEmployee: number;
+    totalConsumption: number;
+    totalEmployeeDays: number;
+    avgCostPerEmployee: number;
+  };
+  trends: Array<{
+    period: string;
+    consumptionPerEmployee: number;
+    costPerEmployee: number;
+    employeeCount: number;
+  }>;
+};
+
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8082";
+
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 30000; // 30 seconds
 
-async function cachedHttp<T>(path: string, init?: RequestInit): Promise<T> {
-  const cacheKey = `${init?.method || 'GET'}:${path}`;
+async function http<T>(path: string, config: RequestInit): Promise<T> {
+  const accessToken = localStorage.getItem("accessToken");
   
-  // Only cache GET requests
-  if (!init?.method || init.method === 'GET') {
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return cached.data as T;
-    }
+  const request = new Request(API_BASE + path, {
+    ...config,
+    headers: {
+      ...(config.headers || {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...(config.method === "POST" || config.method === "PUT" || config.method === "PATCH"
+        ? { "Content-Type": "application/json" }
+        : {}),
+    },
+  });
+
+  const response = await fetch(request);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP Error: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  return response.text() as any;
+}
+
+async function cachedHttp<T>(path: string, config: RequestInit): Promise<T> {
+  const cacheKey = `${config.method || 'GET'}-${path}`;
+  const cached = cache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
   }
   
-  const data = await http<T>(path, init);
-  
-  // Cache successful GET responses
-  if (!init?.method || init.method === 'GET') {
-    cache.set(cacheKey, { data, timestamp: Date.now() });
-  }
-  
+  const data = await http<T>(path, config);
+  cache.set(cacheKey, { data, timestamp: Date.now() });
   return data;
 }
 
-// Categories API
 export const CategoriesAPI = {
-  list: () => cachedHttp<Category[]>("/api/categories", { method: "GET" }),
+  list: () => http<Category[]>("/api/categories", { method: "GET" }),
+  get: (id: number) => http<Category>(`/api/categories/${id}`, { method: "GET" }),
   create: (body: { categoryName: string; categoryDescription: string }) =>
-    http<Category>("/api/categories", { method: "POST", body: JSON.stringify(body) }),
+    http<Category>("/api/categories", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   update: (id: number, body: { categoryName: string; categoryDescription: string }) =>
-    http<Category>(`/api/categories/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    http<Category>(`/api/categories/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
   remove: (id: number) => http<void>(`/api/categories/${id}`, { method: "DELETE" }),
 };
 
-// Items API
 export const ItemsAPI = {
-  list: () => cachedHttp<Item[]>("/api/items", { method: "GET" }),
-  get: (id: number) => cachedHttp<Item>(`/api/items/${id}`, { method: "GET" }),
-  create: (body: Omit<Item, 'id'>) => http<Item>("/api/items", { method: "POST", body: JSON.stringify(body) }),
-  update: (id: number, body: Partial<Omit<Item, 'id'>>) =>
-    http<Item>(`/api/items/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  list: () => http<Item[]>("/api/items", { method: "GET" }),
+  get: (id: number) => http<Item>(`/api/items/${id}`, { method: "GET" }),
+  create: (body: Omit<Item, "id">) =>
+    http<Item>("/api/items", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: number, body: Partial<Omit<Item, "id">>) =>
+    http<Item>(`/api/items/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
   remove: (id: number) => http<void>(`/api/items/${id}`, { method: "DELETE" }),
-  search: (q: string) => cachedHttp<Item[]>(`/api/items/search?q=${encodeURIComponent(q)}`, { method: "GET" }),
-  lowStock: (threshold: number) => cachedHttp<Item[]>(`/api/items/low-stock?threshold=${threshold}`, { method: "GET" }),
-  expiring: (days: number) => cachedHttp<Item[]>(`/api/items/expiring?days=${days}`, { method: "GET" }),
-  expired: () => cachedHttp<Item[]>(`/api/items/expired`, { method: "GET" }),
-  consume: (id: number, body: ConsumptionRequest) =>
-    http<{ success: boolean }>(`/api/items/${id}/consume`, { method: "POST", body: JSON.stringify(body) }),
-  receive: (id: number, body: ReceiptRequest) =>
-    http<{ success: boolean }>(`/api/items/${id}/receive`, { method: "POST", body: JSON.stringify(body) }),
+  search: (q: string) => http<Item[]>(`/api/items/search?q=${encodeURIComponent(q)}`, { method: "GET" }),
+  lowStock: (threshold = 10) => http<Item[]>(`/api/items/low-stock?threshold=${threshold}`, { method: "GET" }),
+  expiring: (days = 30) => http<Item[]>(`/api/items/expiring?days=${days}`, { method: "GET" }),
+  expired: () => http<Item[]>("/api/items/expired", { method: "GET" }),
+  consume: (id: number, req: ConsumptionRequest) =>
+    http<Item>(`/api/items/${id}/consume`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+  receive: (id: number, req: ReceiptRequest) =>
+    http<Item>(`/api/items/${id}/receive`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
 };
 
-// Analytics API with caching for dashboard data
 export const AnalyticsAPI = {
-  dashboard: () => cachedHttp<any>("/api/analytics/dashboard", { method: "GET" }),
+  // Dashboard & Basic Stats
+  basic: () => cachedHttp<any>('/api/analytics', { method: "GET" }),
   
-  stockAlerts: () => cachedHttp<any>("/api/analytics/stock-alerts", { method: "GET" }),
+  dashboard: () => cachedHttp<any>('/api/analytics/dashboard', { method: "GET" }),
   
-  consumptionTrends: (period?: string, groupBy?: string, categoryId?: number, startDate?: string, endDate?: string) => {
+  dashboardBulk: (year?: number, month?: number, categoryId?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    if (month) params.append('month', month.toString());
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    const query = params.toString();
+    return cachedHttp<DashboardBulkResponse>(`/api/analytics/dashboard-bulk${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Consumption & Trends
+  consumptionTrends: (period?: string, groupBy?: string, categoryId?: number) => {
     const params = new URLSearchParams();
     if (period) params.append('period', period);
     if (groupBy) params.append('groupBy', groupBy);
     if (categoryId) params.append('categoryId', categoryId.toString());
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
     const query = params.toString();
     return cachedHttp<ConsumptionTrendsResponse>(`/api/analytics/consumption-trends${query ? `?${query}` : ''}`, { method: "GET" });
   },
-  
-  topConsumers: (days?: number, limit?: number) => {
+
+  // Add inside AnalyticsAPI object
+
+costConsumption: (startDate?: string, endDate?: string) => {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  const query = params.toString();
+  return cachedHttp<costConsumptionResponse>(`/api/analytics/cost-consumption-scatter${query ? `?${query}` : ''}`, { method: "GET" });
+},
+
+  topConsumingItems: (days?: number, limit?: number) => {
     const params = new URLSearchParams();
     if (days) params.append('days', days.toString());
     if (limit) params.append('limit', limit.toString());
     const query = params.toString();
     return cachedHttp<TopConsumersResponse>(`/api/analytics/top-consuming-items${query ? `?${query}` : ''}`, { method: "GET" });
   },
-  
-  stockAnalytics: () => cachedHttp<StockAnalyticsResponse>("/api/analytics/stock-analytics", { method: "GET" }),
-  
-  dataRange: () => cachedHttp<DataRangeResponse>("/api/analytics/data-range", { method: "GET" }),
-  
-  verifyData: () => http<any>("/api/analytics/verify-data", { method: "GET" }),
-  
-  inventoryValue: () => cachedHttp<any>("/api/analytics/inventory-value", { method: "GET" }),
-  
-  turnoverRatio: () => cachedHttp<any>("/api/analytics/turnover-ratio", { method: "GET" }),
-  
-  analytics: () => cachedHttp<any>("/api/analytics", { method: "GET" }),
-  
-  costDistribution: (period?: string, startDate?: string, endDate?: string, includeBins?: boolean) => {
+
+  // Stock Analysis
+  stockUsage: (categoryId?: number) => {
     const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    if (includeBins) params.append('includeBins', 'true');
-    const query = params.toString();
-    return cachedHttp<CostDistributionResponse>(`/api/analytics/cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-  
-  budgetConsumption: (period?: string, startDate?: string, endDate?: string, budgetType?: string, categoryId?: number, department?: string, includeProjections?: boolean) => {
-    const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    if (budgetType) params.append('budgetType', budgetType);
     if (categoryId) params.append('categoryId', categoryId.toString());
-    if (department) params.append('department', department);
-    if (includeProjections !== undefined) params.append('includeProjections', includeProjections.toString());
     const query = params.toString();
-    return cachedHttp<BudgetConsumptionResponse>(`/api/analytics/budget-consumption${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<StockUsageResponse>(`/api/analytics/stock-usage${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
-  enhancedCostDistribution: (period?: string, startDate?: string, endDate?: string, breakdown?: string, includeProjections?: boolean) => {
+  stockLevels: (categoryId?: number, alertLevel?: string, sortBy?: string, sortOrder?: string) => {
     const params = new URLSearchParams();
-    if (period) params.append('period', period);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    if (breakdown) params.append('breakdown', breakdown);
-    if (includeProjections !== undefined) params.append('includeProjections', includeProjections.toString());
-    const query = params.toString();
-    return cachedHttp<any>(`/api/analytics/enhanced-cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
-  },
-
-  budgetVsActual: (year?: number, granularity?: string, categoryId?: number, department?: string, includeForecasts?: boolean, includeVariance?: boolean, quarter?: number) => {
-    const params = new URLSearchParams();
-    if (year) params.append('year', year.toString());
-    if (granularity) params.append('granularity', granularity);
     if (categoryId) params.append('categoryId', categoryId.toString());
-    if (department) params.append('department', department);
-    if (includeForecasts !== undefined) params.append('includeForecasts', includeForecasts.toString());
-    if (includeVariance !== undefined) params.append('includeVariance', includeVariance.toString());
-    if (quarter) params.append('quarter', quarter.toString());
+    if (alertLevel) params.append('alertLevel', alertLevel);
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
     const query = params.toString();
-    return cachedHttp<any>(`/api/analytics/budget-vs-actual${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<StockLevelsResponse>(`/api/analytics/stock-levels${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
-  itemHeatmap: (itemId: number, period?: string, startDate?: string, endDate?: string) => {
+  stockDistributionCategory: () => 
+    cachedHttp<StockDistributionCategoryResponse>('/api/analytics/stock-distribution-category', { method: "GET" }),
+
+  monthlyStockValueTrend: (startDate?: string, endDate?: string, categoryId?: number) => {
     const params = new URLSearchParams();
-    if (period) params.append('period', period);
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return http<any>(`/api/analytics/item-heatmap/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<MonthlyStockValueTrendResponse>(`/api/analytics/monthly-stock-value-trend${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   stockMovements: (period?: string, startDate?: string, endDate?: string, categoryId?: number, itemId?: number) => {
@@ -578,16 +873,172 @@ export const AnalyticsAPI = {
     return cachedHttp<any>(`/api/analytics/stock-movements${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
-  stockLevels: (categoryId?: number, alertLevel?: string, sortBy?: string, sortOrder?: string) => {
+  // Legacy stock analytics (keep for backward compatibility)
+  stockAnalytics: () => cachedHttp<StockAnalyticsResponse>('/api/analytics/stock-levels', { method: "GET" }),
+  stockAlerts: () => cachedHttp<any>('/api/analytics/stock-alerts', { method: "GET" }),
+  topConsumers: (days?: number) => {
+    const query = days ? `?days=${days}` : '';
+    return cachedHttp<TopConsumersResponse>(`/api/analytics/top-consumers${query}`, { method: "GET" });
+  },
+  inventoryValue: () => cachedHttp<any>('/api/analytics/inventory-value', { method: "GET" }),
+  turnoverRatio: () => cachedHttp<any>('/api/analytics/turnover-ratio', { method: "GET" }),
+
+  // Forecasting & Predictions
+  monthlyForecast: (year?: number, month?: number, categoryId?: number) => {
     const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    if (month) params.append('month', month.toString());
     if (categoryId) params.append('categoryId', categoryId.toString());
-    if (alertLevel) params.append('alertLevel', alertLevel);
-    if (sortBy) params.append('sortBy', sortBy);
-    if (sortOrder) params.append('sortOrder', sortOrder);
     const query = params.toString();
-    return cachedHttp<any>(`/api/analytics/stock-levels${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<MonthlyForecastResponse>(`/api/analytics/monthly-forecast${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
+  forecastVsActualBins: (year?: number, month?: number, categoryId?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    if (month) params.append('month', month.toString());
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    const query = params.toString();
+    return cachedHttp<ForecastVsActualBinsResponse>(`/api/analytics/forecast-vs-actual-bins${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  binVarianceAnalysis: () => 
+    cachedHttp<BinVarianceAnalysisResponse>('/api/analytics/bin-variance-analysis', { method: "GET" }),
+
+  itemHeatmap: (itemId: number, period?: string) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    const query = params.toString();
+    return cachedHttp<ItemHeatmapResponse>(`/api/analytics/item-heatmap/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  consumptionPatterns: (itemId: number, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return cachedHttp<ConsumptionPatternsResponse>(`/api/analytics/consumption-patterns/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  priceTrends: (itemId: number, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return cachedHttp<PriceTrendsResponse>(`/api/analytics/price-trends/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  leadTimeAnalysis: (supplierId?: number) => {
+    const params = new URLSearchParams();
+    if (supplierId) params.append('supplierId', supplierId.toString());
+    const query = params.toString();
+    return cachedHttp<LeadTimeAnalysisResponse>(`/api/analytics/lead-time-analysis${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Budget Analysis
+  budgetConsumption: (period?: string, startDate?: string, endDate?: string, budgetType?: string, categoryId?: number, department?: string, includeProjections?: boolean) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (budgetType) params.append('budgetType', budgetType);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (department) params.append('department', department);
+    if (includeProjections !== undefined) params.append('includeProjections', includeProjections.toString());
+    const query = params.toString();
+    return cachedHttp<BudgetConsumptionResponse>(`/api/analytics/budget-consumption${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  budgetKPIs: () => 
+    cachedHttp<BudgetKPIResponse>('/api/analytics/budget-kpis', { method: "GET" }),
+
+  budgetComparison: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return cachedHttp<BudgetComparisonResponse>(`/api/analytics/budget-comparison${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  costDistribution: (period?: string, startDate?: string, endDate?: string, categoryId?: number, groupBy?: string) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (groupBy) params.append('groupBy', groupBy);
+    const query = params.toString();
+    return cachedHttp<CostDistributionResponse>(`/api/analytics/cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Performance Metrics
+  availableDateRange: () => 
+    cachedHttp<AvailableDateResponse>('/api/analytics/available-date-range', { method: "GET" }),
+
+  inventoryTurnover: (period?: string, categoryId?: number) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    const query = params.toString();
+    return cachedHttp<InventoryTurnoverResponse>(`/api/analytics/inventory-turnover${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  supplierPerformance: (startDate?: string, endDate?: string, supplierId?: number) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (supplierId) params.append('supplierId', supplierId.toString());
+    const query = params.toString();
+    return cachedHttp<SupplierPerformanceResponse>(`/api/analytics/supplier-performance${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  reorderRecommendations: (categoryId?: number, urgencyLevel?: string) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (urgencyLevel) params.append('urgencyLevel', urgencyLevel);
+    const query = params.toString();
+    return cachedHttp<ReorderRecommendationsResponse>(`/api/analytics/reorder-recommendations${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  expiryAnalysis: (daysThreshold?: number, categoryId?: number) => {
+    const params = new URLSearchParams();
+    if (daysThreshold) params.append('daysThreshold', daysThreshold.toString());
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    const query = params.toString();
+    return cachedHttp<ExpiryAnalysisResponse>(`/api/analytics/expiry-analysis${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Department & Footfall
+  departmentCostAnalysis: (period?: string, startDate?: string, endDate?: string, department?: string) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (department) params.append('department', department);
+    const query = params.toString();
+    return cachedHttp<DepartmentCostAnalysisResponse>(`/api/analytics/department-cost-analysis${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  footfallTrends: (period?: string, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return cachedHttp<FootfallTrendsResponse>(`/api/analytics/footfall-trends${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  perEmployeeConsumption: (startDate?: string, endDate?: string, categoryId?: number, itemId?: number) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (itemId) params.append('itemId', itemId.toString());
+    const query = params.toString();
+    return cachedHttp<PerEmployeeConsumptionResponse>(`/api/analytics/footfall/per-employee-consumption${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Legacy methods kept for backward compatibility
   costPerEmployee: (period?: string, startDate?: string, endDate?: string, categoryId?: number, department?: string, includeComparisons?: boolean) => {
     const params = new URLSearchParams();
     if (period) params.append('period', period);
@@ -601,7 +1052,7 @@ export const AnalyticsAPI = {
   }
 };
 
-// Footfall API (keeping original implementation as it's less frequently called)
+// Footfall API
 export const FootfallAPI = {
   list: async (startDate?: string, endDate?: string, department?: string, page = 0, size = 50): Promise<FootfallListResponse> => {
     const params = new URLSearchParams();
@@ -689,6 +1140,7 @@ export const FootfallAPI = {
     }>("/api/footfall/data-range", { method: "GET" });
   },
 
+  // Upload footfall data
   upload: async (file: File) => {
     const form = new FormData();
     form.append('file', file);
@@ -699,7 +1151,7 @@ export const FootfallAPI = {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
     
-    const res = await fetch(`${API_BASE}/api/footfall/upload`, {
+    const res = await fetch(`${API_BASE}/api/analytics/footfall/upload`, {
       method: 'POST',
       body: form,
       headers,
@@ -711,6 +1163,34 @@ export const FootfallAPI = {
     }
     
     return res.json().catch(() => ({}));
+  },
+
+  // Check if footfall data exists for a specific date
+  check: (date?: string) => {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    const query = params.toString();
+    return http<{
+      success: boolean;
+      exists: boolean;
+      date: string;
+      data?: FootfallData;
+      message?: string;
+    }>(`/api/analytics/footfall/check${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Get footfall data range
+  getDataRange: () => {
+    return http<{
+      success: boolean;
+      dateRange?: {
+        minDate: string;
+        maxDate: string;
+        totalDays: number;
+      };
+      totalRecords: number;
+      message?: string;
+    }>("/api/analytics/footfall/data-range", { method: "GET" });
   },
 
   health: () => {

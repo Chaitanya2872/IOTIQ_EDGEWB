@@ -87,6 +87,7 @@
   color: var(--text-primary);
   letter-spacing: 0.5px;
   text-transform: lowercase;
+  transform: translate(3px, -4px);
 }
 
 /* Menu List */

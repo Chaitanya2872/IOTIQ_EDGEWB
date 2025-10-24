@@ -92,34 +92,47 @@ export function getStoredAuth(): AuthResponse | null {
 }
 
 // Validate current token with your backend
+// ...existing code...
 export async function validateToken(token: string): Promise<TokenValidationResponse> {
+  const controller = new AbortController();
+  const signal = controller.signal;
+  // optional: auto-timeout to avoid hung requests
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
-    // Using FormData as your backend expects form data
-    const formData = new FormData();
-    formData.append('token', token);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
-
-    const res = await fetch(`${API_BASE}/api/validate/token`, {
-      method: "POST",
-      body: formData, // Don't set Content-Type, let browser set it for FormData
-      signal: controller.signal,
+    const res = await fetch(`${API_BASE}/api/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+      signal,
     });
-
     clearTimeout(timeoutId);
-
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { valid: false };
+      const message = (data && (data.message || data.error)) || `validateToken failed: ${res.status}`;
+      throw new Error(message);
     }
 
-    const data = await res.json();
-    return data;
-  } catch (error) {
-    console.error('Token validation error:', error);
+    // Expect backend to return a shape compatible with TokenValidationResponse
+    return {
+      valid: !!data.valid,
+      email: data.email,
+      userId: data.userId,
+      fullName: data.fullName,
+      roles: data.roles || [],
+    };
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    // Treat AbortError as an expected cancellation
+    if (err?.name === 'AbortError') {
+      console.warn('validateToken aborted (expected when component unmounts or request cancelled)');
+      return { valid: false };
+    }
+    console.error('Token validation error:', err);
     return { valid: false };
   }
 }
+// ...existing code...
 
 // Refresh token using your backend endpoint
 export async function refreshToken(): Promise<AuthResponse> {

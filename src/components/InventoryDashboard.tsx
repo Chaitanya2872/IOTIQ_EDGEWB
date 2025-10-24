@@ -4,163 +4,45 @@ import {
   ResponsiveContainer, Cell, RadialBarChart, RadialBar,
   LineChart, Line
 } from 'recharts';
-import { 
-  AlertTriangle, Package, TrendingDown, Shield, Clock, 
-  AlertCircle, Activity, Target, CheckCircle, XCircle, 
+import {
+  AlertTriangle, Package, TrendingDown, Shield, Clock,
+  AlertCircle, Activity, Target, CheckCircle, XCircle,
   RefreshCw, DollarSign, Zap, Database, Filter, Bell, ShoppingCart, Calendar, Info
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-
-// API Configuration
-const API_BASE = (import.meta as any).env?.VITE_INVENTORY_API_BASE_URL || 
-                 (import.meta as any).env?.VITE_API_BASE_URL || 
-                 "http://localhost:8082";
-
-// Cache for faster loading
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 30000; // 30 seconds
-
-async function http<T>(path: string, init?: RequestInit): Promise<T> {
-  const cacheKey = `${path}-${JSON.stringify(init)}`;
-  const cached = cache.get(cacheKey);
-  
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data;
-  }
-
-  const url = `${API_BASE}${path}`;
-  const accessToken = localStorage.getItem('accessToken');
-  
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-    ...(init?.headers || {}),
-  };
-  
-  const response = await fetch(url, { ...init, headers });
-  
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
-  }
-  
-  const data = await response.json();
-  cache.set(cacheKey, { data, timestamp: Date.now() });
-  
-  return data;
-}
-
-const ItemsAPI = {
-  list: () => http<any[]>("/api/items", { method: "GET" })
-};
-
-const CategoriesAPI = {
-  list: () => http<any[]>("/api/categories", { method: "GET" })
-};
-
-const AnalyticsAPI = {
-  stockAnalytics: () => http<any>("/api/analytics/stock-analytics", { method: "GET" }),
-  dashboard: () => http<any>("/api/analytics/dashboard", { method: "GET" })
-};
-
-// Custom hooks for data fetching
-function useItems() {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const items = await ItemsAPI.list();
-      setData(items);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load items');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { refresh(); }, [refresh]);
-
-  return { data, loading, error, refresh };
-}
-
-function useCategories() {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const refresh = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const categories = await CategoriesAPI.list();
-      setData(categories);
-    } catch (e: any) {
-      console.error('Failed to load categories:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { refresh(); }, [refresh]);
-
-  return { data, loading, refresh };
-}
-
-function useAnalytics() {
-  const [stockAnalytics, setStockAnalytics] = useState<any>(null);
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [stock, dash] = await Promise.all([
-        AnalyticsAPI.stockAnalytics().catch(() => null),
-        AnalyticsAPI.dashboard().catch(() => null)
-      ]);
-      setStockAnalytics(stock);
-      setDashboard(dash);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load analytics');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { refresh(); }, [refresh]);
-
-  return { stockAnalytics, dashboard, loading, error, refresh };
-}
+import { 
+  useItems, 
+  useCategories, 
+  useAnalytics, 
+  useMonthlyStockValueTrend,
+  useStockLevels,
+  useBudgetKPIs,
+  useDataRange
+} from '../api/hooks';
 
 // Vibrant color scheme
 const COLORS = {
-  primary: '#8b5cf6', // Purple
-  secondary: '#ec4899', // Pink
+  primary: '#8b5cf6',
+  secondary: '#ec4899',
   dark: '#1e293b',
   gray: '#64748b',
   lightGray: '#94a3b8',
   bg: '#f8fafc',
   white: '#ffffff',
   border: '#e2e8f0',
-  // Vibrant alert level colors
-  critical: '#ef4444', // Red
-  high: '#f59e0b', // Orange
-  medium: '#8b5cf6', // Purple
-  low: '#10b981', // Green
-  // Additional accent colors
+  critical: '#ef4444',
+  high: '#f59e0b',
+  medium: '#8b5cf6',
+  low: '#10b981',
   pink: '#ec4899',
   purple: '#8b5cf6',
   green: '#10b981',
   orange: '#f59e0b',
   cyan: '#06b6d4',
-  // Blue shades for heatmap only
-  heatmapCritical: '#1e3a8a', // Dark blue
-  heatmapHigh: '#1d4ed8', // Blue
-  heatmapMedium: '#3b82f6', // Light blue
-  heatmapLow: '#60a5fa', // Lighter blue
+  heatmapCritical: '#1e3a8a',
+  heatmapHigh: '#1d4ed8',
+  heatmapMedium: '#3b82f6',
+  heatmapLow: '#60a5fa',
 };
 
 const RISK_COLORS: Record<AlertLevel, string> = {
@@ -177,7 +59,6 @@ const HEATMAP_COLORS: Record<AlertLevel, string> = {
   LOW: COLORS.heatmapLow
 };
 
-// Types
 type AlertLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 // CountUp Animation Component
@@ -196,7 +77,6 @@ const CountUp: React.FC<{ end: number; duration?: number; decimals?: number }> =
       if (!startTime) startTime = currentTime;
       const progress = Math.min((currentTime - startTime) / duration, 1);
       
-      // Easing function for smooth animation
       const easeOutQuart = 1 - Math.pow(1 - progress, 4);
       const current = startValue + (end - startValue) * easeOutQuart;
       
@@ -247,7 +127,7 @@ const FloatingText: React.FC<{ items: string[]; delay?: number }> = ({ items, de
       zIndex: 10
     }}>
       <div style={{ marginBottom: '4px', fontSize: '11px', fontWeight: '700', textAlign: 'center' }}>
-        ⚠ Reorder Needed
+        ⚠️ Reorder Needed
       </div>
       {items.slice(0, 3).map((item, idx) => (
         <div key={idx} style={{ fontSize: '9px', marginTop: '3px', paddingLeft: '4px' }}>
@@ -264,9 +144,14 @@ const FloatingText: React.FC<{ items: string[]; delay?: number }> = ({ items, de
 };
 
 const InventoryHealthDashboard: React.FC = () => {
-  const { data: items, loading, error, refresh: refreshItems } = useItems();
+  // Use proper hooks
+  const { data: items, loading: itemsLoading, error, refresh: refreshItems } = useItems();
   const { data: categories, refresh: refreshCategories } = useCategories();
   const { stockAnalytics, dashboard, refresh: refreshAnalytics } = useAnalytics();
+  const { data: monthlyStockTrend } = useMonthlyStockValueTrend();
+  const { data: stockLevelsData, loading: stockLevelsLoading, refresh: refreshStockLevels } = useStockLevels();
+  const { data: budgetKPIs, loading: budgetKPIsLoading, refresh: refreshBudgetKPIs } = useBudgetKPIs();
+  const { data: dateRangeData } = useDataRange();
   
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [daysFilter, setDaysFilter] = useState<string>('all');
@@ -276,6 +161,19 @@ const InventoryHealthDashboard: React.FC = () => {
   const [fullscreenTable, setFullscreenTable] = useState(false);
   const [fullscreenHeatmap, setFullscreenHeatmap] = useState(false);
 
+  const loading = itemsLoading || stockLevelsLoading || budgetKPIsLoading;
+
+  // Helper function to safely get category name from any item type
+  const getCategoryName = (item: any): string => {
+    if ('categoryName' in item && item.categoryName) {
+      return item.categoryName;
+    }
+    if ('category' in item && item.category?.categoryName) {
+      return item.category.categoryName;
+    }
+    return 'Unknown';
+  };
+
   // Auto-refresh
   useEffect(() => {
     if (!autoRefresh) return;
@@ -283,18 +181,90 @@ const InventoryHealthDashboard: React.FC = () => {
       refreshItems();
       refreshCategories();
       refreshAnalytics();
+      refreshStockLevels();
+      refreshBudgetKPIs();
     }, 30000);
     return () => clearInterval(interval);
-  }, [autoRefresh, refreshItems, refreshCategories, refreshAnalytics]);
+  }, [autoRefresh, refreshItems, refreshCategories, refreshAnalytics, refreshStockLevels, refreshBudgetKPIs]);
 
   const handleRefreshAll = () => {
     refreshItems();
     refreshCategories();
     refreshAnalytics();
+    refreshStockLevels();
+    refreshBudgetKPIs();
   };
 
+  // Use Budget KPIs data for health metrics
   const healthMetrics = useMemo(() => {
-    if (!items || items.length === 0) {
+    // Fallback to items if budgetKPIs is not available
+    const stockItems = stockLevelsData?.items || items || [];
+    
+    if (budgetKPIs) {
+      // Use Budget KPIs API data
+      // robust numeric parsing (handles numbers or numeric strings)
+      const parseNumber = (v: any): number | undefined => {
+        if (v === null || v === undefined) return undefined;
+        if (typeof v === 'number' && Number.isFinite(v)) return v;
+        if (typeof v === 'string') {
+          const n = Number(v.replace(/,/g, '').trim());
+          return Number.isFinite(n) ? n : undefined;
+        }
+        return undefined;
+      };
+
+      const itemsBelowROP = parseNumber(budgetKPIs.reorderAlerts) ?? 0;
+
+      // support multiple possible API field names (numeric or string) and fallback to counting stockoutItems
+      const predictedStockOuts =
+        parseNumber(budgetKPIs.predictedStockOuts) ??
+        parseNumber((budgetKPIs as any).predictedStockouts) ??
+        parseNumber((budgetKPIs as any).predicted_stock_outs) ??
+        (budgetKPIs.predictions ? parseNumber((budgetKPIs as any).predictions.predictedStockOuts) : undefined) ??
+        (Array.isArray(budgetKPIs.stockoutItems) ? budgetKPIs.stockoutItems.filter((it: any) => (Number(it.coverageDays) || 0) <= 15).length : undefined) ??
+        0;
+      const totalItems = budgetKPIs.totalItems || stockItems.length;
+      const totalValue = budgetKPIs.totalStockValue || 0;
+
+      // Calculate critical items from stockout items
+      const criticalItems = budgetKPIs.stockoutItems?.filter(item => item.coverageDays <= 7).length || 0;
+
+      // Calculate average coverage days
+      const coverageDays = budgetKPIs.stockoutItems?.map(item => item.coverageDays) || [];
+      const avgCoverageDays = coverageDays.length > 0 
+        ? coverageDays.reduce((a, b) => a + b, 0) / coverageDays.length 
+        : 30;
+
+      // Calculate high-risk categories
+      const categoryRisks = categories?.map(cat => {
+        const catItems = budgetKPIs.stockoutItems?.filter(item => item.categoryName === cat.categoryName) || [];
+        return { category: cat.categoryName, riskCount: catItems.length };
+      }) || [];
+      const highRiskCategories = categoryRisks.filter(c => c.riskCount > 0).length;
+
+      // Calculate health score
+      const healthScore = Math.max(0, 100 - (
+        (itemsBelowROP * 2) + 
+        (predictedStockOuts * 5) + 
+        (criticalItems * 10) +
+        Math.max(0, (30 - avgCoverageDays) * 2)
+      ));
+
+      return {
+        itemsBelowROP,
+        predictedStockOuts,
+        avgCoverageDays: Math.round(avgCoverageDays),
+        highRiskCategories,
+        criticalItems,
+        healthScore: Math.round(healthScore),
+        totalValue,
+        lowStockValue: 0,
+        totalItems
+      };
+    }
+
+    // Fallback calculation from items
+    if (stockItems.length === 0) {
       return {
         itemsBelowROP: 0,
         predictedStockOuts: 0,
@@ -308,29 +278,27 @@ const InventoryHealthDashboard: React.FC = () => {
       };
     }
 
-    const itemsBelowROP = items.filter(item => 
+    const itemsBelowROP = stockItems.filter(item => 
       item.currentQuantity <= (item.reorderLevel || item.minStockLevel)
     ).length;
 
-    const predictedStockOuts = items.filter(item => {
-      if (item.avgDailyConsumption && item.avgDailyConsumption > 0) {
-        const daysUntilStockout = item.currentQuantity / item.avgDailyConsumption;
-        return daysUntilStockout <= 15;
-      }
-      return false;
-    }).length;
+    const predictedStockOuts = stockItems.filter(item => 
+      (item.coverageDays || 0) <= 15
+    ).length;
 
-    const criticalItems = items.filter(item => (item.coverageDays || 0) <= 7).length;
+    const criticalItems = stockItems.filter(item => 
+      item.stockAlertLevel === 'CRITICAL'
+    ).length;
 
-    const coverageDays = items
+    const coverageDays = stockItems
       .filter(item => item.coverageDays && item.coverageDays > 0)
-      .map(item => item.coverageDays);
+      .map(item => item.coverageDays || 0);
     const avgCoverageDays = coverageDays.length > 0 
       ? coverageDays.reduce((a, b) => a + b, 0) / coverageDays.length 
       : 0;
 
     const categoryRisks = categories?.map(cat => {
-      const catItems = items.filter(item => item.categoryId === cat.id);
+      const catItems = stockItems.filter(item => getCategoryName(item) === cat.categoryName);
       const riskCount = catItems.filter(item => 
         item.currentQuantity <= (item.reorderLevel || item.minStockLevel)
       ).length;
@@ -339,15 +307,15 @@ const InventoryHealthDashboard: React.FC = () => {
 
     const highRiskCategories = categoryRisks.filter(c => c.riskCount > 0).length;
 
-    const totalValue = items.reduce((sum, item) => 
-      sum + (item.currentQuantity * (item.unitPrice || 0)), 0
+    const totalValue = stockItems.reduce((sum, item) => 
+      sum + ((item.totalValue || 0) || (item.currentQuantity * (item.unitPrice || 0))), 0
     );
 
-    const lowStockItems = items.filter(item => 
+    const lowStockItems = stockItems.filter(item => 
       item.currentQuantity <= (item.reorderLevel || item.minStockLevel)
     );
     const lowStockValue = lowStockItems.reduce((sum, item) => 
-      sum + (item.currentQuantity * (item.unitPrice || 0)), 0
+      sum + ((item.totalValue || 0) || (item.currentQuantity * (item.unitPrice || 0))), 0
     );
 
     const healthScore = Math.max(0, 100 - (
@@ -366,37 +334,41 @@ const InventoryHealthDashboard: React.FC = () => {
       healthScore: Math.round(healthScore),
       totalValue,
       lowStockValue,
-      totalItems: items.length
+      totalItems: stockItems.length
     };
-  }, [items, categories]);
+  }, [budgetKPIs, stockLevelsData, items, categories]);
 
-  // Filter items by days AND category
+  // Filter items using stockLevelsData or fallback to items
   const filteredItems = useMemo(() => {
-    if (!items || items.length === 0) return [];
+    const sourceItems = stockLevelsData?.items || items || [];
+    if (sourceItems.length === 0) return [];
     
-    let filtered = [...items];
+    let filtered = [...sourceItems];
 
     // Category filter
     if (categoryFilter !== 'all') {
-      filtered = filtered.filter(item => 
-        (item.categoryName || 'Unknown') === categoryFilter
-      );
+      filtered = filtered.filter(item => getCategoryName(item) === categoryFilter);
     }
 
-    // Days filter - use same calculation as chart
+    // Days filter with ranges
     if (daysFilter !== 'all') {
-      const filterValue = parseInt(daysFilter);
       filtered = filtered.filter(item => {
-        // Use same calculation as coverageChartData
-        const daysLeft = item.coverageDays || 
-          (item.avgDailyConsumption && item.avgDailyConsumption > 0 
-            ? Math.round(item.currentQuantity / item.avgDailyConsumption) 
-            : 0);
-        return daysLeft > 0 && daysLeft <= filterValue;
+        const daysLeft = item.coverageDays || 0;
+        
+        if (daysFilter === '1-7') {
+          return daysLeft > 0 && daysLeft <= 7;
+        } else if (daysFilter === '7-15') {
+          return daysLeft > 7 && daysLeft <= 15;
+        } else if (daysFilter === '15-30') {
+          return daysLeft > 15 && daysLeft <= 30;
+        } else if (daysFilter === '30-60') {
+          return daysLeft > 30 && daysLeft <= 60;
+        }
+        return true;
       });
     }
 
-    // Sort by risk level (most critical first)
+    // Sort by alert level (most critical first)
     filtered.sort((a, b) => {
       const riskOrder: Record<string, number> = { 
         CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3
@@ -406,9 +378,9 @@ const InventoryHealthDashboard: React.FC = () => {
     });
 
     return filtered;
-  }, [items, daysFilter, categoryFilter]);
+  }, [stockLevelsData, items, daysFilter, categoryFilter]);
 
-  // Add pagination
+  // Pagination
   const paginatedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -417,83 +389,146 @@ const InventoryHealthDashboard: React.FC = () => {
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [daysFilter, categoryFilter]);
 
-  // Bar chart data should use ALL filtered items, not just paginated ones
+  // Bar chart data
   const coverageChartData = useMemo(() => {
     return filteredItems.slice(0, 20).map(item => ({
       name: item.itemName.substring(0, 20) + (item.itemName.length > 20 ? '...' : ''),
       fullName: item.itemName,
-      daysLeft: item.coverageDays || 
-        (item.avgDailyConsumption && item.avgDailyConsumption > 0 
-          ? Math.round(item.currentQuantity / item.avgDailyConsumption) 
-          : 0),
+      daysLeft: item.coverageDays || 0,
       alertLevel: (item.stockAlertLevel || 'LOW') as AlertLevel,
       currentStock: item.currentQuantity,
-      unit: item.unitOfMeasurement || 'units'
+      unit: 'units'
     }));
   }, [filteredItems]);
 
-  const skusBelowROPData = [
-    {
-      name: 'Below ROP',
-      value: items && items.length > 0 ? Math.round((healthMetrics.itemsBelowROP / items.length) * 100) : 0,
-      fill: COLORS.pink
-    }
-  ];
+  const skusBelowROPData = useMemo(() => {
+    const totalItems = budgetKPIs?.totalItems || (stockLevelsData?.items || items || []).length;
+    return [
+      {
+        name: 'Below ROP',
+        value: totalItems > 0 
+          ? Math.round((healthMetrics.itemsBelowROP / totalItems) * 100) 
+          : 0,
+        fill: COLORS.green
+      }
+    ];
+  }, [budgetKPIs, stockLevelsData, items, healthMetrics.itemsBelowROP]);
 
+  const daysRangeChartData = useMemo(() => {
+    const sourceItems = stockLevelsData?.items || items || [];
+    
+    const ranges = [
+      { label: '1-7 days', min: 1, max: 7, color: COLORS.critical },
+      { label: '7-15 days', min: 7, max: 15, color: COLORS.orange },
+      { label: '15-30 days', min: 15, max: 30, color: COLORS.purple },
+      { label: '30-60 days', min: 30, max: 60, color: COLORS.cyan },
+      { label: '60+ days', min: 60, max: Infinity, color: COLORS.green }
+    ];
+
+    return ranges.map(range => {
+      const count = sourceItems.filter(item => {
+        const days = item.coverageDays || 0;
+        if (range.min === 60) {
+          return days > range.min;
+        }
+        return days > range.min && days <= range.max;
+      }).length;
+      
+      return {
+        name: range.label,
+        items: count,
+        fill: range.color
+      };
+    });
+  }, [stockLevelsData, items]);
+
+  // Heatmap data from stock levels or items
   const stockLevelTrendData = useMemo(() => {
-    if (!items || items.length === 0) return [];
+    const sourceItems = stockLevelsData?.items || items || [];
+    if (sourceItems.length === 0) return [];
 
-    const categories = [...new Set(items.map(item => item.categoryName || 'Unknown'))];
+    const categoryNames = [...new Set(sourceItems.map(item => getCategoryName(item)))];
     const levels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
-    return categories.map(category => {
-      const categoryItems = items.filter(item => (item.categoryName || 'Unknown') === category);
+    return categoryNames.map(categoryName => {
+      const categoryItems = sourceItems.filter(item => getCategoryName(item) === categoryName);
       const levelCounts = levels.map(level =>
         categoryItems.filter(item => item.stockAlertLevel === level).length
       );
 
       return {
-        category,
+        category: categoryName,
         CRITICAL: levelCounts[0],
         HIGH: levelCounts[1],
         MEDIUM: levelCounts[2],
         LOW: levelCounts[3]
       };
     });
-  }, [items]);
+  }, [stockLevelsData, items]);
 
+  const monthlyStockTrendData = useMemo(() => {
+    if (!monthlyStockTrend?.trendData) return [];
+
+    return monthlyStockTrend.trendData.map(item => ({
+      month: item.monthName,
+      stockValue: item.stockValue
+    }));
+  }, [monthlyStockTrend]);
+
+  // Use Budget KPIs stockout items for predictions
   const stockOutPredictions = useMemo(() => {
-    if (!items || items.length === 0 || !categories) return [];
-    
-    return items
-      .filter(item => {
-        if (item.avgDailyConsumption && item.avgDailyConsumption > 0) {
-          const daysUntilStockout = item.currentQuantity / item.avgDailyConsumption;
-          return daysUntilStockout <= 30;
-        }
-        return false;
-      })
-      .map(item => ({
-        id: item.id,
+    if (budgetKPIs?.stockoutItems && budgetKPIs.stockoutItems.length > 0) {
+      return budgetKPIs.stockoutItems.map(item => ({
+        id: item.itemId,
         name: item.itemName,
-        category: categories.find(c => c.id === item.categoryId)?.categoryName || 'Unknown',
+        category: item.categoryName,
+        currentStock: item.currentStock,
+        unit: 'units',
+        unitPrice: 0,
+        dailyConsumption: 0,
+        daysUntilStockout: item.coverageDays,
+        severity: item.coverageDays <= 7 ? 'critical' as const :
+                 item.coverageDays <= 15 ? 'warning' as const :
+                 'low' as const
+      })).sort((a, b) => a.daysUntilStockout - b.daysUntilStockout).slice(0, 10);
+    }
+    
+    // Fallback: calculate from items data
+    const sourceItems = stockLevelsData?.items || items || [];
+    return sourceItems
+      .filter(item => item.currentQuantity <= (item.reorderLevel || item.minStockLevel))
+      .map(item => ({
+        id: ('itemId' in item ? item.itemId : item.id) as number,
+        name: item.itemName,
+        category: getCategoryName(item),
         currentStock: item.currentQuantity,
-        unit: item.unitOfMeasurement || 'units',
+        unit: ('unitOfMeasurement' in item ? item.unitOfMeasurement : undefined) || 'units',
         unitPrice: item.unitPrice || 0,
-        dailyConsumption: item.avgDailyConsumption || 0,
-        daysUntilStockout: Math.round(item.currentQuantity / (item.avgDailyConsumption || 1)),
-        severity: item.currentQuantity / (item.avgDailyConsumption || 1) <= 7 ? 'critical' as const :
-                 item.currentQuantity / (item.avgDailyConsumption || 1) <= 15 ? 'warning' as const :
+        dailyConsumption: 0,
+        daysUntilStockout: item.coverageDays || 0,
+        severity: (item.coverageDays || 0) <= 7 ? 'critical' as const :
+                 (item.coverageDays || 0) <= 15 ? 'warning' as const :
                  'low' as const
       }))
       .sort((a, b) => a.daysUntilStockout - b.daysUntilStockout)
       .slice(0, 10);
-  }, [items, categories]);
+  }, [budgetKPIs, stockLevelsData, items]);
+
+  // Get unique category names for filter
+  const uniqueCategories = useMemo(() => {
+    const sourceItems = stockLevelsData?.items || items || [];
+    return [...new Set(sourceItems.map(item => getCategoryName(item)))];
+  }, [stockLevelsData, items]);
+
+  // Format date range
+  const dateRangeDisplay = useMemo(() => {
+    if (!dateRangeData) return 'Loading date range...';
+    return `Data from ${dateRangeData.minDate} to ${dateRangeData.maxDate} (${dateRangeData.availableMonths} months)`;
+  }, [dateRangeData]);
 
   return (
     <div style={{ 
@@ -502,13 +537,47 @@ const InventoryHealthDashboard: React.FC = () => {
       padding: '32px',
       fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif'
     }}>
-      {/* Font Import */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         
         * {
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
+        }
+        
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        @keyframes floatUpSlow {
+          0% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(0);
+          }
+          15% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+          85% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-80px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-100px);
+          }
+        }
+
+        /* Prevent Recharts bar hover from applying grey shading */
+        .recharts-bar-rectangle {
+          transition: none !important;
+          opacity: 1 !important;
+        }
+        .recharts-bar-rectangle:hover {
+          opacity: 1 !important;
+          fill-opacity: 1 !important;
+          filter: none !important;
         }
       `}</style>
       
@@ -532,8 +601,12 @@ const InventoryHealthDashboard: React.FC = () => {
             }}>
               Inventory Health Dashboard
             </h1>
-            <p style={{ fontSize: '15px', color: COLORS.gray, margin: 0, fontWeight: '500' }}>
+            <p style={{ fontSize: '15px', color: COLORS.gray, margin: '0 0 4px 0', fontWeight: '500' }}>
               Monitor stock levels, predict shortages, and manage reorder points
+            </p>
+            <p style={{ fontSize: '12px', color: COLORS.lightGray, margin: 0, fontWeight: '500' }}>
+              <Calendar size={12} style={{ display: 'inline', marginRight: '4px' }} />
+              {dateRangeDisplay}
             </p>
           </div>
           
@@ -614,7 +687,7 @@ const InventoryHealthDashboard: React.FC = () => {
         )}
 
         {/* Loading State */}
-        {loading && !error && items.length === 0 && (
+        {loading && !error && filteredItems.length === 0 && (
           <div style={{
             backgroundColor: COLORS.white,
             borderRadius: '12px',
@@ -640,8 +713,8 @@ const InventoryHealthDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Main Content Section: KPI Cards - Minimal Design */}
-        {!loading && items && items.length > 0 && (
+        {/* Main Content Section: KPI Cards */}
+        {!loading && filteredItems.length > 0 && (
           <>
             <div style={{
               display: 'grid',
@@ -649,7 +722,7 @@ const InventoryHealthDashboard: React.FC = () => {
               gap: '16px',
               marginBottom: '24px'
             }}>
-              {/* Card 1: Items Below ROP - Minimal */}
+              {/* Card 1: Items Below ROP */}
               <div style={{
                 backgroundColor: COLORS.white,
                 borderRadius: '12px',
@@ -683,9 +756,7 @@ const InventoryHealthDashboard: React.FC = () => {
                     marginBottom: '8px',
                     cursor: 'pointer'
                   }}
-                  title={items.filter(item => 
-                    item.currentQuantity <= (item.reorderLevel || item.minStockLevel)
-                  ).map(i => i.itemName).slice(0, 10).join('\n')}
+                  title={budgetKPIs?.stockoutItems?.map(i => i.itemName).slice(0, 10).join('\n') || ''}
                 >
                   <CountUp end={healthMetrics.itemsBelowROP} duration={1500} />
                 </div>
@@ -693,7 +764,9 @@ const InventoryHealthDashboard: React.FC = () => {
                   <TrendingDown size={14} color={COLORS.critical} />
                   <span style={{ fontSize: '12px', color: COLORS.gray }}>
                     <CountUp 
-                      end={items.length > 0 ? ((healthMetrics.itemsBelowROP / items.length) * 100) : 0} 
+                      end={healthMetrics.totalItems > 0 
+                        ? ((healthMetrics.itemsBelowROP / healthMetrics.totalItems) * 100) 
+                        : 0} 
                       duration={1500}
                       decimals={1}
                     />% of inventory
@@ -701,7 +774,7 @@ const InventoryHealthDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Card 2: Predicted Stock-Outs - Minimal */}
+              {/* Card 2: Predicted Stock-Outs */}
               <div style={{
                 backgroundColor: COLORS.white,
                 borderRadius: '12px',
@@ -735,13 +808,7 @@ const InventoryHealthDashboard: React.FC = () => {
                     marginBottom: '8px',
                     cursor: 'pointer'
                   }}
-                  title={items.filter(item => {
-                    if (item.avgDailyConsumption && item.avgDailyConsumption > 0) {
-                      const daysUntilStockout = item.currentQuantity / item.avgDailyConsumption;
-                      return daysUntilStockout <= 15;
-                    }
-                    return false;
-                  }).map(i => i.itemName).slice(0, 10).join('\n')}
+                  title={budgetKPIs?.stockoutItems?.filter(item => item.coverageDays <= 15).map(i => i.itemName).slice(0, 10).join('\n') || ''}
                 >
                   <CountUp end={healthMetrics.predictedStockOuts} duration={1500} />
                 </div>
@@ -753,7 +820,7 @@ const InventoryHealthDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Card 3: High-Risk Categories - Minimal */}
+              {/* Card 3: High-Risk Categories */}
               <div style={{
                 backgroundColor: COLORS.white,
                 borderRadius: '12px',
@@ -787,13 +854,6 @@ const InventoryHealthDashboard: React.FC = () => {
                     marginBottom: '8px',
                     cursor: 'pointer'
                   }}
-                  title={categories?.filter(cat => {
-                    const catItems = items.filter(item => item.categoryId === cat.id);
-                    const riskCount = catItems.filter(item => 
-                      item.currentQuantity <= (item.reorderLevel || item.minStockLevel)
-                    ).length;
-                    return riskCount > 0;
-                  }).map(c => c.categoryName).join('\n') || ''}
                 >
                   <CountUp end={healthMetrics.highRiskCategories} duration={1500} />
                 </div>
@@ -804,6 +864,67 @@ const InventoryHealthDashboard: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+
+            </div>
+
+            {/* Days Range Distribution Chart */}
+            <div style={{
+              backgroundColor: COLORS.white,
+              borderRadius: '12px',
+              padding: '20px',
+              border: `1px solid ${COLORS.border}`,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+              marginBottom: '24px'
+            }}>
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: COLORS.dark,
+                  marginBottom: '4px',
+                  margin: 0
+                }}>
+                  Stock-Out Items by Days Range
+                </h3>
+                <p style={{ fontSize: '12px', color: COLORS.gray, margin: '4px 0 0 0' }}>
+                  Distribution of items across different coverage day ranges
+                </p>
+              </div>
+              
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={daysRangeChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke={COLORS.gray} 
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis stroke={COLORS.gray} tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: COLORS.white,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: '8px',
+                      padding: '10px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      fontSize: '12px'
+                    }}
+                    formatter={(value: any) => [
+                      <div key="tooltip">
+                        <div style={{ fontWeight: '700', color: COLORS.dark }}>
+                          {value} items
+                        </div>
+                      </div>
+                    ]}
+                  />
+                  <Bar dataKey="items" radius={[4, 4, 0, 0]}>
+                    {daysRangeChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
 
             {/* Compact Two-Column Layout: Bar Chart + Heatmap */}
@@ -813,7 +934,7 @@ const InventoryHealthDashboard: React.FC = () => {
               gap: '20px',
               marginBottom: '24px'
             }}>
-              {/* Days Left per Item - Vertical Bar Chart with inline filter */}
+              {/* Days Left per Item */}
               <div style={{
                 backgroundColor: COLORS.white,
                 borderRadius: '12px',
@@ -840,7 +961,6 @@ const InventoryHealthDashboard: React.FC = () => {
                   
                   {/* Filters */}
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    {/* Category Filter */}
                     <select
                       value={categoryFilter}
                       onChange={(e) => setCategoryFilter(e.target.value)}
@@ -856,20 +976,13 @@ const InventoryHealthDashboard: React.FC = () => {
                         outline: 'none',
                         transition: 'border-color 0.2s'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = COLORS.purple;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = COLORS.border;
-                      }}
                     >
                       <option value="all">All Categories</option>
-                      {[...new Set(items.map(item => item.categoryName || 'Unknown'))].map(cat => (
+                      {uniqueCategories.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
                     </select>
 
-                    {/* Days Filter */}
                     <select
                       value={daysFilter}
                       onChange={(e) => setDaysFilter(e.target.value)}
@@ -885,18 +998,12 @@ const InventoryHealthDashboard: React.FC = () => {
                         outline: 'none',
                         transition: 'border-color 0.2s'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = COLORS.purple;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = COLORS.border;
-                      }}
                     >
                       <option value="all">All Days</option>
-                      <option value="7">≤ 7 days</option>
-                      <option value="15">≤ 15 days</option>
-                      <option value="30">≤ 30 days</option>
-                      <option value="60">≤ 60 days</option>
+                      <option value="1-7">1-7 days</option>
+                      <option value="7-15">7-15 days</option>
+                      <option value="15-30">15-30 days</option>
+                      <option value="30-60">30-60 days</option>
                     </select>
                   </div>
                 </div>
@@ -922,13 +1029,11 @@ const InventoryHealthDashboard: React.FC = () => {
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                         fontSize: '12px'
                       }}
+                      // show only the details in tooltip (avoid repeating name twice)
                       formatter={(value: any, name: string, props: any) => {
                         const item = props.payload;
                         return [
                           <div key="tooltip">
-                            <div style={{ fontWeight: '700', marginBottom: '4px', color: COLORS.dark }}>
-                              {item.fullName}
-                            </div>
                             <div style={{ color: COLORS.gray, fontSize: '11px' }}>
                               Days: <span style={{ fontWeight: '600', color: COLORS.dark }}>{value}</span>
                             </div>
@@ -948,7 +1053,7 @@ const InventoryHealthDashboard: React.FC = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Category Heatmap (without SAFE) */}
+              {/* Category Heatmap */}
               <div style={{
                 backgroundColor: COLORS.white,
                 borderRadius: '12px',
@@ -983,12 +1088,6 @@ const InventoryHealthDashboard: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = COLORS.bg;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = COLORS.white;
                     }}
                     title="Expand to fullscreen"
                   >
@@ -1037,8 +1136,9 @@ const InventoryHealthDashboard: React.FC = () => {
                           </td>
                           {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(level => {
                             const count = row[level as keyof typeof row] as number;
-                            const categoryItems = items.filter(item => 
-                              (item.categoryName || 'Unknown') === row.category && 
+                            const sourceItems = stockLevelsData?.items || items || [];
+                            const categoryItems = sourceItems.filter(item => 
+                              getCategoryName(item) === row.category && 
                               item.stockAlertLevel === level
                             );
                             
@@ -1082,14 +1182,14 @@ const InventoryHealthDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Three Column Layout: Gauge + Stock Table + Health Index */}
+            {/* Two Column Layout: Gauge + Stock Table */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '280px 1fr 260px',
+              gridTemplateColumns: '280px 1fr',
               gap: '20px',
               marginBottom: '24px'
             }}>
-              {/* SKUs Below ROP Gauge - Left - Enhanced with Clear Info */}
+              {/* SKUs Below ROP Gauge */}
               <div style={{
                 backgroundColor: COLORS.white,
                 borderRadius: '12px',
@@ -1125,7 +1225,7 @@ const InventoryHealthDashboard: React.FC = () => {
                       <RadialBar
                         dataKey="value"
                         cornerRadius={10}
-                        fill={COLORS.pink}
+                        fill={COLORS.primary}
                         background={{ fill: COLORS.bg }}
                       />
                     </RadialBarChart>
@@ -1138,7 +1238,7 @@ const InventoryHealthDashboard: React.FC = () => {
                     textAlign: 'center',
                     pointerEvents: 'none'
                   }}>
-                    <div style={{ fontSize: '32px', fontWeight: '900', color: COLORS.pink }}>
+                    <div style={{ fontSize: '32px', fontWeight: '900', color: COLORS.dark }}>
                       <CountUp end={skusBelowROPData[0].value} duration={1500} />%
                     </div>
                     <div style={{ fontSize: '10px', color: COLORS.gray, fontWeight: '600', marginTop: '4px' }}>
@@ -1147,7 +1247,6 @@ const InventoryHealthDashboard: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Enhanced Details */}
                 <div style={{ 
                   display: 'flex',
                   flexDirection: 'column',
@@ -1164,19 +1263,19 @@ const InventoryHealthDashboard: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '11px', color: COLORS.gray }}>Above ROP</span>
                     <span style={{ fontSize: '16px', fontWeight: '800', color: COLORS.green }}>
-                      <CountUp end={items.length - healthMetrics.itemsBelowROP} duration={1500} />
+                      <CountUp end={healthMetrics.totalItems - healthMetrics.itemsBelowROP} duration={1500} />
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '11px', color: COLORS.gray }}>Total SKUs</span>
                     <span style={{ fontSize: '16px', fontWeight: '800', color: COLORS.dark }}>
-                      <CountUp end={items.length} duration={1500} />
+                      <CountUp end={healthMetrics.totalItems} duration={1500} />
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Stock-Out Risk Predictions Table - Right (with Stock-Out Date) */}
+              {/* Stock-Out Risk Predictions Table */}
               {stockOutPredictions.length > 0 && (
                 <div style={{
                   backgroundColor: COLORS.white,
@@ -1194,40 +1293,15 @@ const InventoryHealthDashboard: React.FC = () => {
                         marginBottom: '4px',
                         margin: 0
                       }}>
-                        Stock-Out Risk Predictions
+                        Stock-Out Risk Items
                       </h3>
                       <p style={{ fontSize: '12px', color: COLORS.gray, margin: '4px 0 0 0' }}>
-                        Top items at risk within 30 days
+                        Items requiring immediate attention
                       </p>
                     </div>
-                    <button
-                      onClick={() => setFullscreenTable(true)}
-                      style={{
-                        padding: '6px',
-                        borderRadius: '6px',
-                        border: `1px solid ${COLORS.border}`,
-                        backgroundColor: COLORS.white,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = COLORS.bg;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = COLORS.white;
-                      }}
-                      title="Expand to fullscreen"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={COLORS.dark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-                      </svg>
-                    </button>
                   </div>
                   
-                  <div style={{ overflowX: 'auto', maxHeight: '300px', overflowY: 'auto' }}>
+                  <div style={{ overflowX: 'auto', maxHeight: '450px', overflowY: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                       <thead style={{ position: 'sticky', top: 0, backgroundColor: COLORS.white, zIndex: 1 }}>
                         <tr>
@@ -1236,7 +1310,7 @@ const InventoryHealthDashboard: React.FC = () => {
                             textAlign: 'left',
                             fontSize: '11px',
                             fontWeight: '700',
-                            color: COLORS.dark,
+                            color: COLORS.gray,
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
                             borderBottom: `2px solid ${COLORS.border}`,
@@ -1247,7 +1321,7 @@ const InventoryHealthDashboard: React.FC = () => {
                             textAlign: 'right',
                             fontSize: '11px',
                             fontWeight: '700',
-                            color: COLORS.dark,
+                            color: COLORS.gray,
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
                             borderBottom: `2px solid ${COLORS.border}`,
@@ -1258,18 +1332,18 @@ const InventoryHealthDashboard: React.FC = () => {
                             textAlign: 'center',
                             fontSize: '11px',
                             fontWeight: '700',
-                            color: COLORS.dark,
+                            color: COLORS.gray,
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
                             borderBottom: `2px solid ${COLORS.border}`,
                             backgroundColor: COLORS.bg
-                          }}>Days Left</th>
+                          }}>Days</th>
                           <th style={{
                             padding: '12px 16px',
                             textAlign: 'center',
                             fontSize: '11px',
                             fontWeight: '700',
-                            color: COLORS.dark,
+                            color: COLORS.gray,
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
                             borderBottom: `2px solid ${COLORS.border}`,
@@ -1278,7 +1352,7 @@ const InventoryHealthDashboard: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {stockOutPredictions.slice(0, 6).map((item, idx) => (
+                        {stockOutPredictions.map((item, idx) => (
                           <tr key={item.id} style={{
                             transition: 'background-color 0.2s'
                           }}
@@ -1313,7 +1387,7 @@ const InventoryHealthDashboard: React.FC = () => {
                               textAlign: 'right',
                               borderBottom: `1px solid ${COLORS.border}`
                             }}>
-                              {item.currentStock.toFixed(0)} {item.unit}
+                              {item.currentStock.toFixed(0)}
                             </td>
                             <td style={{
                               padding: '14px 16px',
@@ -1334,7 +1408,7 @@ const InventoryHealthDashboard: React.FC = () => {
                                 display: 'inline-block',
                                 whiteSpace: 'nowrap'
                               }}>
-                                {item.daysUntilStockout} days
+                                {item.daysUntilStockout}d
                               </span>
                             </td>
                             <td style={{ 
@@ -1366,160 +1440,14 @@ const InventoryHealthDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* Inventory Health Index - Right Side - Compact */}
-              <div style={{
-                backgroundColor: COLORS.white,
-                borderRadius: '12px',
-                padding: '20px',
-                border: `1px solid ${COLORS.border}`,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                position: 'relative',
-                overflow: 'visible'
-              }}>
-                <div style={{ 
-                  fontSize: '12px', 
-                  color: COLORS.gray, 
-                  fontWeight: '600',
-                  marginBottom: '16px',
-                  textAlign: 'center'
-                }}>
-                  Inventory Health
-                </div>
-                
-                {/* Circular Progress */}
-                <div style={{ 
-                  position: 'relative', 
-                  width: '120px', 
-                  height: '120px', 
-                  marginBottom: '80px',
-                  overflow: 'visible'
-                }}>
-                  <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="55"
-                      stroke={COLORS.bg}
-                      strokeWidth="8"
-                      fill="none"
-                    />
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="55"
-                      stroke={
-                        healthMetrics.healthScore >= 80 ? COLORS.green :
-                        healthMetrics.healthScore >= 60 ? COLORS.orange :
-                        COLORS.critical
-                      }
-                      strokeWidth="8"
-                      fill="none"
-                      strokeDasharray={2 * Math.PI * 55}
-                      strokeDashoffset={2 * Math.PI * 55 - (healthMetrics.healthScore / 100) * 2 * Math.PI * 55}
-                      strokeLinecap="round"
-                      style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-                    />
-                  </svg>
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ 
-                      fontSize: '32px', 
-                      fontWeight: '900', 
-                      color: healthMetrics.healthScore >= 80 ? COLORS.green :
-                             healthMetrics.healthScore >= 60 ? COLORS.orange :
-                             COLORS.critical,
-                      lineHeight: '1'
-                    }}>
-                      <CountUp end={healthMetrics.healthScore} duration={1500} />
-                    </div>
-                    <div style={{ 
-                      fontSize: '10px', 
-                      color: COLORS.gray, 
-                      fontWeight: '600',
-                      marginTop: '4px'
-                    }}>
-                      Score
-                    </div>
-                  </div>
-                  {/* Floating Text Animation with Item Names */}
-                  {healthMetrics.itemsBelowROP > 0 && (
-                    <FloatingText 
-                      items={items
-                        .filter(item => item.currentQuantity <= (item.reorderLevel || item.minStockLevel))
-                        .map(item => item.itemName)
-                      }
-                      delay={1600}
-                    />
-                  )}
-                </div>
-                
-                {/* Status Badge */}
-                <div style={{
-                  padding: '4px 12px',
-                  borderRadius: '16px',
-                  backgroundColor: `${
-                    healthMetrics.healthScore >= 80 ? COLORS.green :
-                    healthMetrics.healthScore >= 60 ? COLORS.orange :
-                    COLORS.critical
-                  }15`,
-                  fontSize: '10px',
-                  fontWeight: '700',
-                  color: healthMetrics.healthScore >= 80 ? COLORS.green :
-                         healthMetrics.healthScore >= 60 ? COLORS.orange :
-                         COLORS.critical,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  marginBottom: '12px'
-                }}>
-                  {healthMetrics.healthScore >= 80 ? 'Excellent' :
-                   healthMetrics.healthScore >= 60 ? 'Good' :
-                   'Critical'}
-                </div>
 
-                {/* Compact Details */}
-                <div style={{ 
-                  width: '100%',
-                  paddingTop: '12px',
-                  borderTop: `1px solid ${COLORS.border}`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10px', color: COLORS.gray }}>Critical</span>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.critical }}>
-                      <CountUp end={healthMetrics.criticalItems} duration={1500} />
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10px', color: COLORS.gray }}>Warning</span>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.orange }}>
-                      <CountUp end={items.filter(i => (i.coverageDays || 0) > 7 && (i.coverageDays || 0) <= 15).length} duration={1500} />
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10px', color: COLORS.gray }}>Total</span>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.dark }}>
-                      <CountUp end={items.length} duration={1500} />
-                    </span>
-                  </div>
-                </div>
-              </div>
             </div>
           </>
         )}
       </div>
 
       {/* Fullscreen Table Modal */}
-      {fullscreenTable && (
+      {fullscreenTable && stockOutPredictions.length > 0 && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1553,10 +1481,10 @@ const InventoryHealthDashboard: React.FC = () => {
             }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: COLORS.dark }}>
-                  Stock-Out Risk Predictions - Full View
+                  Stock-Out Risk Items - Full View
                 </h2>
                 <p style={{ margin: '8px 0 0 0', fontSize: '14px', color: COLORS.gray }}>
-                  Complete list of items at risk within 30 days
+                  Complete list of items at risk
                 </p>
               </div>
               <button
@@ -1615,17 +1543,6 @@ const InventoryHealthDashboard: React.FC = () => {
                       borderBottom: `2px solid ${COLORS.border}`,
                       backgroundColor: COLORS.bg
                     }}>Current Stock</th>
-                    <th style={{
-                      padding: '16px',
-                      textAlign: 'right',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      color: COLORS.dark,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      borderBottom: `2px solid ${COLORS.border}`,
-                      backgroundColor: COLORS.bg
-                    }}>Daily Usage</th>
                     <th style={{
                       padding: '16px',
                       textAlign: 'center',
@@ -1687,17 +1604,7 @@ const InventoryHealthDashboard: React.FC = () => {
                         textAlign: 'right',
                         borderBottom: `1px solid ${COLORS.border}`
                       }}>
-                        {item.currentStock.toFixed(0)} {item.unit}
-                      </td>
-                      <td style={{
-                        padding: '16px',
-                        fontSize: '13px',
-                        color: COLORS.gray,
-                        fontWeight: '500',
-                        textAlign: 'right',
-                        borderBottom: `1px solid ${COLORS.border}`
-                      }}>
-                        {item.dailyConsumption.toFixed(1)} / day
+                        {item.currentStock.toFixed(0)}
                       </td>
                       <td style={{
                         padding: '16px',
@@ -1849,8 +1756,9 @@ const InventoryHealthDashboard: React.FC = () => {
                       </td>
                       {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(level => {
                         const count = row[level as keyof typeof row] as number;
-                        const categoryItems = items.filter(item => 
-                          (item.categoryName || 'Unknown') === row.category && 
+                        const sourceItems = stockLevelsData?.items || items || [];
+                        const categoryItems = sourceItems.filter(item => 
+                          getCategoryName(item) === row.category && 
                           item.stockAlertLevel === level
                         );
                         
@@ -1893,33 +1801,6 @@ const InventoryHealthDashboard: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        
-        @keyframes floatUpSlow {
-          0% {
-            opacity: 0;
-            transform: translateX(-50%) translateY(0);
-          }
-          15% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-          }
-          85% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(-80px);
-          }
-          100% {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-100px);
-          }
-        }
-      `}</style>
     </div>
   );
 };
