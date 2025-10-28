@@ -32,7 +32,13 @@ import {
   type ConsumptionTrendsResponse,
   type TopConsumersResponse,
   type AvailableDateResponse,
-  type costConsumptionResponse
+  type costConsumptionResponse,
+  type SmartInsightsResponse,
+  type SmartInsightsSummaryResponse,
+  type SmartRecommendationsResponse,
+  type SmartAlertsResponse,
+  type SmartAnomaliesResponse,
+  type SmartHealthResponse
 } from '../api/inventory';
 
 // ============================================================================
@@ -216,6 +222,247 @@ export function useItems() {
   }), []);
 
   return { data, loading, error, refresh, ...actions };
+}
+
+
+export function useSmartInsights(
+  analysisDepth?: string,
+  categoryId?: number,
+  minConfidence?: number,
+  includeRecommendations?: boolean
+) {
+  const [data, setData] = useState<SmartInsightsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('🤖 Fetching Smart Insights...');
+      const cacheKey = `smart-insights-${analysisDepth}-${categoryId}-${minConfidence}-${includeRecommendations}`;
+      
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.smartInsights(analysisDepth, categoryId, minConfidence, includeRecommendations),
+        60000 // 60 second cache for insights
+      );
+      
+      console.log('✅ Smart Insights loaded:', result.summary);
+      setData(result);
+    } catch (e: any) {
+      console.error('❌ Smart Insights error:', e);
+      setError(e?.message || 'Failed to load smart insights');
+    } finally {
+      setLoading(false);
+    }
+  }, [analysisDepth, categoryId, minConfidence, includeRecommendations]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { data, loading, error, refresh };
+}
+
+/**
+ * Hook for Smart Insights Summary
+ * Quick overview for dashboard widgets
+ */
+export function useSmartInsightsSummary(categoryId?: number) {
+  const [data, setData] = useState<SmartInsightsSummaryResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `smart-insights-summary-${categoryId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.smartInsightsSummary(categoryId),
+        30000 // 30 second cache
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load insights summary');
+    } finally {
+      setLoading(false);
+    }
+  }, [categoryId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { data, loading, error, refresh };
+}
+
+/**
+ * Hook for Smart Recommendations
+ * AI-generated action items
+ */
+export function useSmartRecommendations(
+  categoryId?: number,
+  minPriority?: number,
+  limit?: number
+) {
+  const [data, setData] = useState<SmartRecommendationsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `smart-recommendations-${categoryId}-${minPriority}-${limit}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.smartRecommendations(categoryId, minPriority, limit),
+        60000
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load recommendations');
+    } finally {
+      setLoading(false);
+    }
+  }, [categoryId, minPriority, limit]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { data, loading, error, refresh };
+}
+
+/**
+ * Hook for Smart Alerts
+ * Critical items requiring attention
+ */
+export function useSmartAlerts(
+  categoryId?: number,
+  severity?: string,
+  limit?: number
+) {
+  const [data, setData] = useState<SmartAlertsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `smart-alerts-${categoryId}-${severity}-${limit}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.smartAlerts(categoryId, severity, limit),
+        30000
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load alerts');
+    } finally {
+      setLoading(false);
+    }
+  }, [categoryId, severity, limit]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { data, loading, error, refresh };
+}
+
+/**
+ * Hook for Smart Anomalies
+ * Statistical outliers and unusual patterns
+ */
+export function useSmartAnomalies(
+  categoryId?: number,
+  minConfidence?: number,
+  limit?: number
+) {
+  const [data, setData] = useState<SmartAnomaliesResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `smart-anomalies-${categoryId}-${minConfidence}-${limit}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.smartAnomalies(categoryId, minConfidence, limit),
+        60000
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load anomalies');
+    } finally {
+      setLoading(false);
+    }
+  }, [categoryId, minConfidence, limit]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { data, loading, error, refresh };
+}
+
+/**
+ * Hook for Inventory Health Score
+ * Quick health check
+ */
+export function useSmartHealth(categoryId?: number) {
+  const [data, setData] = useState<SmartHealthResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cacheKey = `smart-health-${categoryId}`;
+      const result = await optimizedRequest(
+        cacheKey,
+        () => AnalyticsAPI.smartHealth(categoryId),
+        30000
+      );
+      setData(result);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load health score');
+    } finally {
+      setLoading(false);
+    }
+  }, [categoryId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { data, loading, error, refresh };
+}
+
+/**
+ * Composite hook for complete Smart Insights dashboard
+ * Fetches all insights data in parallel
+ */
+export function useSmartInsightsDashboard(categoryId?: number) {
+  const insights = useSmartInsights('standard', categoryId, 0.7, true);
+  const summary = useSmartInsightsSummary(categoryId);
+  const health = useSmartHealth(categoryId);
+
+  const loading = insights.loading || summary.loading || health.loading;
+  const error = insights.error || summary.error || health.error;
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([
+      insights.refresh(),
+      summary.refresh(),
+      health.refresh()
+    ]);
+  }, [insights, summary, health]);
+
+  return {
+    insights: insights.data,
+    summary: summary.data,
+    health: health.data,
+    loading,
+    error,
+    refreshAll
+  };
 }
 
 export function useAnalytics() {
@@ -464,12 +711,9 @@ export function useMonthlyStockValueTrend(startDate?: string, endDate?: string, 
     try {
       console.log('📊 Fetching monthly stock trend data...');
       
-      clearCache(cacheKey);
-      
       const result = await optimizedRequest(
         cacheKey,
-        () => AnalyticsAPI.monthlyStockValueTrend(startDate, endDate, categoryId),
-        0
+        () => AnalyticsAPI.monthlyStockValueTrend(startDate, endDate, categoryId)
       );
       
       if (result?.trendData) {

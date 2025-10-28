@@ -174,6 +174,49 @@ const InventoryHealthDashboard: React.FC = () => {
     return 'Unknown';
   };
 
+  const parseNumeric = (value: any): number | undefined => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value.replace(/,/g, '').trim());
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  };
+
+  const isHighRiskItem = (item: any): boolean => {
+    const riskLevel = String(item.stockAlertLevel ?? item.alertLevel ?? item.riskLevel ?? '').toUpperCase();
+    if (riskLevel === 'CRITICAL' || riskLevel === 'HIGH') return true;
+
+    const coverage =
+      parseNumeric(item.coverageDays) ??
+      parseNumeric(item.daysUntilStockout) ??
+      parseNumeric(item.daysOfSupply) ??
+      parseNumeric(item.daysLeft) ??
+      parseNumeric(item.daysToStockOut);
+
+    if (coverage !== undefined && coverage <= 15) return true;
+
+    const threshold =
+      parseNumeric(item.reorderLevel) ??
+      parseNumeric(item.minStockLevel) ??
+      parseNumeric(item.reorderPoint) ??
+      parseNumeric(item.minimumStock) ??
+      parseNumeric(item.minQuantity);
+
+    if (threshold !== undefined && threshold > 0) {
+      const quantity =
+        parseNumeric(item.currentQuantity) ??
+        parseNumeric(item.currentStock) ??
+        parseNumeric(item.stockOnHand) ??
+        parseNumeric(item.quantity);
+
+      if (quantity !== undefined && quantity <= threshold) return true;
+    }
+
+    return false;
+  };
+
   // Auto-refresh
   useEffect(() => {
     if (!autoRefresh) return;
@@ -201,48 +244,43 @@ const InventoryHealthDashboard: React.FC = () => {
     const stockItems = stockLevelsData?.items || items || [];
     
     if (budgetKPIs) {
-      // Use Budget KPIs API data
-      // robust numeric parsing (handles numbers or numeric strings)
-      const parseNumber = (v: any): number | undefined => {
-        if (v === null || v === undefined) return undefined;
-        if (typeof v === 'number' && Number.isFinite(v)) return v;
-        if (typeof v === 'string') {
-          const n = Number(v.replace(/,/g, '').trim());
-          return Number.isFinite(n) ? n : undefined;
-        }
-        return undefined;
-      };
+      const itemsBelowROP = parseNumeric(budgetKPIs.reorderAlerts) ?? 0;
 
-      const itemsBelowROP = parseNumber(budgetKPIs.reorderAlerts) ?? 0;
-
-      // support multiple possible API field names (numeric or string) and fallback to counting stockoutItems
       const predictedStockOuts =
-        parseNumber(budgetKPIs.predictedStockOuts) ??
-        parseNumber((budgetKPIs as any).predictedStockouts) ??
-        parseNumber((budgetKPIs as any).predicted_stock_outs) ??
-        (budgetKPIs.predictions ? parseNumber((budgetKPIs as any).predictions.predictedStockOuts) : undefined) ??
-        (Array.isArray(budgetKPIs.stockoutItems) ? budgetKPIs.stockoutItems.filter((it: any) => (Number(it.coverageDays) || 0) <= 15).length : undefined) ??
+        parseNumeric(budgetKPIs.predictedStockOuts) ??
+        parseNumeric((budgetKPIs as any).predictedStockouts) ??
+        parseNumeric((budgetKPIs as any).predicted_stock_outs) ??
+        (budgetKPIs.predictions ? parseNumeric((budgetKPIs as any).predictions.predictedStockOuts) : undefined) ??
+        (Array.isArray(budgetKPIs.stockoutItems)
+          ? budgetKPIs.stockoutItems.filter((it: any) => {
+              const coverage = parseNumeric((it as any).coverageDays);
+              return (coverage ?? 0) <= 15;
+            }).length
+          : undefined) ??
         0;
-      const totalItems = budgetKPIs.totalItems || stockItems.length;
-      const totalValue = budgetKPIs.totalStockValue || 0;
+      const totalItems = parseNumeric(budgetKPIs.totalItems) ?? stockItems.length;
+      const totalValue = parseNumeric(budgetKPIs.totalStockValue) ?? 0;
 
-      // Calculate critical items from stockout items
-      const criticalItems = budgetKPIs.stockoutItems?.filter(item => item.coverageDays <= 7).length || 0;
+      const criticalItems = Array.isArray(budgetKPIs.stockoutItems)
+        ? budgetKPIs.stockoutItems.filter(item => {
+            const coverage = parseNumeric(item.coverageDays);
+            return (coverage ?? 0) <= 7;
+          }).length
+        : 0;
 
-      // Calculate average coverage days
-      const coverageDays = budgetKPIs.stockoutItems?.map(item => item.coverageDays) || [];
-      const avgCoverageDays = coverageDays.length > 0 
-        ? coverageDays.reduce((a, b) => a + b, 0) / coverageDays.length 
+      const coverageValues = Array.isArray(budgetKPIs.stockoutItems)
+        ? budgetKPIs.stockoutItems
+            .map(item => parseNumeric(item.coverageDays))
+            .filter((value): value is number => value !== undefined && value > 0)
+        : [];
+      const avgCoverageDays = coverageValues.length > 0
+        ? coverageValues.reduce((a, b) => a + b, 0) / coverageValues.length
         : 30;
 
-      // Calculate high-risk categories
-      const categoryRisks = categories?.map(cat => {
-        const catItems = budgetKPIs.stockoutItems?.filter(item => item.categoryName === cat.categoryName) || [];
-        return { category: cat.categoryName, riskCount: catItems.length };
-      }) || [];
-      const highRiskCategories = categoryRisks.filter(c => c.riskCount > 0).length;
+      const highRiskItems = Array.isArray(budgetKPIs.stockoutItems)
+        ? budgetKPIs.stockoutItems.filter(isHighRiskItem).length
+        : 0;
 
-      // Calculate health score
       const healthScore = Math.max(0, 100 - (
         (itemsBelowROP * 2) + 
         (predictedStockOuts * 5) + 
@@ -254,7 +292,7 @@ const InventoryHealthDashboard: React.FC = () => {
         itemsBelowROP,
         predictedStockOuts,
         avgCoverageDays: Math.round(avgCoverageDays),
-        highRiskCategories,
+        highRiskItems,
         criticalItems,
         healthScore: Math.round(healthScore),
         totalValue,
@@ -269,7 +307,7 @@ const InventoryHealthDashboard: React.FC = () => {
         itemsBelowROP: 0,
         predictedStockOuts: 0,
         avgCoverageDays: 0,
-        highRiskCategories: 0,
+        highRiskItems: 0,
         criticalItems: 0,
         healthScore: 100,
         totalValue: 0,
@@ -278,45 +316,77 @@ const InventoryHealthDashboard: React.FC = () => {
       };
     }
 
-    const itemsBelowROP = stockItems.filter(item => 
-      item.currentQuantity <= (item.reorderLevel || item.minStockLevel)
-    ).length;
+    const itemsBelowROP = stockItems.filter(item => {
+      const quantity =
+        parseNumeric(item.currentQuantity) ??
+        parseNumeric(item.currentStock) ??
+        parseNumeric(item.quantity) ??
+        0;
+      const threshold =
+        parseNumeric(item.reorderLevel) ??
+        parseNumeric(item.minStockLevel) ??
+        0;
+      return quantity <= threshold;
+    }).length;
 
-    const predictedStockOuts = stockItems.filter(item => 
-      (item.coverageDays || 0) <= 15
-    ).length;
+    const predictedStockOuts = stockItems.filter(item => {
+      const coverage =
+        parseNumeric(item.coverageDays) ??
+        parseNumeric(item.daysUntilStockout) ??
+        0;
+      return coverage <= 15;
+    }).length;
 
-    const criticalItems = stockItems.filter(item => 
-      item.stockAlertLevel === 'CRITICAL'
-    ).length;
+    const criticalItems = stockItems.filter(item => item.stockAlertLevel === 'CRITICAL').length;
 
-    const coverageDays = stockItems
-      .filter(item => item.coverageDays && item.coverageDays > 0)
-      .map(item => item.coverageDays || 0);
-    const avgCoverageDays = coverageDays.length > 0 
-      ? coverageDays.reduce((a, b) => a + b, 0) / coverageDays.length 
+    const coverageValues = stockItems
+      .map(item => parseNumeric(item.coverageDays))
+      .filter((value): value is number => value !== undefined && value > 0);
+    const avgCoverageDays = coverageValues.length > 0
+      ? coverageValues.reduce((a, b) => a + b, 0) / coverageValues.length
       : 0;
 
-    const categoryRisks = categories?.map(cat => {
-      const catItems = stockItems.filter(item => getCategoryName(item) === cat.categoryName);
-      const riskCount = catItems.filter(item => 
-        item.currentQuantity <= (item.reorderLevel || item.minStockLevel)
-      ).length;
-      return { category: cat.categoryName, riskCount };
-    }) || [];
+    const highRiskItems = stockItems.filter(isHighRiskItem).length;
 
-    const highRiskCategories = categoryRisks.filter(c => c.riskCount > 0).length;
+    const totalValue = stockItems.reduce((sum, item) => {
+      const direct = parseNumeric(item.totalValue);
+      if (direct !== undefined) {
+        return sum + direct;
+      }
+      const quantity =
+        parseNumeric(item.currentQuantity) ??
+        parseNumeric(item.currentStock) ??
+        parseNumeric(item.quantity) ??
+        0;
+      const price = parseNumeric(item.unitPrice) ?? 0;
+      return sum + quantity * price;
+    }, 0);
 
-    const totalValue = stockItems.reduce((sum, item) => 
-      sum + ((item.totalValue || 0) || (item.currentQuantity * (item.unitPrice || 0))), 0
-    );
-
-    const lowStockItems = stockItems.filter(item => 
-      item.currentQuantity <= (item.reorderLevel || item.minStockLevel)
-    );
-    const lowStockValue = lowStockItems.reduce((sum, item) => 
-      sum + ((item.totalValue || 0) || (item.currentQuantity * (item.unitPrice || 0))), 0
-    );
+    const lowStockItems = stockItems.filter(item => {
+      const quantity =
+        parseNumeric(item.currentQuantity) ??
+        parseNumeric(item.currentStock) ??
+        parseNumeric(item.quantity) ??
+        0;
+      const threshold =
+        parseNumeric(item.reorderLevel) ??
+        parseNumeric(item.minStockLevel) ??
+        0;
+      return quantity <= threshold;
+    });
+    const lowStockValue = lowStockItems.reduce((sum, item) => {
+      const direct = parseNumeric(item.totalValue);
+      if (direct !== undefined) {
+        return sum + direct;
+      }
+      const quantity =
+        parseNumeric(item.currentQuantity) ??
+        parseNumeric(item.currentStock) ??
+        parseNumeric(item.quantity) ??
+        0;
+      const price = parseNumeric(item.unitPrice) ?? 0;
+      return sum + quantity * price;
+    }, 0);
 
     const healthScore = Math.max(0, 100 - (
       (itemsBelowROP * 2) + 
@@ -329,14 +399,14 @@ const InventoryHealthDashboard: React.FC = () => {
       itemsBelowROP,
       predictedStockOuts,
       avgCoverageDays: Math.round(avgCoverageDays),
-      highRiskCategories,
+      highRiskItems,
       criticalItems,
       healthScore: Math.round(healthScore),
       totalValue,
       lowStockValue,
       totalItems: stockItems.length
     };
-  }, [budgetKPIs, stockLevelsData, items, categories]);
+  }, [budgetKPIs, stockLevelsData, items]);
 
   // Filter items using stockLevelsData or fallback to items
   const filteredItems = useMemo(() => {
@@ -843,7 +913,7 @@ const InventoryHealthDashboard: React.FC = () => {
                   fontWeight: '500',
                   marginBottom: '12px'
                 }}>
-                  High-Risk Categories
+                  High-Risk Items
                 </div>
                 <div 
                   style={{ 
@@ -855,12 +925,12 @@ const InventoryHealthDashboard: React.FC = () => {
                     cursor: 'pointer'
                   }}
                 >
-                  <CountUp end={healthMetrics.highRiskCategories} duration={1500} />
+                  <CountUp end={healthMetrics.highRiskItems} duration={1500} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <AlertCircle size={14} color={COLORS.purple} />
                   <span style={{ fontSize: '12px', color: COLORS.gray }}>
-                    {categories?.length || 0} total
+                    {healthMetrics.totalItems} total
                   </span>
                 </div>
               </div>

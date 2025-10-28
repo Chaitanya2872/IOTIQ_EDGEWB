@@ -47,9 +47,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Check authentication on mount
-  useEffect(() => {
+useEffect(() => {
+  const token = localStorage.getItem('accessToken');
+
+  // 🧠 Only check auth if a token exists
+  if (token) {
     checkAuth();
-  }, []);
+  } else {
+    // Skip backend call, render login immediately
+    setLoading(false);
+  }
+}, []);
+
 
   const login = async (credentials: SignInRequest) => {
     const authResponse = await signIn(credentials);

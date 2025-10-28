@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-
 export type SignInRequest = {
   email: string;
   password: string;
@@ -10,52 +7,20 @@ export type SignUpRequest = {
   fullName: string;
   email: string;
   password: string;
-  roles: string[]; 
+  roles: string[];
 };
 
 export type AuthResponse = {
   accessToken: string;
   refreshToken: string;
-  tokenType: string; 
+  tokenType: string;
   userId: number;
   fullName: string;
   email: string;
   roles: string[];
 };
 
-const VITE_ENV: any = (import.meta as any).env || {};
-const API_BASE = VITE_ENV.VITE_AUTH_API_BASE_URL || VITE_ENV.VITE_API_BASE_URL || "";
-
-async function request<T>(path: string, options: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const message = (data && (data.message || data.error)) || `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
-  return data as T;
-}
-
-export async function signIn(body: SignInRequest): Promise<AuthResponse> {
-  return request<AuthResponse>("/api/auth/signin", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-}
-
-export async function signUp(body: SignUpRequest): Promise<AuthResponse> {
-  return request<AuthResponse>("/api/auth/signup", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-}
-
-
-
-// Add these functions to your existing auth.ts file
+export type User = Pick<AuthResponse, 'userId' | 'fullName' | 'email' | 'roles'>;
 
 export type TokenValidationResponse = {
   valid: boolean;
@@ -65,55 +30,135 @@ export type TokenValidationResponse = {
   roles?: string[];
 };
 
-// Get stored authentication data
-export function getStoredAuth(): AuthResponse | null {
-  try {
-    const accessToken = localStorage.getItem("accessToken");
-    const refreshToken = localStorage.getItem("refreshToken");
-    const tokenType = localStorage.getItem("tokenType") || "Bearer";
-    const userStr = localStorage.getItem("user");
-    
-    if (!accessToken || !userStr) return null;
-    
-    const user = JSON.parse(userStr);
-    return {
-      accessToken,
-      refreshToken: refreshToken || "",
-      tokenType,
-      userId: user.userId,
-      fullName: user.fullName,
-      email: user.email,
-      roles: user.roles || []
-    };
-  } catch (error) {
-    console.error('Error getting stored auth:', error);
-    return null;
+export type AuthStatusResponse = {
+  isAuthenticated: boolean;
+  user: User | null;
+};
+
+const API_BASE = (import.meta.env.VITE_AUTH_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '') as string;
+
+const TIMEOUTS = {
+  VALIDATE_TOKEN: 10000,
+  REFRESH_TOKEN: 2000,
+  AUTH_CHECK: 3000,
+} as const;
+
+const API_ENDPOINTS = {
+  SIGN_IN: '/api/auth/signin',
+  SIGN_UP: '/api/auth/signup',
+  VALIDATE: '/api/validate',
+  REFRESH: '/api/auth/refresh',
+} as const;
+
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: 'accessToken',
+  REFRESH_TOKEN: 'refreshToken',
+  TOKEN_TYPE: 'tokenType',
+  USER: 'user',
+} as const;
+
+const extractErrorMessage = (data: unknown): string => {
+  if (typeof data === 'object' && data !== null) {
+    const { message, error } = data as Record<string, unknown>;
+    if (typeof message === 'string') return message;
+    if (typeof error === 'string') return error;
   }
+  return '';
+};
+
+const toUser = (auth: AuthResponse): User => ({
+  userId: auth.userId,
+  fullName: auth.fullName,
+  email: auth.email,
+  roles: auth.roles,
+});
+
+async function request<T>(path: string, options: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message = extractErrorMessage(data) || `Request failed: ${res.status}`;
+    throw new Error(message);
+  }
+  return data as T;
 }
 
-// Validate current token with your backend
-// ...existing code...
+export async function signIn(body: SignInRequest): Promise<AuthResponse> {
+  return request<AuthResponse>(API_ENDPOINTS.SIGN_IN, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function signUp(body: SignUpRequest): Promise<AuthResponse> {
+  return request<AuthResponse>(API_ENDPOINTS.SIGN_UP, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+const storage = {
+  getAccessToken: (): string | null => localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
+  getRefreshToken: (): string | null => localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
+  getTokenType: (): string => localStorage.getItem(STORAGE_KEYS.TOKEN_TYPE) || 'Bearer',
+  getUser: (): User | null => {
+    try {
+      const userStr = localStorage.getItem(STORAGE_KEYS.USER);
+      return userStr ? JSON.parse(userStr) : null;
+    } catch {
+      return null;
+    }
+  },
+  setAuth: (auth: AuthResponse): void => {
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, auth.accessToken);
+    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, auth.refreshToken);
+    localStorage.setItem(STORAGE_KEYS.TOKEN_TYPE, auth.tokenType);
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(toUser(auth)));
+  },
+  clear: (): void => {
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.TOKEN_TYPE);
+    localStorage.removeItem(STORAGE_KEYS.USER);
+  },
+};
+
+export function getStoredAuth(): AuthResponse | null {
+  const accessToken = storage.getAccessToken();
+  const refreshToken = storage.getRefreshToken();
+  const user = storage.getUser();
+
+  if (!accessToken || !user) return null;
+
+  return {
+    accessToken,
+    refreshToken: refreshToken || '',
+    tokenType: storage.getTokenType(),
+    ...user,
+  };
+}
+
 export async function validateToken(token: string): Promise<TokenValidationResponse> {
   const controller = new AbortController();
-  const signal = controller.signal;
-  // optional: auto-timeout to avoid hung requests
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.VALIDATE_TOKEN);
 
   try {
-    const res = await fetch(`${API_BASE}/api/validate`, {
+    const res = await fetch(`${API_BASE}${API_ENDPOINTS.VALIDATE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
-      signal,
+      signal: controller.signal,
     });
     clearTimeout(timeoutId);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const message = (data && (data.message || data.error)) || `validateToken failed: ${res.status}`;
+      const message = extractErrorMessage(data) || `validateToken failed: ${res.status}`;
       throw new Error(message);
     }
 
-    // Expect backend to return a shape compatible with TokenValidationResponse
     return {
       valid: !!data.valid,
       email: data.email,
@@ -121,34 +166,31 @@ export async function validateToken(token: string): Promise<TokenValidationRespo
       fullName: data.fullName,
       roles: data.roles || [],
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     clearTimeout(timeoutId);
-    // Treat AbortError as an expected cancellation
-    if (err?.name === 'AbortError') {
-      console.warn('validateToken aborted (expected when component unmounts or request cancelled)');
+    const error = err as DOMException | Error;
+    if (error?.name === 'AbortError') {
+      console.warn('validateToken aborted');
       return { valid: false };
     }
     console.error('Token validation error:', err);
     return { valid: false };
   }
 }
-// ...existing code...
 
-// Refresh token using your backend endpoint
 export async function refreshToken(): Promise<AuthResponse> {
-  const refreshToken = localStorage.getItem("refreshToken");
+  const token = storage.getRefreshToken();
 
-  if (!refreshToken) {
-    throw new Error("No refresh token available");
+  if (!token) {
+    throw new Error('No refresh token available');
   }
 
-  try {
-    // Your backend expects refreshToken as query parameter
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.REFRESH_TOKEN);
 
-    const res = await fetch(`${API_BASE}/api/auth/refresh?refreshToken=${encodeURIComponent(refreshToken)}`, {
-      method: "POST",
+  try {
+    const res = await fetch(`${API_BASE}${API_ENDPOINTS.REFRESH}?refreshToken=${encodeURIComponent(token)}`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
     });
@@ -157,143 +199,67 @@ export async function refreshToken(): Promise<AuthResponse> {
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const message = (data && (data.message || data.error)) || `Token refresh failed: ${res.status}`;
+      const message = extractErrorMessage(data) || `Token refresh failed: ${res.status}`;
       throw new Error(message);
     }
 
-    // Update stored tokens
-    storeAuth(data);
+    storage.setAuth(data);
     return data as AuthResponse;
   } catch (error) {
-    // Clear invalid tokens
-    clearAuth();
+    storage.clear();
     throw error;
   }
 }
 
-// Check authentication status on app load
-export async function checkAuthStatus(): Promise<{ isAuthenticated: boolean; user: any | null }> {
+export async function checkAuthStatus(): Promise<AuthStatusResponse> {
   const storedAuth = getStoredAuth();
 
-  if (!storedAuth) {
+  // 🚀 Quick exit if token missing or empty
+  if (!storedAuth?.accessToken || storedAuth.accessToken === 'undefined') {
     return { isAuthenticated: false, user: null };
   }
 
-  // If no API base URL configured, skip server validation
-  if (!API_BASE) {
-    return {
-      isAuthenticated: true, // Assume valid if stored and no API check
-      user: {
-        userId: storedAuth.userId,
-        fullName: storedAuth.fullName,
-        email: storedAuth.email,
-        roles: storedAuth.roles
-      }
-    };
-  }
-  
-  try {
-    // Add overall timeout for auth check
-    const authCheckPromise = (async () => {
-      // First validate current token
+  const user = toUser(storedAuth);
+
+  // ⏱ Short timeout for validation (default 1s fallback)
+  const AUTH_CHECK_TIMEOUT = 1000;
+
+  const authCheckPromise = (async (): Promise<AuthStatusResponse> => {
+    try {
       const validation = await validateToken(storedAuth.accessToken);
-    
-    if (validation.valid) {
-      return {
-        isAuthenticated: true,
-        user: {
-          userId: storedAuth.userId,
-          fullName: storedAuth.fullName,
-          email: storedAuth.email,
-          roles: storedAuth.roles
-        }
-      };
-    } else {
-      // Try to refresh token
-      try {
-        const newAuth = await refreshToken();
-        return {
-          isAuthenticated: true,
-          user: {
-            userId: newAuth.userId,
-            fullName: newAuth.fullName,
-            email: newAuth.email,
-            roles: newAuth.roles
-          }
-        };
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        return { isAuthenticated: false, user: null };
+
+      if (validation.valid) {
+        return { isAuthenticated: true, user };
       }
+
+      // Try refresh token if access invalid
+      await refreshToken();
+      return { isAuthenticated: true, user };
+    } catch (err) {
+      console.warn("Auth validation or refresh failed:", err);
+      return { isAuthenticated: false, user: null };
     }
-    })();
+  })();
 
-    // Race against a timeout
-    const timeoutPromise = new Promise<{ isAuthenticated: boolean; user: any | null }>((resolve) => {
-      setTimeout(() => {
-        console.log('Auth check timed out, using stored auth');
-        resolve({
-          isAuthenticated: true, // Assume valid if stored
-          user: {
-            userId: storedAuth.userId,
-            fullName: storedAuth.fullName,
-            email: storedAuth.email,
-            roles: storedAuth.roles
-          }
-        });
-      }, 3000); // 3 second overall timeout
-    });
+  // Fallback in case backend is slow or unreachable
+  const timeoutPromise = new Promise<AuthStatusResponse>((resolve) => {
+    setTimeout(() => {
+      console.log("Auth check timed out — defaulting to stored auth.");
+      resolve({ isAuthenticated: true, user });
+    }, AUTH_CHECK_TIMEOUT);
+  });
 
+  try {
+    // whichever finishes first (validation or timeout)
     return await Promise.race([authCheckPromise, timeoutPromise]);
   } catch (error) {
-    console.error('Auth status check failed:', error);
-    // Even on error, return stored auth to avoid blocking
-    return {
-      isAuthenticated: true,
-      user: {
-        userId: storedAuth.userId,
-        fullName: storedAuth.fullName,
-        email: storedAuth.email,
-        roles: storedAuth.roles
-      }
-    };
+    console.error("Auth status check error:", error);
+    return { isAuthenticated: false, user: null };
   }
 }
 
-// Clear authentication data
-export function clearAuth() {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("tokenType");
-  localStorage.removeItem("user");
-}
 
-// Get current user info
-export function getCurrentUser() {
-  const userStr = localStorage.getItem("user");
-  if (!userStr) return null;
-  
-  try {
-    return JSON.parse(userStr);
-  } catch (error) {
-    console.error('Error parsing user data:', error);
-    return null;
-  }
-}
-
-// Get current access token
-export function getAccessToken(): string | null {
-  return localStorage.getItem("accessToken");
-}
-
-export function storeAuth(auth: AuthResponse) {
-  localStorage.setItem("accessToken", auth.accessToken);
-  localStorage.setItem("refreshToken", auth.refreshToken);
-  localStorage.setItem("tokenType", auth.tokenType);
-  localStorage.setItem("user", JSON.stringify({
-    userId: auth.userId,
-    fullName: auth.fullName,
-    email: auth.email,
-    roles: auth.roles,
-  }));
-}
+export const clearAuth = storage.clear;
+export const getCurrentUser = storage.getUser;
+export const getAccessToken = storage.getAccessToken;
+export const storeAuth = storage.setAuth;

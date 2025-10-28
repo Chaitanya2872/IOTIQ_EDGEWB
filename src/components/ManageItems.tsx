@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import type { UploadProps, UploadFile } from 'antd';
 import { useItems, useCategories } from '../api/hooks';
-import type { Item } from '../api/inventory';
+import type { Item, UploadConsumptionResponse, UploadItemsResponse } from '../api/inventory';
 import { UploadAPI } from '../api/inventory';
 import ManageItemsCards from './ManageItemsCards';
 import { Edit3, Trash2, Clock, TrendingUp, Download, Upload as UploadIcon, FileSpreadsheet, TableIcon } from 'lucide-react';
@@ -256,122 +256,47 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
   }, [visible]);
 
   // Generate XLSX template
-  const downloadTemplate = () => {
-    let data: any[] = [];
-    let filename = '';
-
-    if (type === 'items') {
-      data = [
-        { 
-          Category: 'HK Chemicals', 
-          'Item Name': 'Pril-Dishwash', 
-          'Item SKU': '125ml', 
-          UOM: 'Bottle', 
-          Price: 17.00, 
-          Stock: 50, 
-          'Reorder Level': 10 
-        },
-        { 
-          Category: 'HK Chemicals', 
-          'Item Name': 'Pril-Dishwash', 
-          'Item SKU': '500ml', 
-          UOM: 'Bottle', 
-          Price: 52.00, 
-          Stock: 30, 
-          'Reorder Level': 10 
-        },
-        { 
-          Category: 'Beverages', 
-          'Item Name': 'Coffee Beans', 
-          'Item SKU': '500g', 
-          UOM: 'kg', 
-          Price: 450, 
-          Stock: 20, 
-          'Reorder Level': 5 
-        },
-        { 
-          Category: 'Pantry Items', 
-          'Item Name': 'Sugar', 
-          'Item SKU': '1kg', 
-          UOM: 'kg', 
-          Price: 45, 
-          Stock: 100, 
-          'Reorder Level': 20 
-        },
-        { 
-          Category: 'Cleaning', 
-          'Item Name': 'Hand Soap', 
-          'Item SKU': '100ml', 
-          UOM: 'Bottle', 
-          Price: 15, 
-          Stock: 75, 
-          'Reorder Level': 15 
-        }
-      ];
-      filename = 'items_template.xlsx';
-    } else {
-      data = [
-        { 
-          'Item Name': 'Pril-Dishwash', 
-          'Item SKU': '125ml', 
-          Date: '2024-01-15', 
-          'Opening Stock': 50, 
-          'Received Quantity': 10, 
-          'Consumed Quantity': 5, 
-          'Closing Stock': 55, 
-          Department: 'Kitchen', 
-          Notes: 'Regular usage' 
-        },
-        { 
-          'Item Name': 'Coffee Beans', 
-          'Item SKU': '500g', 
-          Date: '2024-01-15', 
-          'Opening Stock': 20, 
-          'Received Quantity': 0, 
-          'Consumed Quantity': 2, 
-          'Closing Stock': 18, 
-          Department: 'Pantry', 
-          Notes: 'Morning coffee' 
-        },
-        { 
-          'Item Name': 'Sugar', 
-          'Item SKU': '1kg', 
-          Date: '2024-01-15', 
-          'Opening Stock': 100, 
-          'Received Quantity': 50, 
-          'Consumed Quantity': 10, 
-          'Closing Stock': 140, 
-          Department: 'Pantry', 
-          Notes: 'Event catering' 
-        },
-        { 
-          'Item Name': 'Hand Soap', 
-          'Item SKU': '100ml', 
-          Date: '2024-01-15', 
-          'Opening Stock': 75, 
-          'Received Quantity': 0, 
-          'Consumed Quantity': 8, 
-          'Closing Stock': 67, 
-          Department: 'Restroom', 
-          Notes: '' 
-        }
-      ];
-      filename = 'consumption_template.xlsx';
+ // Fetch and download XLSX template from API
+  // Download Excel template from API
+  const downloadTemplate = async () => {
+    try {
+      message.loading({ content: 'Downloading template...', key: 'template-download' });
+      
+      // Fetch blob from API
+      const blob = type === 'items' 
+        ? await UploadAPI.getItemsTemplate()
+        : await UploadAPI.getConsumptionTemplate();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = type === 'items' ? 'items_template.xlsx' : 'consumption_template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      message.success({ 
+        content: `Template downloaded successfully`, 
+        key: 'template-download',
+        duration: 2
+      });
+      
+    } catch (error: any) {
+      console.error('Template download error:', error);
+      message.error({ 
+        content: error?.message || 'Failed to download template. Please try again.', 
+        key: 'template-download',
+        duration: 3
+      });
     }
+  };
 
     // Create workbook and worksheet
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    (XLSX as any).utils.book_append_sheet(wb, ws, type === 'items' ? 'Items' : 'Consumption');
-
-    // Auto-size columns
-    const maxWidth = data.reduce((w, r) => Math.max(w, ...Object.keys(r).map(k => k.length)), 10);
-    ws['!cols'] = Object.keys(data[0]).map(() => ({ wch: maxWidth + 2 }));
-
-    // Download
-    XLSX.writeFile(wb, filename);
-    message.success(`${filename} downloaded`);
-  };
+    
 
   const handleUpload = async () => {
     if (fileList.length === 0) {
@@ -387,96 +312,110 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
         ? await UploadAPI.uploadItems(file)
         : await UploadAPI.uploadConsumption(file);
       
-      if (result.success) {
-        const count = type === 'items' ? result.itemsCreated : result.recordsCreated;
-        message.success(`Successfully ${type === 'items' ? 'created' : 'recorded'} ${count} ${type === 'items' ? 'items' : 'records'}`);
+      const isConsumption = type === 'consumption';
+      const records = isConsumption 
+        ? (result as UploadConsumptionResponse).records 
+        : (result as UploadItemsResponse).items;
+      
+      const count = records?.length || 0;
+      const hasRecords = count > 0;
+      const hasErrors = (result.creationErrors?.length || 0) > 0;
+      
+      if (hasRecords && !hasErrors) {
+        message.success(`Successfully ${isConsumption ? 'recorded' : 'created'} ${count} ${isConsumption ? 'records' : 'items'}`);
         setFileList([]);
         onRefresh();
-        
-        // Show detailed results if there are warnings or errors
-        if (result.warnings?.length > 0 || result.parseErrors?.length > 0 || result.creationErrors?.length > 0) {
-          setTimeout(() => {
-            Modal.info({
-              title: `Upload Results - ${type === 'items' ? 'Items' : 'Consumption'}`,
-              width: 700,
-              content: (
-                <div>
-                  <p><strong>Total Rows Processed:</strong> {result.totalRowsProcessed}</p>
-                  <p><strong>{type === 'items' ? 'Items Created' : 'Records Created'}:</strong> {count}</p>
-                  {type === 'consumption' && result.missingItemsCount > 0 && (
-                    <p><strong>Missing Items:</strong> {result.missingItemsCount}</p>
-                  )}
-                  
-                  {result.parseErrors?.length > 0 && (
-                    <Alert 
-                      type="warning" 
-                      message="Parse Errors" 
-                      description={
-                        <div style={{ maxHeight: 150, overflow: 'auto' }}>
-                          {result.parseErrors.slice(0, 10).map((e: string, i: number) => (
-                            <div key={i} style={{ fontSize: '12px' }}>• {e}</div>
-                          ))}
-                          {result.parseErrors.length > 10 && (
-                            <div style={{ fontSize: '12px', marginTop: 4 }}>
-                              ... and {result.parseErrors.length - 10} more
-                            </div>
-                          )}
-                        </div>
-                      }
-                      style={{ marginTop: 12 }}
-                    />
-                  )}
-                  
-                  {result.creationErrors?.length > 0 && (
-                    <Alert 
-                      type="error" 
-                      message="Creation Errors" 
-                      description={
-                        <div style={{ maxHeight: 150, overflow: 'auto' }}>
-                          {result.creationErrors.slice(0, 10).map((e: string, i: number) => (
-                            <div key={i} style={{ fontSize: '12px' }}>• {e}</div>
-                          ))}
-                          {result.creationErrors.length > 10 && (
-                            <div style={{ fontSize: '12px', marginTop: 4 }}>
-                              ... and {result.creationErrors.length - 10} more
-                            </div>
-                          )}
-                        </div>
-                      }
-                      style={{ marginTop: 12 }}
-                    />
-                  )}
-                  
-                  {result.warnings?.length > 0 && (
-                    <Alert 
-                      type="warning" 
-                      message="Warnings" 
-                      description={
-                        <div style={{ maxHeight: 200, overflow: 'auto' }}>
-                          {result.warnings.slice(0, 15).map((w: string, i: number) => (
-                            <div key={i} style={{ fontSize: '12px' }}>{w}</div>
-                          ))}
-                          {result.warnings.length > 15 && (
-                            <div style={{ fontSize: '12px', marginTop: 4 }}>
-                              ... and {result.warnings.length - 15} more
-                            </div>
-                          )}
-                        </div>
-                      }
-                      style={{ marginTop: 12 }}
-                    />
-                  )}
-                </div>
-              )
-            });
-          }, 500);
-        }
-        
         onCancel();
-      } else {
+      } else if (hasRecords) {
+        message.warning(`Uploaded with ${count} ${isConsumption ? 'records' : 'items'}, but some errors occurred`);
+        setFileList([]);
+        onRefresh();
+      }
+      
+      if (result.warnings?.length > 0 || result.parseErrors?.length > 0 || result.creationErrors?.length > 0) {
+        setTimeout(() => {
+          Modal.info({
+            title: `Upload Results - ${isConsumption ? 'Consumption' : 'Items'}`,
+            width: 700,
+            content: (
+              <div>
+                <p><strong>{isConsumption ? 'Records' : 'Items'} Processed:</strong> {count}</p>
+                {result.totalRowsProcessed !== undefined && (
+                  <p><strong>Total Rows Processed:</strong> {result.totalRowsProcessed}</p>
+                )}
+                {isConsumption && (result as UploadConsumptionResponse).missingItemsCount && (
+                  <p><strong>Missing Items:</strong> {(result as UploadConsumptionResponse).missingItemsCount}</p>
+                )}
+                
+                {result.parseErrors?.length > 0 && (
+                  <Alert 
+                    type="warning" 
+                    message="Parse Errors" 
+                    description={
+                      <div style={{ maxHeight: 150, overflow: 'auto' }}>
+                        {result.parseErrors.slice(0, 10).map((e: string, i: number) => (
+                          <div key={i} style={{ fontSize: '12px' }}>• {e}</div>
+                        ))}
+                        {result.parseErrors.length > 10 && (
+                          <div style={{ fontSize: '12px', marginTop: 4 }}>
+                            ... and {result.parseErrors.length - 10} more
+                          </div>
+                        )}
+                      </div>
+                    }
+                    style={{ marginTop: 12 }}
+                  />
+                )}
+                
+                {result.creationErrors?.length > 0 && (
+                  <Alert 
+                    type="error" 
+                    message="Creation Errors" 
+                    description={
+                      <div style={{ maxHeight: 150, overflow: 'auto' }}>
+                        {result.creationErrors.slice(0, 10).map((e: string, i: number) => (
+                          <div key={i} style={{ fontSize: '12px' }}>• {e}</div>
+                        ))}
+                        {result.creationErrors.length > 10 && (
+                          <div style={{ fontSize: '12px', marginTop: 4 }}>
+                            ... and {result.creationErrors.length - 10} more
+                          </div>
+                        )}
+                      </div>
+                    }
+                    style={{ marginTop: 12 }}
+                  />
+                )}
+                
+                {result.warnings?.length > 0 && (
+                  <Alert 
+                    type="warning" 
+                    message="Warnings" 
+                    description={
+                      <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                        {result.warnings.slice(0, 15).map((w: string, i: number) => (
+                          <div key={i} style={{ fontSize: '12px' }}>{w}</div>
+                        ))}
+                        {result.warnings.length > 15 && (
+                          <div style={{ fontSize: '12px', marginTop: 4 }}>
+                            ... and {result.warnings.length - 15} more
+                          </div>
+                        )}
+                      </div>
+                    }
+                    style={{ marginTop: 12 }}
+                  />
+                )}
+              </div>
+            )
+          });
+        }, 500);
+      }
+      
+      if (!hasRecords && hasErrors) {
         Modal.error({
           title: 'Upload Failed',
-          content: result.message || 'Upload failed. Please check your file format.'
+          content: 'No records could be created. Please check your file format and try again.'
         });
       }
     } catch (e: any) {
@@ -726,10 +665,10 @@ const ManageItems: React.FC = () => {
     },
     {
       title: 'Item SKU',
-      dataIndex: 'itemCode',
-      key: 'itemCode',
+      dataIndex: 'itemSku',
+      key: 'itemSku',
       width: 120,
-      sorter: (a: any, b: any) => String(a.itemCode || '').localeCompare(String(b.itemCode || ''))
+      sorter: (a: any, b: any) => String(a.itemSku || '').localeCompare(String(b.itemSku || ''))
     },
     {
       title: 'Qty',
@@ -818,21 +757,21 @@ const ManageItems: React.FC = () => {
       key: 'lastUpdated',
       width: 150,
       sorter: (a: any, b: any) => {
-        const dateA = a.updated_at || '';
-        const dateB = b.updated_at || '';
-        return dateA.localeCompare(dateB);
+        const getTs = (r: any) => {
+          const d = r.lastConsumedAt ?? r.lastConsumedDate ?? r.last_consumed ?? r.lastConsumptionDate ?? r.last_consumption_date ?? r.updated_at ?? r.updatedAt ?? null;
+          const dt = d ? dayjs(d) : null;
+          return dt && dt.isValid() ? dt.valueOf() : 0;
+        };
+        return getTs(a) - getTs(b);
       },
       render: (_: any, rec: any) => {
-        const lastDate = rec.updated_at;
-        if (!lastDate) return <Tag color="default">—</Tag>;
-        const date = new Date(lastDate);
+        const last = rec.lastConsumedAt ?? rec.lastConsumedDate ?? rec.last_consumed ?? rec.lastConsumptionDate ?? rec.last_consumption_date ?? rec.updated_at ?? rec.updatedAt ?? null;
+        if (!last) return <Tag color="default">—</Tag>;
+        const d = dayjs(last);
+        if (!d.isValid()) return <Tag color="default">—</Tag>;
         return (
           <div style={{ fontSize: '12px' }}>
-            {date.toLocaleDateString('en-IN', { 
-              year: 'numeric', 
-              month: 'short', 
-              day: 'numeric' 
-            })}
+            {d.format('D MMM YYYY')}
           </div>
         );
       }

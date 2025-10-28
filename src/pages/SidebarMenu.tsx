@@ -69,12 +69,12 @@ const MENU_ITEMS: MenuConfig[] = [
     children: [
       { key: "inventory-analytics", label: "Executive Overview", path: "/inventory/analytics" },
       { key: "inventory-dashboard", label: "Inventory  Health", path: "/inventory" },
-      { key: "inventory-predictive-inserts", label: "Predictive Inserts", path: "/inventory/predictive-inserts" },
-      { key: "inventory-predictive-analysis", label: "Predictive Analysis", path: "/inventory/predictive-analysis" },
-      { key: "inventory-consumption", label: "Consumption & Stock Usage", path: "/inventory/consumption-inventory" },
-      { key: "inventory-budget", label: "Financial Impact", path: "/inventory/budget-analysis" },
-      { key: "inventory-categories", label: "Categories", path: "/inventory/categories" },
-      { key: "inventory-items", label: "Items", path: "/inventory/items" },
+      /*{ key: "inventory-predictive-inserts", label: "Predictive Inserts", path: "/inventory/predictive-inserts" },
+      { key: "inventory-predictive-analysis", label: "Predictive Analysis", path: "/inventory/predictive-analysis" },*/
+      { key: "inventory-consumption", label: "Consumption & Usage", path: "/inventory/consumption-inventory" },
+      { key: "inventory-budget", label: "Budget Analysis", path: "/inventory/budget-analysis" },
+      { key: "inventory-categories", label: "Manage Categories", path: "/inventory/categories" },
+      { key: "inventory-items", label: "Manage Items", path: "/inventory/items" },
     ],
   },
   {

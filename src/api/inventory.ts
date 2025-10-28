@@ -22,9 +22,10 @@ export type Item = {
   itemName: string;
   itemDescription: string;
   itemCode: string;
+  itemSku: string;
   currentQuantity: number;
-  totalReceivedStock?: number;  
-  totalConsumedStock? : number;
+  totalReceivedStock?: number;
+  totalConsumedStock?: number;
   totalOpeningStock?: number;
   monthConsumedStock?: number; 
   monthReceivedStock?: number;
@@ -129,13 +130,15 @@ export type StockDistributionCategoryResponse = {
 
 export type MonthlyStockValueTrendResponse = {
   trendData: Array<{
-    stockValue: number;
+    totalMonthlyConsumptionValue: number;
     month: string;
     monthName: string;
+    averageDailyConsumptionValue: number;
   }>;
   totalMonths: number;
   startDate: string;
   endDate: string;
+  formula: string;
 };
 
 export type TopConsumersResponse = {
@@ -156,14 +159,306 @@ export type TopConsumersResponse = {
 };
 
 
+export type SmartInsightsResponse = {
+  analysisDepth: string;
+  analysisPeriod: {
+    startDate: string;
+    endDate: string;
+    daysAnalyzed: number;
+  };
+  minConfidence: number;
+  generatedAt: string;
+  
+  criticalAlerts: Array<{
+    type: string;
+    severity: string;
+    priority: number;
+    itemId: number;
+    itemName: string;
+    categoryName: string;
+    daysRemaining?: number;
+    currentStock?: number;
+    avgDailyConsumption?: number;
+    spikePercentage?: number;
+    recentAvg?: number;
+    previousAvg?: number;
+    message: string;
+    action: string;
+  }>;
+  
+  anomalies: Array<{
+    type: string;
+    itemId: number;
+    itemName: string;
+    categoryName: string;
+    confidence: number;
+    mean: number;
+    stdDev: number;
+    outlierCount: number;
+    totalRecords: number;
+    message: string;
+    outlierDates: Array<{
+      date: string;
+      quantity: number;
+      deviation: number;
+    }>;
+  }>;
+  
+  trendInsights: {
+    overallTrend: {
+      direction: string;
+      strength: string;
+      slope: number;
+      interpretation: string;
+    };
+    monthlyData: Record<string, number>;
+    volatility: {
+      absolute: number;
+      percentage: number;
+      level: string;
+    };
+  };
+  
+  costOpportunities: Array<{
+    type: string;
+    priority: number;
+    itemId: number;
+    itemName: string;
+    categoryName: string;
+    currentTotalCost: number;
+    totalConsumption: number;
+    potentialSavings: number;
+    savingsPercentage: number;
+    message: string;
+    recommendation: string;
+  }>;
+  
+  forecastAccuracy: {
+    overallAccuracy: number;
+    rating: string;
+    totalForecast: number;
+    totalActual: number;
+    variance: number;
+    itemsAnalyzed: number;
+    message: string;
+  };
+  
+  seasonalPatterns: {
+    seasonalityDetected: boolean;
+    peakMonth?: string;
+    peakValue?: number;
+    lowMonth?: string;
+    lowValue?: number;
+    variance?: number;
+    variancePercent?: number;
+    message: string;
+  };
+  
+  inventoryHealthScore: {
+    overallScore: number;
+    rating: string;
+    healthyItems: number;
+    warningItems: number;
+    criticalItems: number;
+    totalItems: number;
+    healthyPercentage: number;
+    message: string;
+  };
+  
+  topMovers: {
+    topConsumers: Array<{
+      itemId: number;
+      itemName: string;
+      categoryName: string;
+      totalConsumption: number;
+      totalValue: number;
+    }>;
+    fastestGrowing: Array<{
+      itemId: number;
+      itemName: string;
+      categoryName: string;
+      growthRate: number;
+      firstHalfConsumption: number;
+      secondHalfConsumption: number;
+    }>;
+    highestValue: Array<{
+      itemId: number;
+      itemName: string;
+      categoryName: string;
+      totalValue: number;
+      totalConsumption: number;
+      unitPrice: number;
+    }>;
+  };
+  
+  predictions: Array<{
+    type: string;
+    itemId: number;
+    itemName: string;
+    categoryName: string;
+    daysUntilStockout?: number;
+    predictedDate?: string;
+    currentStock?: number;
+    avgDailyConsumption?: number;
+    predicted30DayConsumption?: number;
+    predicted30DayCost?: number;
+    confidence: number;
+    message: string;
+  }>;
+  
+  recommendations: Array<{
+    priority: number;
+    category: string;
+    title: string;
+    description: string;
+    action: string;
+    impact: string;
+    effort: string;
+    estimatedTime: string;
+    confidence?: number;
+    potentialSavings?: number;
+    relatedItems: Array<{
+      itemId: number;
+      itemName: string;
+    }>;
+  }>;
+  
+  summary: {
+    totalCriticalAlerts: number;
+    totalAnomalies: number;
+    totalCostOpportunities: number;
+    totalRecommendations: number;
+    overallHealthScore: number;
+    itemsAnalyzed: number;
+    recordsAnalyzed: number;
+  };
+};
+
+export type SmartInsightsSummaryResponse = {
+  summary: SmartInsightsResponse['summary'];
+  inventoryHealthScore: SmartInsightsResponse['inventoryHealthScore'];
+  criticalAlertsCount: number;
+  anomaliesCount: number;
+  costOpportunitiesCount: number;
+  topAlerts: SmartInsightsResponse['criticalAlerts'];
+  forecastAccuracy: SmartInsightsResponse['forecastAccuracy'];
+  generatedAt: string;
+};
+
+export type SmartRecommendationsResponse = {
+  recommendations: SmartInsightsResponse['recommendations'];
+  totalRecommendations: number;
+  filteredCount: number;
+  filters: {
+    minPriority: number;
+    limit: number;
+    categoryId: number | string;
+  };
+  generatedAt: string;
+};
+
+export type SmartAlertsResponse = {
+  alerts: SmartInsightsResponse['criticalAlerts'];
+  totalAlerts: number;
+  filteredCount: number;
+  criticalCount: number;
+  highCount: number;
+  filters: {
+    severity: string;
+    limit: number;
+    categoryId: number | string;
+  };
+  generatedAt: string;
+};
+
+export type SmartAnomaliesResponse = {
+  anomalies: SmartInsightsResponse['anomalies'];
+  totalAnomalies: number;
+  returnedCount: number;
+  averageConfidence: number;
+  filters: {
+    minConfidence: number;
+    limit: number;
+    categoryId: number | string;
+  };
+  generatedAt: string;
+};
+
+export type SmartHealthResponse = {
+  healthScore: SmartInsightsResponse['inventoryHealthScore'];
+  categoryFilter: number | string;
+  generatedAt: string;
+};
+
+
 
 export type AvailableDateResponse = {
-
     minDate: string,
     availableMonths: number,
     maxDate: string
-
 };
+
+export type UploadConsumptionRecord = {
+  consumptionDate: string;
+  item: {
+    itemName: string;
+    id: number;
+    category: {
+      id: number;
+      categoryName: string;
+    };
+    currentQuantity: number;
+  };
+  openingStock: number;
+  receivedQuantity: number;
+  closingStock: number;
+  id: number;
+  consumedQuantity: number;
+};
+
+export type UploadItemsRecord = {
+  id: number;
+  itemName: string;
+  itemCode: string;
+  itemSku: string;
+  category: {
+    id: number;
+    categoryName: string;
+  };
+  currentQuantity: number;
+  unitOfMeasurement: string;
+  unitPrice: number;
+  minStockLevel: number;
+  maxStockLevel: number;
+};
+
+export type UploadResponseBase = {
+  creationErrors: string[];
+};
+
+export type UploadConsumptionResponse = UploadResponseBase & {
+  records: UploadConsumptionRecord[];
+  parseErrors?: string[];
+  warnings?: string[];
+  totalRowsProcessed?: number;
+  recordsCreated?: number;
+  missingItemsCount?: number;
+  success?: boolean;
+};
+
+export type UploadItemsResponse = UploadResponseBase & {
+  items: UploadItemsRecord[];
+  parseErrors?: string[];
+  warnings?: string[];
+  totalRowsProcessed?: number;
+  itemsCreated?: number;
+  success?: boolean;
+};
+
+
+
+
+
 
 export type CostDistributionResponse = {
   period: string;
@@ -444,6 +739,10 @@ export type BinVarianceAnalysisResponse = {
     };
     year: number;
   }>;
+  formula : {
+    costVariance: string;
+    consumptionVariance: string;
+  };
   lastMonth: {
     bin1: {
       cost: number;
@@ -470,6 +769,14 @@ export type BinVarianceAnalysisResponse = {
       cost: number;
     };
     year: number;
+  };
+  trendSummary?: {
+    highestVarianceMonth: string;
+    totalCost: number;
+    averageConsumptionVariancePercent: number;
+    averageCostVariancePercent: number;
+    lowestVarianceMonth: string;
+    totalConsumption: number;
   };
 };
 
@@ -875,12 +1182,71 @@ costConsumption: (startDate?: string, endDate?: string) => {
     return cachedHttp<any>(`/api/analytics/stock-movements${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
+  
+  // Smart Insights - Full Analysis
+  smartInsights: (analysisDepth?: string, categoryId?: number, minConfidence?: number, includeRecommendations?: boolean) => {
+    const params = new URLSearchParams();
+    if (analysisDepth) params.append('analysisDepth', analysisDepth);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (minConfidence !== undefined) params.append('minConfidence', minConfidence.toString());
+    if (includeRecommendations !== undefined) params.append('includeRecommendations', includeRecommendations.toString());
+    const query = params.toString();
+    return cachedHttp<SmartInsightsResponse>(`/api/analytics/smart-insights${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Smart Insights - Summary Only
+  smartInsightsSummary: (categoryId?: number) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    const query = params.toString();
+    return cachedHttp<SmartInsightsSummaryResponse>(`/api/analytics/smart-insights/summary${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Smart Insights - Recommendations
+  smartRecommendations: (categoryId?: number, minPriority?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (minPriority) params.append('minPriority', minPriority.toString());
+    if (limit) params.append('limit', limit.toString());
+    const query = params.toString();
+    return cachedHttp<SmartRecommendationsResponse>(`/api/analytics/smart-insights/recommendations${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Smart Insights - Alerts
+  smartAlerts: (categoryId?: number, severity?: string, limit?: number) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (severity) params.append('severity', severity);
+    if (limit) params.append('limit', limit.toString());
+    const query = params.toString();
+    return cachedHttp<SmartAlertsResponse>(`/api/analytics/smart-insights/alerts${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Smart Insights - Anomalies
+  smartAnomalies: (categoryId?: number, minConfidence?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    if (minConfidence) params.append('minConfidence', minConfidence.toString());
+    if (limit) params.append('limit', limit.toString());
+    const query = params.toString();
+    return cachedHttp<SmartAnomaliesResponse>(`/api/analytics/smart-insights/anomalies${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+  // Smart Insights - Health Check
+  smartHealth: (categoryId?: number) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    const query = params.toString();
+    return cachedHttp<SmartHealthResponse>(`/api/analytics/smart-insights/health${query ? `?${query}` : ''}`, { method: "GET" });
+  },
+
+
   // Legacy stock analytics (keep for backward compatibility)
   stockAnalytics: () => cachedHttp<StockAnalyticsResponse>('/api/analytics/stock-levels', { method: "GET" }),
   stockAlerts: () => cachedHttp<any>('/api/analytics/stock-alerts', { method: "GET" }),
   topConsumers: (days?: number) => {
     const query = days ? `?days=${days}` : '';
-    return cachedHttp<TopConsumersResponse>(`/api/analytics/top-consumers${query}`, { method: "GET" });
+    return cachedHttp<TopConsumersResponse>(`/api/analytics/top-consuming-items${query}`, { method: "GET" });
   },
   inventoryValue: () => cachedHttp<any>('/api/analytics/inventory-value', { method: "GET" }),
   turnoverRatio: () => cachedHttp<any>('/api/analytics/turnover-ratio', { method: "GET" }),
@@ -1294,8 +1660,52 @@ export const UploadAPI = {
     return res.json();
   },
   
-  getItemsTemplate: () => http<any>(`/api/upload/template`, { method: 'GET' }),
-  getConsumptionTemplate: () => http<any>(`/api/upload/consumption/template`, { method: 'GET' }),
+  // ✅ UPDATED: Handle binary Excel file responses
+  getItemsTemplate: async (): Promise<Blob> => {
+    const accessToken = localStorage.getItem('accessToken');
+    const headers: HeadersInit = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(`${API_BASE}/api/templates/items`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to download items template: ${response.status} - ${errorText}`);
+    }
+
+    return response.blob();
+  },
+
+  getConsumptionTemplate: async (daysToGenerate?: number, categoryId?: number): Promise<Blob> => {
+    const params = new URLSearchParams();
+    if (daysToGenerate) params.append('daysToGenerate', daysToGenerate.toString());
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    const query = params.toString();
+
+    const accessToken = localStorage.getItem('accessToken');
+    const headers: HeadersInit = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(`${API_BASE}/api/templates/consumption${query ? `?${query}` : ''}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to download consumption template: ${response.status} - ${errorText}`);
+    }
+
+    return response.blob();
+  },
+  
   getItemsInstructions: () => http<any>(`/api/upload/instructions`, { method: 'GET' }),
   getConsumptionInstructions: () => http<any>(`/api/upload/consumption/instructions`, { method: 'GET' }),
 };
