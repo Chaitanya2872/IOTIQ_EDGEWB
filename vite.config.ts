@@ -56,10 +56,12 @@ export default defineConfig({
           
           // Split by route
           'inventory': [
-            './src/pages/InventoryAnalyticsPage.tsx',
-            './src/pages/InventoryDashboard.tsx',
-            './src/pages/ConsumptionInventory.tsx',
-            './src/pages/BudgetAnalysis.tsx',
+            './src/components/InventoryAnalytics.tsx',
+            './src/components/InventoryDashboard.tsx',
+            './src/components/ConsumptionInventory.tsx',
+            './src/components/BudgetAnalysis.tsx',
+            './src/components/ManageItems.tsx',
+            './src/components/ManageCategories.tsx'
           ],
         },
         
