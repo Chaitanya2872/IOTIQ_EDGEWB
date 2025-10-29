@@ -2,11 +2,26 @@
   "rewrites": [
     {
       "source": "/api8084/:path*",
-      "destination": "http://13.208.172.7:8084/api/:path*"
+      "destination": "https://user-service-v2xz.onrender.com/api/:path*"
     },
     {
       "source": "/api8082/:path*",
-      "destination": "http://15.168.240.206:8082/api/:path*"
+      "destination": "https://inventoryservice-jwh6.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }

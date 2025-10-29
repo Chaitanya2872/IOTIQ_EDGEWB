@@ -1,43 +1,108 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
-import autoprefixer from "autoprefixer";
-import cssnano from "cssnano";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
+// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), cssInjectedByJsPlugin()],
+  plugins: [react()],
+  
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+
+  // CSS Optimization
+  css: {
+    modules: {
+      localsConvention: 'camelCase',
+      generateScopedName: '[name]__[local]___[hash:base64:5]',
+    },
+    devSourcemap: true,
+  },
+
+  // Build Optimization
   build: {
-    chunkSizeWarningLimit: 1200, // optional – increase to reduce warnings
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // ✅ Split large dependencies into separate chunks
-          react: ["react", "react-dom", "react-router-dom"],
-          antd: ["antd", "@ant-design/icons"],
-          charts: ["recharts"],
-          utils: ["axios", "dayjs"],
-          others: ["xlsx", "papaparse"],
-        },
+    // Output directory
+    outDir: 'dist',
+    
+    // Generate source maps for debugging (disable in production if not needed)
+    sourcemap: false,
+    
+    // Minify CSS and JS
+    minify: 'terser',
+    
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.logs in production
+        drop_debugger: true,
       },
     },
-  },
-  css: {
-    postcss: {
-      plugins: [
-        autoprefixer(),
-        cssnano({ preset: "default" }),
-      ],
+
+    // CSS code splitting
+    cssCodeSplit: true,
+    
+    // Chunk size warnings
+    chunkSizeWarningLimit: 1000,
+    
+    rollupOptions: {
+      output: {
+        // Manual chunks for better caching
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['antd', 'lucide-react'],
+          'chart-vendor': ['recharts'],
+          
+          // Split by route
+          'inventory': [
+            './src/pages/InventoryAnalyticsPage.tsx',
+            './src/pages/InventoryDashboard.tsx',
+            './src/pages/ConsumptionInventory.tsx',
+            './src/pages/BudgetAnalysis.tsx',
+          ],
+        },
+        
+        // Asset file naming
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.')
+          const ext = info[info.length - 1]
+          
+          if (/\.(css)$/.test(assetInfo.name)) {
+            return `assets/css/[name]-[hash][extname]`
+          }
+          if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(assetInfo.name)) {
+            return `assets/images/[name]-[hash][extname]`
+          }
+          if (/\.(woff2?|eot|ttf|otf)$/i.test(assetInfo.name)) {
+            return `assets/fonts/[name]-[hash][extname]`
+          }
+          
+          return `assets/[name]-[hash][extname]`
+        },
+        
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+      },
+    },
+
+    // Optimize deps
+    commonjsOptions: {
+      include: [/node_modules/],
     },
   },
-  optimizeDeps: {
-    include: [
-      "react",
-      "react-dom",
-      "react-router-dom",
-      "antd",
-      "@ant-design/icons",
-      "axios",
-      "dayjs",
-    ],
+
+  // Development server
+  server: {
+    port: 3000,
+    open: true,
+    // Fix CORS issues in development
+    cors: true,
   },
-});
+
+  // Preview server (for testing production build)
+  preview: {
+    port: 4173,
+    open: true,
+  },
+})
