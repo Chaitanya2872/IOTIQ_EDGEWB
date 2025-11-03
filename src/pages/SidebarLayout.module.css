@@ -1,0 +1,133 @@
+/* 
+.appShell {
+  display: flex;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+}
+
+.sidebarWrapper {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.backdropSpacer {
+  flex-shrink: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mainArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.contentSurface {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  min-height: calc(100vh - 40px);
+} */
+
+
+/* .appShell {
+  display: flex;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+}
+
+.sidebarWrapper {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+}
+
+.backdropSpacer {
+  flex-shrink: 0;
+}
+
+.mainArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.contentSurface {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  min-height: calc(100vh - 40px);
+}
+
+ */
+/* SidebarLayout.module.css - Full Width, No Top Space */
+
+.appShell {
+  display: flex;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebarWrapper {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.backdropSpacer {
+  flex-shrink: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mainArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.contentSurface {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  border: none;
+  min-height: 100vh;
+  flex: 1;
+}
+
+/* Add padding to direct children of contentSurface */
+.contentSurface > * {
+  padding: 32px;
+}
+
+/* Ensure first child has consistent top padding */
+.contentSurface > *:first-child {
+  padding-top: 32px;
+}

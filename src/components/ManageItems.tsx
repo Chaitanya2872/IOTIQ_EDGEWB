@@ -248,26 +248,27 @@ interface UploadModalProps {
 const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRefresh }) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!visible) {
       setFileList([]);
+      setSelectedFile(null);
     }
   }, [visible]);
 
-  // Generate XLSX template
- // Fetch and download XLSX template from API
-  // Download Excel template from API
   const downloadTemplate = async () => {
     try {
       message.loading({ content: 'Downloading template...', key: 'template-download' });
       
-      // Fetch blob from API
+      console.log('📥 Starting template download for:', type);
+      
       const blob = type === 'items' 
         ? await UploadAPI.getItemsTemplate()
         : await UploadAPI.getConsumptionTemplate();
       
-      // Create download link
+      console.log('✅ Blob received:', blob.size, 'bytes');
+      
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -275,9 +276,10 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
       document.body.appendChild(a);
       a.click();
       
-      // Cleanup
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
       
       message.success({ 
         content: `Template downloaded successfully`, 
@@ -286,31 +288,36 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
       });
       
     } catch (error: any) {
-      console.error('Template download error:', error);
+      console.error('❌ Template download error:', error);
       message.error({ 
-        content: error?.message || 'Failed to download template. Please try again.', 
+        content: error?.message || 'Failed to download template. Check console for details.', 
         key: 'template-download',
-        duration: 3
+        duration: 5
       });
     }
   };
 
-    // Create workbook and worksheet
-    
-
   const handleUpload = async () => {
-    if (fileList.length === 0) {
+    if (!selectedFile) {
       message.error('Please select a file first');
       return;
     }
+    
+    console.log('📤 Starting upload:', {
+      fileName: selectedFile.name,
+      fileSize: selectedFile.size,
+      fileType: selectedFile.type,
+      uploadType: type
+    });
 
-    const file = fileList[0].originFileObj as File;
     setUploading(true);
 
     try {
       const result = type === 'items' 
-        ? await UploadAPI.uploadItems(file)
-        : await UploadAPI.uploadConsumption(file);
+        ? await UploadAPI.uploadItems(selectedFile)
+        : await UploadAPI.uploadConsumption(selectedFile);
+      
+      console.log('✅ Upload result:', result);
       
       const isConsumption = type === 'consumption';
       const records = isConsumption 
@@ -322,13 +329,18 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
       const hasErrors = (result.creationErrors?.length || 0) > 0;
       
       if (hasRecords && !hasErrors) {
-        message.success(`Successfully ${isConsumption ? 'recorded' : 'created'} ${count} ${isConsumption ? 'records' : 'items'}`);
+        message.success({
+          content: `Successfully ${isConsumption ? 'recorded' : 'created'} ${count} ${isConsumption ? 'records' : 'items'}`,
+          duration: 3
+        });
         setFileList([]);
+        setSelectedFile(null);
         onRefresh();
-        onCancel();
+        setTimeout(() => onCancel(), 500);
       } else if (hasRecords) {
         message.warning(`Uploaded with ${count} ${isConsumption ? 'records' : 'items'}, but some errors occurred`);
         setFileList([]);
+        setSelectedFile(null);
         onRefresh();
       }
       
@@ -419,7 +431,11 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
         });
       }
     } catch (e: any) {
-      message.error(e?.message || 'Upload failed');
+      console.error('❌ Upload error:', e);
+      message.error({
+        content: e?.message || 'Upload failed. Check console for details.',
+        duration: 5
+      });
     } finally {
       setUploading(false);
     }
@@ -428,11 +444,37 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
   const uploadProps: UploadProps = {
     fileList,
     beforeUpload: (file) => {
-      setFileList([file]);
-      return false;
+      // Validate file size (10MB max)
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        message.error('File size must be less than 10MB');
+        return false;
+      }
+      
+      // Validate file type
+      if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        message.error('Only Excel files (.xlsx, .xls) are allowed');
+        return false;
+      }
+      
+      // Store the raw File object for upload
+      setSelectedFile(file);
+      
+      // Store in fileList for UI display
+      const uploadFile: UploadFile = {
+        uid: file.name,
+        name: file.name,
+        status: 'done',
+        size: file.size,
+        type: file.type,
+      };
+      setFileList([uploadFile]);
+      
+      return false; // Prevent automatic upload
     },
     onRemove: () => {
       setFileList([]);
+      setSelectedFile(null);
     },
     accept: '.xlsx,.xls',
     maxCount: 1,
@@ -453,7 +495,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
       }
       width={600}
       footer={[
-        <Button key="cancel" onClick={onCancel}>
+        <Button key="cancel" onClick={onCancel} disabled={uploading}>
           Cancel
         </Button>,
         <Button 
@@ -461,15 +503,15 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
           type="primary" 
           onClick={handleUpload}
           loading={uploading}
-          disabled={fileList.length === 0}
+          disabled={!selectedFile}
           icon={<UploadIcon size={14} />}
         >
-          Upload
+          {uploading ? 'Uploading...' : 'Upload'}
         </Button>
       ]}
     >
       <div style={{ padding: '8px 0' }}>
-        {/* Info Alert */}
+        {/* Important Info for Consumption */}
         {type === 'consumption' && (
           <Alert 
             message="Important: Items must exist before importing consumption records" 
@@ -493,7 +535,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
           <div style={{ fontSize: '12px', color: '#666', marginTop: 8 }}>
             {type === 'items' 
               ? 'Excel file with sample items (5 examples included)'
-              : 'Excel file with sample consumption records (4 examples included)'}
+              : 'Excel file with sample consumption records'}
           </div>
         </div>
 
@@ -503,7 +545,11 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
         <div style={{ marginBottom: 20 }}>
           <div style={{ marginBottom: 8, fontWeight: 500 }}>Step 2: Select File</div>
           <Upload {...uploadProps}>
-            <Button icon={<UploadIcon size={16} />} block size="large">
+            <Button 
+              icon={<UploadIcon size={16} />} 
+              block 
+              size="large"
+            >
               {fileList.length > 0 ? 'Change File' : 'Select Excel File'}
             </Button>
           </Upload>
@@ -515,7 +561,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
               borderRadius: 4,
               fontSize: '12px'
             }}>
-              Selected: <strong>{fileList[0].name}</strong>
+              Selected: <strong>{fileList[0].name}</strong> ({(fileList[0].size! / 1024).toFixed(1)} KB)
             </div>
           )}
         </div>

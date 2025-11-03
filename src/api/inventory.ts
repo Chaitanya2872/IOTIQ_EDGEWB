@@ -1571,8 +1571,14 @@ export const FootfallAPI = {
 };
 
 // Upload API
+// Upload API with better error handling and logging
 export const UploadAPI = {
-  uploadItems: async (file: File) => {
+  /**
+   * Upload items Excel file
+   */
+  uploadItems: async (file: File): Promise<UploadItemsResponse> => {
+    console.log('📤 Uploading items file:', file.name, file.size, 'bytes');
+    
     const form = new FormData();
     form.append('file', file);
     
@@ -1582,21 +1588,50 @@ export const UploadAPI = {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
     
-    const res = await fetch(`${API_BASE}/api/upload/items`, {
-      method: 'POST',
-      body: form,
-      headers,
-    });
-    
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Upload failed: ${res.status} - ${errorText}`);
+    try {
+      const res = await fetch(`${API_BASE}/api/upload/items`, {
+        method: 'POST',
+        body: form,
+        headers,
+      });
+      
+      console.log('📥 Upload response status:', res.status);
+      
+      // Try to parse response as JSON first
+      const contentType = res.headers.get('content-type');
+      let responseData;
+      
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await res.json();
+      } else {
+        const text = await res.text();
+        console.error('❌ Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${text.substring(0, 200)}`);
+      }
+      
+      console.log('📋 Upload response data:', responseData);
+      
+      if (!res.ok) {
+        const errorMsg = responseData?.message || responseData?.error || `Upload failed: ${res.status}`;
+        console.error('❌ Upload failed:', errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      console.log('✅ Upload successful:', responseData.itemsCreated || 0, 'items created');
+      return responseData;
+      
+    } catch (error: any) {
+      console.error('❌ Upload error:', error);
+      throw new Error(error?.message || 'Upload failed. Check console for details.');
     }
-    
-    return res.json();
   },
   
-  uploadConsumption: async (file: File) => {
+  /**
+   * Upload consumption Excel file
+   */
+  uploadConsumption: async (file: File): Promise<UploadConsumptionResponse> => {
+    console.log('📤 Uploading consumption file:', file.name, file.size, 'bytes');
+    
     const form = new FormData();
     form.append('file', file);
     
@@ -1606,21 +1641,132 @@ export const UploadAPI = {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
     
-    const res = await fetch(`${API_BASE}/api/upload/consumption`, {
-      method: 'POST',
-      body: form,
-      headers,
-    });
-    
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Upload failed: ${res.status} - ${errorText}`);
+    try {
+      const res = await fetch(`${API_BASE}/api/upload/consumption`, {
+        method: 'POST',
+        body: form,
+        headers,
+      });
+      
+      console.log('📥 Upload response status:', res.status);
+      
+      // Try to parse response as JSON first
+      const contentType = res.headers.get('content-type');
+      let responseData;
+      
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await res.json();
+      } else {
+        const text = await res.text();
+        console.error('❌ Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${text.substring(0, 200)}`);
+      }
+      
+      console.log('📋 Upload response data:', responseData);
+      
+      if (!res.ok) {
+        const errorMsg = responseData?.message || responseData?.error || `Upload failed: ${res.status}`;
+        console.error('❌ Upload failed:', errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      console.log('✅ Upload successful:', responseData.recordsCreated || 0, 'records created');
+      return responseData;
+      
+    } catch (error: any) {
+      console.error('❌ Upload error:', error);
+      throw new Error(error?.message || 'Upload failed. Check console for details.');
     }
-    
-    return res.json();
   },
   
+  /**
+   * Download items template
+   */
+  getItemsTemplate: async (): Promise<Blob> => {
+    console.log('📥 Downloading items template from:', `${API_BASE}/api/templates/items`);
+    
+    const accessToken = localStorage.getItem('accessToken');
+    const headers: HeadersInit = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/templates/items`, {
+        method: 'GET',
+        headers,
+      });
+
+      console.log('📋 Template response status:', response.status);
+      console.log('📋 Template response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Template download failed:', errorText);
+        throw new Error(`Failed to download items template: ${response.status} - ${errorText}`);
+      }
+
+      const blob = await response.blob();
+      console.log('✅ Template downloaded:', blob.size, 'bytes, type:', blob.type);
+      
+      return blob;
+      
+    } catch (error: any) {
+      console.error('❌ Template download error:', error);
+      throw new Error(error?.message || 'Failed to download template. Check console for details.');
+    }
+  },
+
+  /**
+   * Download consumption template
+   */
+  getConsumptionTemplate: async (daysToGenerate?: number, categoryId?: number): Promise<Blob> => {
+    const params = new URLSearchParams();
+    if (daysToGenerate) params.append('daysToGenerate', daysToGenerate.toString());
+    if (categoryId) params.append('categoryId', categoryId.toString());
+    const query = params.toString();
+    
+    const url = `${API_BASE}/api/templates/consumption${query ? `?${query}` : ''}`;
+    console.log('📥 Downloading consumption template from:', url);
+
+    const accessToken = localStorage.getItem('accessToken');
+    const headers: HeadersInit = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+
+      console.log('📋 Template response status:', response.status);
+      console.log('📋 Template response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Template download failed:', errorText);
+        throw new Error(`Failed to download consumption template: ${response.status} - ${errorText}`);
+      }
+
+      const blob = await response.blob();
+      console.log('✅ Template downloaded:', blob.size, 'bytes, type:', blob.type);
+      
+      return blob;
+      
+    } catch (error: any) {
+      console.error('❌ Template download error:', error);
+      throw new Error(error?.message || 'Failed to download template. Check console for details.');
+    }
+  },
+  
+  /**
+   * Validate items file before upload
+   */
   validateItems: async (file: File) => {
+    console.log('🔍 Validating items file:', file.name);
+    
     const form = new FormData();
     form.append('file', file);
     
@@ -1636,11 +1782,23 @@ export const UploadAPI = {
       headers,
     });
     
-    if (!res.ok) throw new Error(`Validation failed: ${res.status}`);
-    return res.json();
+    if (!res.ok) {
+      const error = await res.text();
+      console.error('❌ Validation failed:', error);
+      throw new Error(`Validation failed: ${res.status} - ${error}`);
+    }
+    
+    const result = await res.json();
+    console.log('✅ Validation result:', result);
+    return result;
   },
   
+  /**
+   * Validate consumption file before upload
+   */
   validateConsumption: async (file: File) => {
+    console.log('🔍 Validating consumption file:', file.name);
+    
     const form = new FormData();
     form.append('file', file);
     
@@ -1656,59 +1814,53 @@ export const UploadAPI = {
       headers,
     });
     
-    if (!res.ok) throw new Error(`Validation failed: ${res.status}`);
-    return res.json();
+    if (!res.ok) {
+      const error = await res.text();
+      console.error('❌ Validation failed:', error);
+      throw new Error(`Validation failed: ${res.status} - ${error}`);
+    }
+    
+    const result = await res.json();
+    console.log('✅ Validation result:', result);
+    return result;
   },
   
-  // ✅ UPDATED: Handle binary Excel file responses
-  getItemsTemplate: async (): Promise<Blob> => {
-    const accessToken = localStorage.getItem('accessToken');
-    const headers: HeadersInit = {};
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    const response = await fetch(`${API_BASE}/api/templates/items`, {
-      method: 'GET',
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to download items template: ${response.status} - ${errorText}`);
-    }
-
-    return response.blob();
-  },
-
-  getConsumptionTemplate: async (daysToGenerate?: number, categoryId?: number): Promise<Blob> => {
-    const params = new URLSearchParams();
-    if (daysToGenerate) params.append('daysToGenerate', daysToGenerate.toString());
-    if (categoryId) params.append('categoryId', categoryId.toString());
-    const query = params.toString();
-
-    const accessToken = localStorage.getItem('accessToken');
-    const headers: HeadersInit = {};
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    const response = await fetch(`${API_BASE}/api/templates/consumption${query ? `?${query}` : ''}`, {
-      method: 'GET',
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to download consumption template: ${response.status} - ${errorText}`);
-    }
-
-    return response.blob();
-  },
-  
+  /**
+   * Get upload instructions
+   */
   getItemsInstructions: () => http<any>(`/api/upload/instructions`, { method: 'GET' }),
   getConsumptionInstructions: () => http<any>(`/api/upload/consumption/instructions`, { method: 'GET' }),
 };
+
+// API Base URL - log it for debugging
+console.log('🌐 API Base URL:', API_BASE);
+console.log('🔑 Access Token:', localStorage.getItem('accessToken') ? 'Present' : 'Missing');
+
+// Health check function to test API connectivity
+export async function testAPIConnection() {
+  console.log('🏥 Testing API connection...');
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/upload/health`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ API is reachable:', data);
+      return { success: true, data };
+    } else {
+      console.error('❌ API returned error:', response.status);
+      return { success: false, status: response.status };
+    }
+  } catch (error: any) {
+    console.error('❌ Cannot reach API:', error.message);
+    return { success: false, error: error.message };
+  }
+}
 
 export function getApiBase() {
   return API_BASE;

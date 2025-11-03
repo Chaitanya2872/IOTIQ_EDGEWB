@@ -914,7 +914,7 @@ export const InventoryAnalyticsDashboard: React.FC = () => {
               zIndex: 10,
             }}
           >
-          <strong>Formula:</strong> Average Daily Stock Value = Total Monthly Consumption Value Ã· Days in Month
+          <strong>Formula:</strong> Total Monthly Consumption value of all categories combined in one month
           </div>
         </span>
 
@@ -992,6 +992,8 @@ export const InventoryAnalyticsDashboard: React.FC = () => {
     </div>
   </span>
 
+
+
   {forecastVsActualData.length === 0 && !budgetConsumption.loading && (
     <span
       style={{
@@ -1063,7 +1065,7 @@ export const InventoryAnalyticsDashboard: React.FC = () => {
         zIndex: 10
       }}
     >
-       <strong>Formula:</strong> Variance % = ((Bin2 âˆ’ Bin1) Ã· Bin1) Ã— 100
+       <strong>Formula:</strong> It shows how much the second bin has increased or decreased compared to the first bin in percentage; for example, if Bin1 is 100 and Bin2 is 120, the variance is 20%.
     </div>
   </span>
 </h3>
