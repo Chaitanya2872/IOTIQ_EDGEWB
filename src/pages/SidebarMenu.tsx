@@ -18,7 +18,7 @@ import {
   User,
 } from "lucide-react";
 import classNames from "classnames";
-import logo from '../assets/bms-rebrand-logo.svg';  // Updated this line
+import logo from '../assets/comp.svg';  // Updated this line
 
 import styles from "./SidebarMenu.module.css";
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, message } from 'antd';
 import { useAuth } from '../contexts/AuthContext';
-import logo from '../assets/logo.png';
+import comp from '../assets/comp.svg';
 import './AuthPage.css';
 
 type Props = {
@@ -37,7 +37,7 @@ const AuthPage: React.FC<Props> = ({ onAuthSuccess }) => {
         <div className="auth-content">
           <div className="auth-header">
             <div className="auth-logo">
-              <img src={logo} alt="Logo" />
+              <img src={comp} alt="Logo" />
             </div>
 
            

@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 import React, { useEffect, useMemo, useState } from 'react';
 import { 
   Button, Card, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Upload, 
@@ -238,6 +239,274 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   );
 };
 
+/**
+ * Detect if consumption file is WIDE format (dates as columns) or TALL format (date as row)
+ */
+function detectConsumptionFormat(rawData: any[][]): 'WIDE' | 'TALL' | 'UNKNOWN' {
+  // Check first 10 rows for headers
+  for (let i = 0; i < Math.min(10, rawData.length); i++) {
+    const row = rawData[i];
+    if (!row || row.length === 0) continue;
+    
+    const rowValues = row.map(cell => 
+      cell ? String(cell).trim().toLowerCase() : ''
+    );
+    
+    // WIDE format indicators: has date columns (DD/MM/YYYY, DD-Mon, etc.)
+    const dateColumnCount = rowValues.filter(val => {
+      // Check for date patterns: DD/MM/YYYY, DD-Mon, 01-Jun, 1-Jun, 01-Jun-2025
+      return /^\d{1,2}[-\/]\w{3}(?:[-\/]\d{4})?$/.test(val) || // 01-Jun or 01-Jun-2025
+             /^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(val) ||  // 01/06/2025 or 1/6/25
+             /^\d{2}-\w{3}$/.test(val);                         // 01-Jun
+    }).length;
+    
+    if (dateColumnCount >= 3) {
+      return 'WIDE';
+    }
+    
+    // TALL format indicators: has "date" column and "consumed" column
+    const hasDate = rowValues.some(val => val === 'date' || val.includes('date'));
+    const hasConsumed = rowValues.some(val => 
+      val.includes('consumed') || val.includes('consumption')
+    );
+    
+    if (hasDate && hasConsumed) {
+      return 'TALL';
+    }
+  }
+  
+  return 'UNKNOWN';
+}
+
+/**
+ * Preprocesses Excel file to handle templates with extra rows (titles, instructions, etc.)
+ * Detects where actual data headers start and creates a clean file for upload
+ * CRITICAL: For WIDE format consumption files, preserves ALL columns including date columns
+ * CRITICAL: Converts date headers from DD-Mon format to DD/MM/YYYY for backend compatibility
+ */
+async function preprocessExcelFile(file: File, type: 'items' | 'consumption'): Promise<File> {
+  console.log('🔍 Preprocessing Excel file...');
+  
+  try {
+    // Read the file
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer, {
+      cellStyles: true,
+      cellDates: true,
+      cellNF: true,
+      sheetStubs: false
+    });
+    
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rawData = XLSX.utils.sheet_to_json(firstSheet, { 
+      header: 1, // Get raw array of arrays
+      defval: null,
+      blankrows: false
+    }) as any[][];
+    
+    console.log('📊 Raw data rows:', rawData.length);
+    
+    // For consumption files, detect format first
+    if (type === 'consumption') {
+      const format = detectConsumptionFormat(rawData);
+      console.log('📋 Detected consumption format:', format);
+      
+      if (format === 'WIDE') {
+        // WIDE format: Minimal preprocessing - just remove completely empty rows
+        // and find the header row, but preserve ALL columns including date columns
+        console.log('✅ WIDE format detected - using minimal preprocessing');
+        
+        let headerRowIndex = -1;
+        
+        // Find header row - look for "item" or "category" column
+        for (let i = 0; i < Math.min(10, rawData.length); i++) {
+          const row = rawData[i];
+          if (!row || row.length === 0) continue;
+          
+          const rowValues = row.map(cell => 
+            cell ? String(cell).trim().toLowerCase() : ''
+          );
+          
+          // Header row should have "item" or "category" and at least 3 date columns
+          const hasItem = rowValues.some(val => 
+            val === 'item' || val === 'item name' || val.includes('item')
+          );
+          const dateCount = rowValues.filter(val => 
+            /^\d{1,2}[-\/]\w{3}(?:[-\/]\d{4})?$/.test(val) || // 01-Jun or 01-Jun-2025
+            /^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(val)     // 01/06/2025
+          ).length;
+          
+          if (hasItem && dateCount >= 3) {
+            headerRowIndex = i;
+            break;
+          }
+        }
+        
+        if (headerRowIndex === -1) {
+          console.warn('⚠️ Could not detect header row for WIDE format, using first row');
+          headerRowIndex = 0;
+        }
+        
+        console.log('✅ Found WIDE format header at row:', headerRowIndex);
+        
+        // Extract from header row onwards, keeping ALL columns
+        const cleanData = rawData.slice(headerRowIndex);
+        
+        // Only filter completely empty rows
+        const filteredData = cleanData.filter(row => 
+          row && row.some(cell => 
+            cell !== null && cell !== undefined && String(cell).trim() !== ''
+          )
+        );
+        
+        console.log('✅ WIDE format - preserved', filteredData.length - 1, 'data rows with', filteredData[0].length, 'columns');
+        
+        // Convert date headers to backend-compatible format (DD/MM/YYYY)
+        const headerRow = filteredData[0];
+        const currentYear = new Date().getFullYear();
+        
+        for (let i = 0; i < headerRow.length; i++) {
+          const header = String(headerRow[i] || '').trim();
+          
+          // Try to parse dates like "01-Jun", "1-Jun", "01-Jun-2025"
+          const dateMatch = header.match(/^(\d{1,2})[-\/](\w{3})(?:[-\/](\d{4}))?$/);
+          if (dateMatch) {
+            const day = dateMatch[1].padStart(2, '0');
+            const monthStr = dateMatch[2].toLowerCase();
+            const year = dateMatch[3] || currentYear;
+            
+            // Month mapping
+            const months: { [key: string]: string } = {
+              'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+              'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+              'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+            };
+            
+            const month = months[monthStr];
+            if (month) {
+              // Convert to DD/MM/YYYY format that backend can parse
+              headerRow[i] = `${day}/${month}/${year}`;
+              console.log(`📅 Converted date header: "${header}" → "${headerRow[i]}"`);
+            }
+          }
+        }
+        
+        // Create workbook preserving original structure with converted dates
+        const newWorkbook = XLSX.utils.book_new();
+        const newWorksheet = XLSX.utils.aoa_to_sheet(filteredData);
+        XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, 'Data');
+        
+        // Convert to file
+        const binaryString = XLSX.write(newWorkbook, { 
+          bookType: 'xlsx', 
+          type: 'binary' 
+        });
+        
+        const buffer = new ArrayBuffer(binaryString.length);
+        const view = new Uint8Array(buffer);
+        for (let i = 0; i < binaryString.length; i++) {
+          view[i] = binaryString.charCodeAt(i) & 0xFF;
+        }
+        
+        const blob = new Blob([buffer], { 
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+        
+        return new File([blob], file.name, { type: blob.type });
+      }
+    }
+    
+    // Standard preprocessing for ITEMS or TALL format consumption
+    const expectedHeaders = type === 'items' 
+      ? ['category', 'item name', 'item sku', 'uom', 'stock', 'price', 'reorder']
+      : ['item name', 'item sku', 'date', 'opening', 'received', 'consumed', 'closing', 'department', 'notes'];
+    
+    // Find the header row by looking for rows that contain expected column names
+    let headerRowIndex = -1;
+    let detectedHeaders: string[] = [];
+    
+    for (let i = 0; i < Math.min(10, rawData.length); i++) {
+      const row = rawData[i];
+      if (!row || row.length === 0) continue;
+      
+      // Convert row to strings and trim
+      const rowValues = row.map(cell => 
+        cell ? String(cell).trim().toLowerCase() : ''
+      );
+      
+      // Check if this row contains expected headers
+      const matchCount = expectedHeaders.filter(header => 
+        rowValues.some(val => val.includes(header))
+      ).length;
+      
+      // If we find at least 3 matching headers, this is likely the header row
+      if (matchCount >= 3) {
+        headerRowIndex = i;
+        detectedHeaders = row.map(cell => cell ? String(cell).trim() : '');
+        console.log('✅ Found header row at index:', headerRowIndex);
+        console.log('📋 Detected headers:', detectedHeaders);
+        break;
+      }
+    }
+    
+    if (headerRowIndex === -1) {
+      console.warn('⚠️ Could not detect header row, using first row');
+      headerRowIndex = 0;
+      detectedHeaders = rawData[0].map(cell => cell ? String(cell).trim() : '');
+    }
+    
+    // Extract data starting from header row
+    const cleanData = rawData.slice(headerRowIndex);
+    
+    // Filter out empty rows
+    const filteredData = cleanData.filter(row => 
+      row && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '')
+    );
+    
+    console.log('✅ Cleaned data rows:', filteredData.length - 1, '(excluding header)');
+    
+    // Create a new workbook with cleaned data
+    const newWorkbook = XLSX.utils.book_new();
+    const newWorksheet = XLSX.utils.aoa_to_sheet(filteredData);
+    
+    // Set column widths for better readability
+    const colWidths = filteredData[0].map(() => ({ wch: 15 }));
+    newWorksheet['!cols'] = colWidths;
+    
+    XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, 'Data');
+    
+    // Convert to binary and create new File
+    const binaryString = XLSX.write(newWorkbook, { 
+      bookType: 'xlsx', 
+      type: 'binary' 
+    });
+    
+    const buffer = new ArrayBuffer(binaryString.length);
+    const view = new Uint8Array(buffer);
+    for (let i = 0; i < binaryString.length; i++) {
+      view[i] = binaryString.charCodeAt(i) & 0xFF;
+    }
+    
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
+    
+    const processedFile = new File(
+      [blob], 
+      file.name, 
+      { type: blob.type }
+    );
+    
+    console.log('✅ File preprocessed successfully');
+    return processedFile;
+    
+  } catch (error: any) {
+    console.error('❌ Preprocessing error:', error);
+    console.warn('⚠️ Falling back to original file');
+    return file; // Return original file if preprocessing fails
+  }
+}
+
 interface UploadModalProps {
   visible: boolean;
   onCancel: () => void;
@@ -249,11 +518,19 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewData, setPreviewData] = useState<{
+    headers: string[];
+    rows: any[][];
+    totalRows: number;
+  } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setFileList([]);
       setSelectedFile(null);
+      setPreviewData(null);
+      setShowPreview(false);
     }
   }, [visible]);
 
@@ -297,6 +574,109 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
     }
   };
 
+  const generatePreview = async (file: File) => {
+    try {
+      console.log('🔍 Generating preview...');
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { cellDates: true });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawData = XLSX.utils.sheet_to_json(firstSheet, { 
+        header: 1,
+        defval: null,
+        blankrows: false
+      }) as any[][];
+      
+      // For consumption, detect format
+      let headerRowIndex = 0;
+      
+      if (type === 'consumption') {
+        const format = detectConsumptionFormat(rawData);
+        console.log('📋 Preview format detected:', format);
+        
+        if (format === 'WIDE') {
+          // For WIDE format, look for row with item/category + date columns
+          for (let i = 0; i < Math.min(10, rawData.length); i++) {
+            const row = rawData[i];
+            if (!row || row.length === 0) continue;
+            
+            const rowValues = row.map(cell => 
+              cell ? String(cell).trim().toLowerCase() : ''
+            );
+            
+            const hasItem = rowValues.some(val => 
+              val === 'item' || val === 'item name' || val.includes('item')
+            );
+            const dateCount = rowValues.filter(val => 
+              /^\d{1,2}[-\/]\w{3}(?:[-\/]\d{4})?$/.test(val) || // 01-Jun or 01-Jun-2025
+              /^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(val)     // 01/06/2025
+            ).length;
+            
+            if (hasItem && dateCount >= 3) {
+              headerRowIndex = i;
+              break;
+            }
+          }
+        } else {
+          // TALL format - use standard detection
+          const expectedHeaders = ['item name', 'date', 'consumed', 'opening', 'received', 'closing'];
+          for (let i = 0; i < Math.min(10, rawData.length); i++) {
+            const row = rawData[i];
+            if (!row || row.length === 0) continue;
+            
+            const rowValues = row.map(cell => 
+              cell ? String(cell).trim().toLowerCase() : ''
+            );
+            
+            const matchCount = expectedHeaders.filter(header => 
+              rowValues.some(val => val.includes(header))
+            ).length;
+            
+            if (matchCount >= 3) {
+              headerRowIndex = i;
+              break;
+            }
+          }
+        }
+      } else {
+        // Items format
+        const expectedHeaders = ['category', 'item name', 'item sku', 'uom', 'stock', 'price', 'reorder'];
+        for (let i = 0; i < Math.min(10, rawData.length); i++) {
+          const row = rawData[i];
+          if (!row || row.length === 0) continue;
+          
+          const rowValues = row.map(cell => 
+            cell ? String(cell).trim().toLowerCase() : ''
+          );
+          
+          const matchCount = expectedHeaders.filter(header => 
+            rowValues.some(val => val.includes(header))
+          ).length;
+          
+          if (matchCount >= 3) {
+            headerRowIndex = i;
+            break;
+          }
+        }
+      }
+      
+      const cleanData = rawData.slice(headerRowIndex).filter(row => 
+        row && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '')
+      );
+      
+      setPreviewData({
+        headers: cleanData[0].map(h => String(h || '')),
+        rows: cleanData.slice(1, 6), // Show first 5 data rows
+        totalRows: cleanData.length - 1
+      });
+      setShowPreview(true);
+      
+      console.log('✅ Preview generated:', cleanData.length - 1, 'data rows');
+    } catch (error: any) {
+      console.error('❌ Preview generation failed:', error);
+      message.warning('Could not generate preview, but you can still upload');
+    }
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) {
       message.error('Please select a file first');
@@ -313,10 +693,16 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
     setUploading(true);
 
     try {
-      const result = type === 'items' 
-        ? await UploadAPI.uploadItems(selectedFile)
-        : await UploadAPI.uploadConsumption(selectedFile);
+      // Preprocess the Excel file to handle templates with extra rows
+      message.loading({ content: 'Processing file...', key: 'upload-process' });
+      const processedFile = await preprocessExcelFile(selectedFile, type);
       
+      message.loading({ content: 'Uploading...', key: 'upload-process' });
+      const result = type === 'items' 
+        ? await UploadAPI.uploadItems(processedFile)
+        : await UploadAPI.uploadConsumption(processedFile);
+      
+      message.destroy('upload-process');
       console.log('✅ Upload result:', result);
       
       const isConsumption = type === 'consumption';
@@ -335,12 +721,16 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
         });
         setFileList([]);
         setSelectedFile(null);
+        setPreviewData(null);
+        setShowPreview(false);
         onRefresh();
         setTimeout(() => onCancel(), 500);
       } else if (hasRecords) {
         message.warning(`Uploaded with ${count} ${isConsumption ? 'records' : 'items'}, but some errors occurred`);
         setFileList([]);
         setSelectedFile(null);
+        setPreviewData(null);
+        setShowPreview(false);
         onRefresh();
       }
       
@@ -460,6 +850,9 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
       // Store the raw File object for upload
       setSelectedFile(file);
       
+      // Generate preview
+      generatePreview(file);
+      
       // Store in fileList for UI display
       const uploadFile: UploadFile = {
         uid: file.name,
@@ -475,6 +868,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
     onRemove: () => {
       setFileList([]);
       setSelectedFile(null);
+      setPreviewData(null);
+      setShowPreview(false);
     },
     accept: '.xlsx,.xls',
     maxCount: 1,
@@ -493,7 +888,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
           <span>{title}</span>
         </div>
       }
-      width={600}
+      width={700}
       footer={[
         <Button key="cancel" onClick={onCancel} disabled={uploading}>
           Cancel
@@ -535,7 +930,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
           <div style={{ fontSize: '12px', color: '#666', marginTop: 8 }}>
             {type === 'items' 
               ? 'Excel file with sample items (5 examples included)'
-              : 'Excel file with sample consumption records'}
+              : 'Excel file with sample consumption records (supports WIDE & TALL formats)'}
           </div>
         </div>
 
@@ -566,6 +961,62 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
           )}
         </div>
 
+        {/* Data Preview */}
+        {showPreview && previewData && (
+          <div style={{ marginBottom: 20 }}>
+            <Alert
+              type="success"
+              message={`✅ File validated: ${previewData.totalRows} data rows detected`}
+              style={{ marginBottom: 12 }}
+            />
+            <div style={{ 
+              padding: 12, 
+              backgroundColor: '#fafafa', 
+              borderRadius: 4,
+              fontSize: '11px',
+              maxHeight: 200,
+              overflow: 'auto'
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>Preview (first 5 rows):</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {previewData.headers.map((h, i) => (
+                      <th key={i} style={{ 
+                        padding: '4px 8px', 
+                        backgroundColor: '#e6f7ff', 
+                        border: '1px solid #91d5ff',
+                        fontWeight: 600,
+                        textAlign: 'left'
+                      }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewData.rows.map((row, i) => (
+                    <tr key={i}>
+                      {row.map((cell, j) => (
+                        <td key={j} style={{ 
+                          padding: '4px 8px', 
+                          border: '1px solid #d9d9d9',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: 100
+                        }}>
+                          {String(cell || '')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Requirements */}
         <div style={{ 
           padding: 12, 
@@ -574,25 +1025,42 @@ const UploadModal: React.FC<UploadModalProps> = ({ visible, onCancel, type, onRe
           fontSize: '12px'
         }}>
           <div style={{ fontWeight: 500, marginBottom: 8 }}>
-            Required Columns:
+            📋 File Requirements:
           </div>
           {type === 'items' ? (
             <ul style={{ margin: 0, paddingLeft: 20 }}>
-              <li>Category</li>
-              <li>Item Name</li>
-              <li>Stock (opening/current/closing)</li>
+              <li><strong>Required:</strong> Category, Item Name, Stock (opening/current/closing)</li>
+              <li><strong>Optional:</strong> Item SKU, UOM, Price, Reorder Level</li>
             </ul>
           ) : (
-            <ul style={{ margin: 0, paddingLeft: 20 }}>
-              <li>Item Name</li>
-              <li>Date</li>
-              <li>Consumed Quantity</li>
-            </ul>
+            <>
+              <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                📊 Supported Formats:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 20, marginBottom: 12 }}>
+                <li>
+                  <strong>WIDE Format:</strong> One row per item, dates as column headers
+                  <div style={{ fontSize: '11px', color: '#666', marginTop: 4 }}>
+                    Example: Category | Item Name | UOM | 01-Jun | 02-Jun | 03-Jun ...
+                  </div>
+                </li>
+                <li>
+                  <strong>TALL Format:</strong> One row per item per date
+                  <div style={{ fontSize: '11px', color: '#666', marginTop: 4 }}>
+                    Example: Item Name | Date | Consumed Quantity
+                  </div>
+                </li>
+              </ul>
+              <div style={{ fontWeight: 500, marginBottom: 4 }}>Required Columns:</div>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                <li><strong>WIDE:</strong> Item Name, Date columns (DD-Mon format like 01-Jun)</li>
+                <li><strong>TALL:</strong> Item Name, Date, Consumed Quantity</li>
+                <li><strong>Optional:</strong> Opening/Received/Closing Stock, Department, Notes</li>
+              </ul>
+            </>
           )}
-          <div style={{ marginTop: 8, color: '#666' }}>
-            Optional: {type === 'items' 
-              ? 'Item SKU, UOM, Price, Reorder Level' 
-              : 'Item SKU, Opening/Received/Closing Stock, Department, Notes'}
+          <div style={{ marginTop: 12, padding: 8, backgroundColor: '#e6f7ff', borderRadius: 4 }}>
+            <strong>✨ Smart Detection:</strong> The system automatically detects your file format (WIDE/TALL) and header row, and converts date formats for compatibility!
           </div>
         </div>
       </div>

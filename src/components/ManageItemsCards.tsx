@@ -68,7 +68,7 @@ const ManageItemsCards: React.FC<{ onCardClick?: (key: CardKey) => void }> = ({ 
 
         const days = 30;
 
-        const res = await AnalyticsAPI.topConsumers(days, 10);
+        const res = await AnalyticsAPI.topConsumers(days);
 
         if (mounted && res) {
           setTopConsumersData(res);
