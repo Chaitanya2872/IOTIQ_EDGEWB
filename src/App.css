@@ -14,26 +14,7 @@
   margin-bottom: 30px;
 }
 
-.info-card {
-  flex: 1;
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-  text-align: center;
-}
 
-.title {
-  font-weight: 600;
-  color: #555;
-  margin-bottom: 10px;
-}
-
-.value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #111;
-}
 
 .charts-row {
   display: flex;
@@ -240,7 +221,6 @@
   display: flex;
   flex-direction: column;
   background-color: #ffffff;
-  min-width: 1600px;
 }
 
 /* ===== Top header (logos) ===== */
@@ -330,7 +310,7 @@
 .ant-input,
 .ant-input-password {
   height: 37px;
-  font-size: 9px;
+  font-size: 14px;
 }
 
 /* ===== Submit Button ===== */
@@ -397,6 +377,52 @@
 
 .right-logo {
   height: 36px;
+}
+
+/* ===== Responsive Design ===== */
+@media (max-width: 768px) {
+  .page-container {
+    min-width: unset;
+  }
+
+  .top-header {
+    padding: 15px 20px;
+    flex-wrap: wrap;
+  }
+
+  .stats-cards {
+    flex-direction: column;
+  }
+
+  .charts-row {
+    flex-direction: column;
+  }
+
+  .chart-box {
+    width: 100%;
+  }
+
+  .info-card {
+    min-width: unset;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding: 15px;
+  }
+
+  .top-header {
+    padding: 10px 15px;
+  }
+
+  .info-card {
+    padding: 20px;
+  }
+
+  .chart-box {
+    padding: 15px;
+  }
 }
 html, body, #root {
   margin: 0;
