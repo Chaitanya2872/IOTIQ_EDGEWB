@@ -1,5 +1,6 @@
+/* eslint-disable prefer-const */
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { 
   CategoriesAPI, 
   ItemsAPI, 
@@ -42,48 +43,116 @@ import {
 } from '../api/inventory';
 
 // ============================================================================
-// PERFORMANCE OPTIMIZATION: Request Deduplication & Caching
+// OPTIMIZED REQUEST MANAGEMENT
 // ============================================================================
 
-// Request cache to prevent duplicate API calls
 const requestCache = new Map<string, Promise<any>>();
-const responseCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 30000; // 30 seconds
+const responseCache = new Map<string, { data: any; timestamp: number; priority: number }>();
+
+// Different cache durations based on data volatility
+const CACHE_DURATIONS = {
+  CRITICAL: 10000,      // 10s - frequently changing data
+  STANDARD: 30000,      // 30s - moderately stable data
+  STABLE: 60000,        // 60s - rarely changing data
+  REFERENCE: 300000,    // 5min - reference data (categories, etc.)
+} as const;
+
+// Request priority levels
+const PRIORITY = {
+  CRITICAL: 1,    // Must load immediately (auth, dashboard summary)
+  HIGH: 2,        // Load next (key metrics)
+  MEDIUM: 3,      // Load when available (detailed analytics)
+  LOW: 4,         // Load last (historical data)
+  BACKGROUND: 5,  // Load in background (non-essential)
+} as const;
+
+// Request queue for priority-based loading
+let requestQueue: Array<{ key: string; priority: number; fn: () => Promise<any> }> = [];
+let isProcessingQueue = false;
+let activeRequests = 0;
+const MAX_CONCURRENT_REQUESTS = 4; // Limit concurrent requests
 
 /**
- * Optimized request handler with deduplication and caching
- * Prevents multiple identical requests and caches responses
+ * Process request queue with priority
+ */
+async function processRequestQueue() {
+  if (isProcessingQueue) return;
+  isProcessingQueue = true;
+
+  while (requestQueue.length > 0 && activeRequests < MAX_CONCURRENT_REQUESTS) {
+    // Sort by priority
+    requestQueue.sort((a, b) => a.priority - b.priority);
+    
+    const request = requestQueue.shift();
+    if (!request) break;
+
+    activeRequests++;
+    request.fn()
+      .finally(() => {
+        activeRequests--;
+        processRequestQueue(); // Process next item
+      });
+  }
+
+  isProcessingQueue = false;
+}
+
+/**
+ * Optimized request with priority and caching
  */
 async function optimizedRequest<T>(
   key: string, 
   requestFn: () => Promise<T>,
-  cacheDuration: number = CACHE_DURATION
+  options: {
+    cacheDuration?: number;
+    priority?: number;
+    force?: boolean;
+  } = {}
 ): Promise<T> {
-  // Check response cache first
-  const cached = responseCache.get(key);
-  if (cached && Date.now() - cached.timestamp < cacheDuration) {
-    console.log(`âœ… Cache hit: ${key}`);
-    return cached.data;
+  const {
+    cacheDuration = CACHE_DURATIONS.STANDARD,
+    priority = PRIORITY.MEDIUM,
+    force = false
+  } = options;
+
+  // Check cache first (unless force refresh)
+  if (!force) {
+    const cached = responseCache.get(key);
+    if (cached && Date.now() - cached.timestamp < cacheDuration) {
+      console.log(`✓ Cache hit: ${key}`);
+      return cached.data;
+    }
   }
 
-  // Check if request is already in flight
+  // Check if request already in flight
   if (requestCache.has(key)) {
-    console.log(`â³ Request in flight, waiting: ${key}`);
+    console.log(`⏳ Request in flight: ${key}`);
     return requestCache.get(key)!;
   }
 
-  // Make new request
-  console.log(`ðŸ”„ Making new request: ${key}`);
-  const promise = requestFn()
-    .then(data => {
-      responseCache.set(key, { data, timestamp: Date.now() });
-      requestCache.delete(key);
-      return data;
-    })
-    .catch(error => {
-      requestCache.delete(key);
-      throw error;
-    });
+  // Create promise
+  const promise = new Promise<T>((resolve, reject) => {
+    const execute = async () => {
+      try {
+        console.log(`🚀 Request [P${priority}]: ${key}`);
+        const data = await requestFn();
+        responseCache.set(key, { data, timestamp: Date.now(), priority });
+        requestCache.delete(key);
+        resolve(data);
+      } catch (error) {
+        requestCache.delete(key);
+        reject(error);
+      }
+    };
+
+    // Add to queue based on priority
+    if (priority <= PRIORITY.HIGH || activeRequests < MAX_CONCURRENT_REQUESTS) {
+      execute(); // Execute immediately for high priority or if capacity available
+    } else {
+      requestQueue.push({ key, priority, fn: execute });
+      processRequestQueue();
+    }
+  });
 
   requestCache.set(key, promise);
   return promise;
@@ -95,17 +164,44 @@ async function optimizedRequest<T>(
 export function clearAllCaches() {
   requestCache.clear();
   responseCache.clear();
-  console.log('ðŸ§¹ All caches cleared');
+  console.log('🧹 All caches cleared');
 }
 
-export function clearCache(key: string) {
-  responseCache.delete(key);
-  requestCache.delete(key);
-  console.log(`🗑️ Cleared cache: ${key}`);
+export function clearCache(pattern?: string) {
+  if (!pattern) {
+    clearAllCaches();
+    return;
+  }
+
+  // Clear caches matching pattern
+  const keysToDelete: string[] = [];
+  responseCache.forEach((_, key) => {
+    if (key.includes(pattern)) keysToDelete.push(key);
+  });
+  
+  keysToDelete.forEach(key => {
+    responseCache.delete(key);
+    requestCache.delete(key);
+  });
+  
+  console.log(`🧹 Cleared ${keysToDelete.length} cache entries matching "${pattern}"`);
+}
+
+/**
+ * Smart cache invalidation - only clear related caches
+ */
+function invalidateRelatedCaches(entity: 'categories' | 'items' | 'analytics') {
+  const patterns: Record<string, string[]> = {
+    categories: ['categories-', 'analytics-', 'dashboard-'],
+    items: ['items-', 'stock-', 'analytics-', 'dashboard-'],
+    analytics: ['analytics-', 'dashboard-', 'smart-']
+  };
+
+  patterns[entity].forEach(pattern => clearCache(pattern));
 }
 
 // ============================================================================
-// OPTIMIZED HOOKS
+// CATEGORIES
 // ============================================================================
 
 export function useCategories() {
@@ -113,13 +209,18 @@ export function useCategories() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true); 
     setError(null);
     try { 
       const categories = await optimizedRequest(
         'categories-list',
-        () => CategoriesAPI.list()
+        () => CategoriesAPI.list(),
+        { 
+          cacheDuration: CACHE_DURATIONS.REFERENCE, 
+          priority: PRIORITY.HIGH,
+          force 
+        }
       );
       setData(categories); 
     }
@@ -136,53 +237,68 @@ export function useCategories() {
   const actions = useMemo(() => ({
     create: async (body: { categoryName: string; categoryDescription: string }) => {
       await CategoriesAPI.create(body); 
-      responseCache.delete('categories-list'); // Invalidate cache
-      await refresh();
+      invalidateRelatedCaches('categories');
+      await refresh(true);
     },
     update: async (id: number, body: { categoryName: string; categoryDescription: string }) => {
       await CategoriesAPI.update(id, body); 
-      responseCache.delete('categories-list'); // Invalidate cache
-      await refresh();
+      invalidateRelatedCaches('categories');
+      await refresh(true);
     },
     remove: async (id: number) => { 
       await CategoriesAPI.remove(id); 
-      responseCache.delete('categories-list'); // Invalidate cache
-      await refresh(); 
+      invalidateRelatedCaches('categories');
+      await refresh(true); 
     },
   }), []);
 
   return { data, loading, error, refresh, ...actions };
 }
 
+// ============================================================================
+// ITEMS
+// ============================================================================
+
 export function useItems() {
   const [data, setData] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isMounted = useRef(true);
 
-  const refresh = async () => {
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
+  const refresh = async (force = false) => {
+    if (!isMounted.current) return;
+    
     setLoading(true); 
     setError(null);
     try { 
-      console.log('ðŸ“¦ Fetching items...');
       const items = await optimizedRequest(
         'items-list',
-        () => ItemsAPI.list()
+        () => ItemsAPI.list(),
+        { 
+          cacheDuration: CACHE_DURATIONS.CRITICAL,
+          priority: PRIORITY.HIGH,
+          force
+        }
       );
-      console.log(`âœ… Items loaded: ${items.length} items`);
-      setData(items); 
+      
+      if (isMounted.current) {
+        setData(items); 
+      }
     }
     catch (e: any) { 
-      console.error('âŒ Items fetch error:', e);
-      const errorMessage = e?.message || 'Failed to load items';
-      setError(errorMessage);
-      
-      // Check if it's an auth error
-      if (errorMessage.includes('Session expired') || errorMessage.includes('401')) {
-        console.log('ðŸ” Redirecting to login due to auth error');
+      if (isMounted.current) {
+        setError(e?.message || 'Failed to load items');
       }
     }
     finally { 
-      setLoading(false); 
+      if (isMounted.current) {
+        setLoading(false); 
+      }
     }
   };
 
@@ -192,18 +308,18 @@ export function useItems() {
     get: (id: number) => ItemsAPI.get(id),
     create: async (body: Omit<Item, 'id'>) => { 
       await ItemsAPI.create(body); 
-      responseCache.delete('items-list'); // Invalidate cache
-      await refresh(); 
+      invalidateRelatedCaches('items');
+      await refresh(true); 
     },
     update: async (id: number, body: Partial<Omit<Item, 'id'>>) => { 
       await ItemsAPI.update(id, body); 
-      responseCache.delete('items-list'); // Invalidate cache
-      await refresh(); 
+      invalidateRelatedCaches('items');
+      await refresh(true); 
     },
     remove: async (id: number) => { 
       await ItemsAPI.remove(id); 
-      responseCache.delete('items-list'); // Invalidate cache
-      await refresh(); 
+      invalidateRelatedCaches('items');
+      await refresh(true); 
     },
     search: (q: string) => ItemsAPI.search(q),
     lowStock: (threshold: number) => ItemsAPI.lowStock(threshold),
@@ -211,19 +327,22 @@ export function useItems() {
     expired: () => ItemsAPI.expired(),
     consume: async (id: number, qty: number, department?: string, notes?: string) => {
       await ItemsAPI.consume(id, { quantity: qty, department, notes }); 
-      responseCache.delete('items-list'); // Invalidate cache
-      await refresh();
+      invalidateRelatedCaches('items');
+      await refresh(true);
     },
     receive: async (id: number, qty: number, unitPrice?: number, referenceNumber?: string, supplier?: string, notes?: string) => {
       await ItemsAPI.receive(id, { quantity: qty, unitPrice, referenceNumber, supplier, notes }); 
-      responseCache.delete('items-list'); // Invalidate cache
-      await refresh();
+      invalidateRelatedCaches('items');
+      await refresh(true);
     },
   }), []);
 
   return { data, loading, error, refresh, ...actions };
 }
 
+// ============================================================================
+// SMART INSIGHTS
+// ============================================================================
 
 export function useSmartInsights(
   analysisDepth?: string,
@@ -235,23 +354,24 @@ export function useSmartInsights(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('🤖 Fetching Smart Insights...');
       const cacheKey = `smart-insights-${analysisDepth}-${categoryId}-${minConfidence}-${includeRecommendations}`;
       
       const result = await optimizedRequest(
         cacheKey,
         () => AnalyticsAPI.smartInsights(analysisDepth, categoryId, minConfidence, includeRecommendations),
-        60000 // 60 second cache for insights
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       
-      console.log('✅ Smart Insights loaded:', result.summary);
       setData(result);
     } catch (e: any) {
-      console.error('❌ Smart Insights error:', e);
       setError(e?.message || 'Failed to load smart insights');
     } finally {
       setLoading(false);
@@ -263,24 +383,23 @@ export function useSmartInsights(
   return { data, loading, error, refresh };
 }
 
-/**
- * Hook for Smart Insights Summary
- * Quick overview for dashboard widgets
- */
 export function useSmartInsightsSummary(categoryId?: number) {
   const [data, setData] = useState<SmartInsightsSummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `smart-insights-summary-${categoryId}`;
       const result = await optimizedRequest(
-        cacheKey,
+        `smart-insights-summary-${categoryId}`,
         () => AnalyticsAPI.smartInsightsSummary(categoryId),
-        30000 // 30 second cache
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -295,10 +414,6 @@ export function useSmartInsightsSummary(categoryId?: number) {
   return { data, loading, error, refresh };
 }
 
-/**
- * Hook for Smart Recommendations
- * AI-generated action items
- */
 export function useSmartRecommendations(
   categoryId?: number,
   minPriority?: number,
@@ -308,15 +423,18 @@ export function useSmartRecommendations(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `smart-recommendations-${categoryId}-${minPriority}-${limit}`;
       const result = await optimizedRequest(
-        cacheKey,
+        `smart-recommendations-${categoryId}-${minPriority}-${limit}`,
         () => AnalyticsAPI.smartRecommendations(categoryId, minPriority, limit),
-        60000
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.BACKGROUND,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -331,10 +449,6 @@ export function useSmartRecommendations(
   return { data, loading, error, refresh };
 }
 
-/**
- * Hook for Smart Alerts
- * Critical items requiring attention
- */
 export function useSmartAlerts(
   categoryId?: number,
   severity?: string,
@@ -344,15 +458,18 @@ export function useSmartAlerts(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `smart-alerts-${categoryId}-${severity}-${limit}`;
       const result = await optimizedRequest(
-        cacheKey,
+        `smart-alerts-${categoryId}-${severity}-${limit}`,
         () => AnalyticsAPI.smartAlerts(categoryId, severity, limit),
-        30000
+        {
+          cacheDuration: CACHE_DURATIONS.CRITICAL,
+          priority: PRIORITY.HIGH,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -367,10 +484,6 @@ export function useSmartAlerts(
   return { data, loading, error, refresh };
 }
 
-/**
- * Hook for Smart Anomalies
- * Statistical outliers and unusual patterns
- */
 export function useSmartAnomalies(
   categoryId?: number,
   minConfidence?: number,
@@ -380,15 +493,18 @@ export function useSmartAnomalies(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `smart-anomalies-${categoryId}-${minConfidence}-${limit}`;
       const result = await optimizedRequest(
-        cacheKey,
+        `smart-anomalies-${categoryId}-${minConfidence}-${limit}`,
         () => AnalyticsAPI.smartAnomalies(categoryId, minConfidence, limit),
-        60000
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.BACKGROUND,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -403,24 +519,23 @@ export function useSmartAnomalies(
   return { data, loading, error, refresh };
 }
 
-/**
- * Hook for Inventory Health Score
- * Quick health check
- */
 export function useSmartHealth(categoryId?: number) {
   const [data, setData] = useState<SmartHealthResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `smart-health-${categoryId}`;
       const result = await optimizedRequest(
-        cacheKey,
+        `smart-health-${categoryId}`,
         () => AnalyticsAPI.smartHealth(categoryId),
-        30000
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -435,10 +550,6 @@ export function useSmartHealth(categoryId?: number) {
   return { data, loading, error, refresh };
 }
 
-/**
- * Composite hook for complete Smart Insights dashboard
- * Fetches all insights data in parallel
- */
 export function useSmartInsightsDashboard(categoryId?: number) {
   const insights = useSmartInsights('standard', categoryId, 0.7, true);
   const summary = useSmartInsightsSummary(categoryId);
@@ -465,38 +576,52 @@ export function useSmartInsightsDashboard(categoryId?: number) {
   };
 }
 
+// ============================================================================
+// ANALYTICS
+// ============================================================================
+
 export function useAnalytics() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [stockAnalytics, setStockAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true); 
     setError(null);
     try {
-      console.log('ðŸ“Š Fetching analytics data...');
-      
       // Fetch both in parallel with caching
       const [dashboardData, stockData] = await Promise.all([
-        optimizedRequest('analytics-dashboard', () => AnalyticsAPI.dashboard())
-          .catch(err => {
-            console.warn('âš ï¸ Dashboard data failed:', err);
-            return null;
-          }),
-        optimizedRequest('analytics-stock', () => AnalyticsAPI.stockAnalytics())
-          .catch(err => {
-            console.warn('âš ï¸ Stock analytics failed:', err);
-            return null;
-          })
+        optimizedRequest(
+          'analytics-dashboard', 
+          () => AnalyticsAPI.dashboard(),
+          {
+            cacheDuration: CACHE_DURATIONS.CRITICAL,
+            priority: PRIORITY.CRITICAL,
+            force
+          }
+        ).catch(err => {
+          console.warn('⚠️ Dashboard data failed:', err);
+          return null;
+        }),
+        optimizedRequest(
+          'analytics-stock', 
+          () => AnalyticsAPI.stockAnalytics(),
+          {
+            cacheDuration: CACHE_DURATIONS.STANDARD,
+            priority: PRIORITY.HIGH,
+            force
+          }
+        ).catch(err => {
+          console.warn('⚠️ Stock analytics failed:', err);
+          return null;
+        })
       ]);
       
       setDashboard(dashboardData);
       setStockAnalytics(stockData);
-      console.log('âœ… Analytics loaded');
     }
     catch (e: any) {
-      console.error('âŒ Analytics fetch error:', e);
       setError(e?.message || 'Failed to load analytics');
     }
     finally { 
@@ -521,7 +646,7 @@ export function useAnalytics() {
 }
 
 // ============================================================================
-// NEW ANALYTICS HOOKS - Dashboard & Basic Stats
+// DASHBOARD & BASIC STATS
 // ============================================================================
 
 export function useDashboardBulk(year?: number, month?: number, categoryId?: number) {
@@ -529,14 +654,18 @@ export function useDashboardBulk(year?: number, month?: number, categoryId?: num
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `dashboard-bulk-${year}-${month}-${categoryId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.dashboardBulk(year, month, categoryId)
+        `dashboard-bulk-${year}-${month}-${categoryId}`,
+        () => AnalyticsAPI.dashboardBulk(year, month, categoryId),
+        {
+          cacheDuration: CACHE_DURATIONS.CRITICAL,
+          priority: PRIORITY.CRITICAL,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -552,7 +681,7 @@ export function useDashboardBulk(year?: number, month?: number, categoryId?: num
 }
 
 // ============================================================================
-// NEW ANALYTICS HOOKS - Consumption & Trends
+// CONSUMPTION & TRENDS
 // ============================================================================
 
 export function useConsumptionTrends(period?: string, groupBy?: string, categoryId?: number) {
@@ -560,14 +689,18 @@ export function useConsumptionTrends(period?: string, groupBy?: string, category
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `consumption-trends-${period}-${groupBy}-${categoryId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.consumptionTrends(period, groupBy, categoryId)
+        `consumption-trends-${period}-${groupBy}-${categoryId}`,
+        () => AnalyticsAPI.consumptionTrends(period, groupBy, categoryId),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -587,14 +720,18 @@ export function useTopConsumingItems(days?: number, limit?: number) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `top-consuming-items-${days}-${limit}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.topConsumingItems(days, limit)
+        `top-consuming-items-${days}-${limit}`,
+        () => AnalyticsAPI.topConsumingItems(days, limit),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -610,7 +747,7 @@ export function useTopConsumingItems(days?: number, limit?: number) {
 }
 
 // ============================================================================
-// NEW ANALYTICS HOOKS - Stock Analysis
+// STOCK ANALYSIS
 // ============================================================================
 
 export function useStockUsage(categoryId?: number) {
@@ -618,14 +755,18 @@ export function useStockUsage(categoryId?: number) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `stock-usage-${categoryId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.stockUsage(categoryId)
+        `stock-usage-${categoryId}`,
+        () => AnalyticsAPI.stockUsage(categoryId),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -645,14 +786,18 @@ export function useStockLevels(categoryId?: number, alertLevel?: string, sortBy?
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `stock-levels-${categoryId}-${alertLevel}-${sortBy}-${sortOrder}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.stockLevels(categoryId, alertLevel, sortBy, sortOrder)
+        `stock-levels-${categoryId}-${alertLevel}-${sortBy}-${sortOrder}`,
+        () => AnalyticsAPI.stockLevels(categoryId, alertLevel, sortBy, sortOrder),
+        {
+          cacheDuration: CACHE_DURATIONS.CRITICAL,
+          priority: PRIORITY.HIGH,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -672,13 +817,18 @@ export function useStockDistributionCategory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
       const result = await optimizedRequest(
         'stock-distribution-category',
-        () => AnalyticsAPI.stockDistributionCategory()
+        () => AnalyticsAPI.stockDistributionCategory(),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -705,24 +855,21 @@ export function useMonthlyStockValueTrend(startDate?: string, endDate?: string, 
     return `monthly-stock-value-trend-${start}-${end}-${cat}`;
   }, [startDate, endDate, categoryId]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('📊 Fetching monthly stock trend data...');
-      
       const result = await optimizedRequest(
         cacheKey,
-        () => AnalyticsAPI.monthlyStockValueTrend(startDate, endDate, categoryId)
+        () => AnalyticsAPI.monthlyStockValueTrend(startDate, endDate, categoryId),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
-      
-      if (result?.trendData) {
-        console.log(`✅ Received ${result.trendData.length} months of data`);
-      }
-      
       setData(result);
     } catch (e: any) {
-      console.error('❌ Error:', e);
       setError(e?.message || 'Failed to load stock value trend');
     } finally {
       setLoading(false);
@@ -734,21 +881,23 @@ export function useMonthlyStockValueTrend(startDate?: string, endDate?: string, 
   return { data, loading, error, refresh };
 }
 
-
-
 export function useMonthlyForecast(year?: number, month?: number, categoryId?: number) {
   const [data, setData] = useState<MonthlyForecastResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `monthly-forecast-${year}-${month}-${categoryId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.monthlyForecast(year, month, categoryId)
+        `monthly-forecast-${year}-${month}-${categoryId}`,
+        () => AnalyticsAPI.monthlyForecast(year, month, categoryId),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -768,14 +917,18 @@ export function useForecastVsActualBins(year?: number, month?: number, categoryI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `forecast-vs-actual-bins-${year}-${month}-${categoryId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.forecastVsActualBins(year, month, categoryId)
+        `forecast-vs-actual-bins-${year}-${month}-${categoryId}`,
+        () => AnalyticsAPI.forecastVsActualBins(year, month, categoryId),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.BACKGROUND,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -795,13 +948,18 @@ export function useBinVarianceAnalysis() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
       const result = await optimizedRequest(
         'bin-variance-analysis',
-        () => AnalyticsAPI.binVarianceAnalysis()
+        () => AnalyticsAPI.binVarianceAnalysis(),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.BACKGROUND,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -821,14 +979,18 @@ export function useItemHeatmap(itemId: number, period?: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `item-heatmap-${itemId}-${period}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.itemHeatmap(itemId, period)
+        `item-heatmap-${itemId}-${period}`,
+        () => AnalyticsAPI.itemHeatmap(itemId, period),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -848,14 +1010,18 @@ export function useConsumptionPatterns(itemId: number, startDate?: string, endDa
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `consumption-patterns-${itemId}-${startDate}-${endDate}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.consumptionPatterns(itemId, startDate, endDate)
+        `consumption-patterns-${itemId}-${startDate}-${endDate}`,
+        () => AnalyticsAPI.consumptionPatterns(itemId, startDate, endDate),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -870,21 +1036,23 @@ export function useConsumptionPatterns(itemId: number, startDate?: string, endDa
   return { data, loading, error, refresh };
 }
 
-// Add this hook in hooks.ts
-
 export function useCostConsumption(startDate?: string, endDate?: string) {
   const [data, setData] = useState<costConsumptionResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `cost-consumption-${startDate}-${endDate}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.costConsumption(startDate, endDate)
+        `cost-consumption-${startDate}-${endDate}`,
+        () => AnalyticsAPI.costConsumption(startDate, endDate),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -904,14 +1072,18 @@ export function usePriceTrends(itemId: number, startDate?: string, endDate?: str
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `price-trends-${itemId}-${startDate}-${endDate}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.priceTrends(itemId, startDate, endDate)
+        `price-trends-${itemId}-${startDate}-${endDate}`,
+        () => AnalyticsAPI.priceTrends(itemId, startDate, endDate),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -931,14 +1103,18 @@ export function useLeadTimeAnalysis(supplierId?: number) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `lead-time-analysis-${supplierId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.leadTimeAnalysis(supplierId)
+        `lead-time-analysis-${supplierId}`,
+        () => AnalyticsAPI.leadTimeAnalysis(supplierId),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -953,7 +1129,9 @@ export function useLeadTimeAnalysis(supplierId?: number) {
   return { data, loading, error, refresh };
 }
 
-
+// ============================================================================
+// BUDGET ANALYTICS
+// ============================================================================
 
 export function useBudgetConsumption(
   period?: string, 
@@ -968,14 +1146,18 @@ export function useBudgetConsumption(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `budget-consumption-${period}-${startDate}-${endDate}-${budgetType}-${categoryId}-${department}-${includeProjections}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.budgetConsumption(period, startDate, endDate, budgetType, categoryId, department, includeProjections)
+        `budget-consumption-${period}-${startDate}-${endDate}-${budgetType}-${categoryId}-${department}-${includeProjections}`,
+        () => AnalyticsAPI.budgetConsumption(period, startDate, endDate, budgetType, categoryId, department, includeProjections),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -995,13 +1177,18 @@ export function useBudgetKPIs() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
       const result = await optimizedRequest(
         'budget-kpis',
-        () => AnalyticsAPI.budgetKPIs()
+        () => AnalyticsAPI.budgetKPIs(),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.HIGH,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1021,14 +1208,18 @@ export function useBudgetComparison(startDate?: string, endDate?: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `budget-comparison-${startDate}-${endDate}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.budgetComparison(startDate, endDate)
+        `budget-comparison-${startDate}-${endDate}`,
+        () => AnalyticsAPI.budgetComparison(startDate, endDate),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1054,14 +1245,18 @@ export function useCostDistribution(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `cost-distribution-${period}-${startDate}-${endDate}-${categoryId}-${groupBy}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.costDistribution(period, startDate, endDate, categoryId, groupBy)
+        `cost-distribution-${period}-${startDate}-${endDate}-${categoryId}-${groupBy}`,
+        () => AnalyticsAPI.costDistribution(period, startDate, endDate, categoryId, groupBy),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1077,7 +1272,7 @@ export function useCostDistribution(
 }
 
 // ============================================================================
-// NEW ANALYTICS HOOKS - Performance Metrics
+// PERFORMANCE METRICS
 // ============================================================================
 
 export function useDataRange() {
@@ -1085,13 +1280,18 @@ export function useDataRange() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
       const result = await optimizedRequest(
         'data-range',
-        () => AnalyticsAPI.availableDateRange()
+        () => AnalyticsAPI.availableDateRange(),
+        {
+          cacheDuration: CACHE_DURATIONS.REFERENCE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1111,14 +1311,18 @@ export function useInventoryTurnover(period?: string, categoryId?: number) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `inventory-turnover-${period}-${categoryId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.inventoryTurnover(period, categoryId)
+        `inventory-turnover-${period}-${categoryId}`,
+        () => AnalyticsAPI.inventoryTurnover(period, categoryId),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1138,14 +1342,18 @@ export function useSupplierPerformance(startDate?: string, endDate?: string, sup
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `supplier-performance-${startDate}-${endDate}-${supplierId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.supplierPerformance(startDate, endDate, supplierId)
+        `supplier-performance-${startDate}-${endDate}-${supplierId}`,
+        () => AnalyticsAPI.supplierPerformance(startDate, endDate, supplierId),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1165,14 +1373,18 @@ export function useReorderRecommendations(categoryId?: number, urgencyLevel?: st
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `reorder-recommendations-${categoryId}-${urgencyLevel}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.reorderRecommendations(categoryId, urgencyLevel)
+        `reorder-recommendations-${categoryId}-${urgencyLevel}`,
+        () => AnalyticsAPI.reorderRecommendations(categoryId, urgencyLevel),
+        {
+          cacheDuration: CACHE_DURATIONS.CRITICAL,
+          priority: PRIORITY.HIGH,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1192,14 +1404,18 @@ export function useExpiryAnalysis(daysThreshold?: number, categoryId?: number) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `expiry-analysis-${daysThreshold}-${categoryId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.expiryAnalysis(daysThreshold, categoryId)
+        `expiry-analysis-${daysThreshold}-${categoryId}`,
+        () => AnalyticsAPI.expiryAnalysis(daysThreshold, categoryId),
+        {
+          cacheDuration: CACHE_DURATIONS.CRITICAL,
+          priority: PRIORITY.HIGH,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1215,7 +1431,7 @@ export function useExpiryAnalysis(daysThreshold?: number, categoryId?: number) {
 }
 
 // ============================================================================
-// NEW ANALYTICS HOOKS - Department & Footfall
+// DEPARTMENT & FOOTFALL
 // ============================================================================
 
 export function useDepartmentCostAnalysis(period?: string, startDate?: string, endDate?: string, department?: string) {
@@ -1223,14 +1439,18 @@ export function useDepartmentCostAnalysis(period?: string, startDate?: string, e
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `department-cost-analysis-${period}-${startDate}-${endDate}-${department}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.departmentCostAnalysis(period, startDate, endDate, department)
+        `department-cost-analysis-${period}-${startDate}-${endDate}-${department}`,
+        () => AnalyticsAPI.departmentCostAnalysis(period, startDate, endDate, department),
+        {
+          cacheDuration: CACHE_DURATIONS.STANDARD,
+          priority: PRIORITY.MEDIUM,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1250,14 +1470,18 @@ export function useFootfallTrends(period?: string, startDate?: string, endDate?:
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `footfall-trends-${period}-${startDate}-${endDate}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.footfallTrends(period, startDate, endDate)
+        `footfall-trends-${period}-${startDate}-${endDate}`,
+        () => AnalyticsAPI.footfallTrends(period, startDate, endDate),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1277,14 +1501,18 @@ export function usePerEmployeeConsumption(startDate?: string, endDate?: string, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const cacheKey = `per-employee-consumption-${startDate}-${endDate}-${categoryId}-${itemId}`;
       const result = await optimizedRequest(
-        cacheKey,
-        () => AnalyticsAPI.perEmployeeConsumption(startDate, endDate, categoryId, itemId)
+        `per-employee-consumption-${startDate}-${endDate}-${categoryId}-${itemId}`,
+        () => AnalyticsAPI.perEmployeeConsumption(startDate, endDate, categoryId, itemId),
+        {
+          cacheDuration: CACHE_DURATIONS.STABLE,
+          priority: PRIORITY.LOW,
+          force
+        }
       );
       setData(result);
     } catch (e: any) {
@@ -1300,7 +1528,7 @@ export function usePerEmployeeConsumption(startDate?: string, endDate?: string, 
 }
 
 // ============================================================================
-// COMPOSITE HOOK - Enhanced Analytics (Backward Compatibility)
+// COMPOSITE HOOKS
 // ============================================================================
 
 export function useEnhancedAnalytics() {
@@ -1316,45 +1544,31 @@ export function useEnhancedAnalytics() {
     setError(null);
     
     try {
-      console.log('ðŸ”„ Refreshing all analytics...');
-      
-      // Refresh basic analytics first
       await analytics.refresh();
       
-      // Then refresh enhanced features in parallel
       await Promise.allSettled([
         budgetHook.refresh(),
         costDistHook.refresh()
       ]);
-      
-      console.log('âœ… All analytics refreshed');
     } catch (e: any) {
       const errorMessage = e?.message || 'Failed to load enhanced analytics';
       setError(errorMessage);
-      console.error('âŒ Enhanced analytics error:', e);
     } finally {
       setLoading(false);
     }
   };
 
   return {
-    // Basic analytics
     dashboard: analytics.dashboard,
     stockAlerts: analytics.stockAlerts,
     consumptionTrends: analytics.consumptionTrends,
     topConsumers: analytics.topConsumers,
     inventoryValue: analytics.inventoryValue,
     turnoverRatio: analytics.turnoverRatio,
-    
-    // Enhanced features
     budgetData: budgetHook.data,
     costDistributionData: costDistHook.data,
-    
-    // Combined state
     loading: loading || analytics.loading || budgetHook.loading || costDistHook.loading,
     error: error || analytics.error || budgetHook.error || costDistHook.error,
-    
-    // Actions
     refresh: analytics.refresh,
     refreshAll
   };
@@ -1365,7 +1579,6 @@ export function useEnhancedAnalytics() {
 // ============================================================================
 
 export function useAnalyticsFilters() {
-  // Load from localStorage if available
   const getInitialState = <T,>(key: string, defaultValue: T): T => {
     try {
       const stored = localStorage.getItem(`analytics-filter-${key}`);
@@ -1394,7 +1607,6 @@ export function useAnalyticsFilters() {
     () => getInitialState('selectedItem', null)
   );
 
-  // Persist to localStorage on change
   useEffect(() => {
     localStorage.setItem('analytics-filter-period', JSON.stringify(period));
   }, [period]);
@@ -1425,7 +1637,6 @@ export function useAnalyticsFilters() {
     setSelectedCategory(null);
     setSelectedItem(null);
     
-    // Clear from localStorage
     localStorage.removeItem('analytics-filter-period');
     localStorage.removeItem('analytics-filter-budgetPeriod');
     localStorage.removeItem('analytics-filter-dateRange');
@@ -1434,25 +1645,18 @@ export function useAnalyticsFilters() {
   };
   
   return {
-    // Period filters
     period,
     setPeriod,
     budgetPeriod,
     setBudgetPeriod,
-    
-    // Date filters
     dateRange,
     setDateRange,
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
-    
-    // Category and item filters
     selectedCategory,
     setSelectedCategory,
     selectedItem,
     setSelectedItem,
-    
-    // Actions
     resetFilters
   };
 }
@@ -1473,7 +1677,6 @@ export function useApiConnectivity() {
         tests: {} as { [key: string]: { success: boolean; error?: string; latency?: number } }
       };
 
-      // Test dashboard endpoint
       const dashStart = Date.now();
       try {
         await AnalyticsAPI.dashboard();
@@ -1489,38 +1692,6 @@ export function useApiConnectivity() {
         };
       }
 
-      // Test cost distribution
-      const costStart = Date.now();
-      try {
-        await AnalyticsAPI.costDistribution('monthly');
-        testResults.tests.costDistribution = { 
-          success: true,
-          latency: Date.now() - costStart
-        };
-      } catch (error: any) {
-        testResults.tests.costDistribution = { 
-          success: false, 
-          error: error.message,
-          latency: Date.now() - costStart
-        };
-      }
-
-      // Test budget consumption
-      const budgetStart = Date.now();
-      try {
-        await AnalyticsAPI.budgetConsumption('monthly');
-        testResults.tests.budgetConsumption = { 
-          success: true,
-          latency: Date.now() - budgetStart
-        };
-      } catch (error: any) {
-        testResults.tests.budgetConsumption = { 
-          success: false, 
-          error: error.message,
-          latency: Date.now() - budgetStart
-        };
-      }
-
       setResults(testResults);
     } catch (error) {
       console.error('Failed to test API connectivity:', error);
@@ -1533,7 +1704,7 @@ export function useApiConnectivity() {
 }
 
 // ============================================================================
-// PERFORMANCE MONITORING HOOK
+// PERFORMANCE MONITORING
 // ============================================================================
 
 export function usePerformanceMonitoring() {
@@ -1556,18 +1727,19 @@ export function usePerformanceMonitoring() {
 
     setMetrics({
       cacheHitRate: Math.round(cacheHitRate),
-      avgResponseTime: 0, // Would need to track this separately
+      avgResponseTime: 0,
       totalRequests,
       cachedRequests
     });
   };
 
   useEffect(() => {
-    const interval = setInterval(calculateMetrics, 5000); // Update every 5 seconds
+    const interval = setInterval(calculateMetrics, 5000);
     return () => clearInterval(interval);
   }, []);
 
   return metrics;
 }
 
-// Removed stray local stub for useCallback; using React's useCallback imported from 'react' instead.
+// Export utility functions
+export { PRIORITY, CACHE_DURATIONS };

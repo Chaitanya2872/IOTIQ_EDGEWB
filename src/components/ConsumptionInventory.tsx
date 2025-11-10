@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -7,7 +6,7 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Package,
-  Calendar, Filter, X, ChevronDown, Activity,
+  Calendar, Filter, X, ChevronDown, ChevronLeft, ChevronRight, Activity,
   Zap, ArrowUp, ArrowDown,
   RefreshCw, Layers, Search,
   Sparkles, AlertTriangle,
@@ -224,29 +223,33 @@ const CompactHeatmap: React.FC<{
               Daily consumption pattern • {heatmapData.length} records • Unit: units
             </p>
           </div>
-          <button
+          <div
             onClick={onClose}
             style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              border: `1px solid ${COLORS.border}`,
-              backgroundColor: COLORS.white,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              padding: '4px',
+              borderRadius: '4px',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            <X size={16} color={COLORS.gray} />
-          </button>
+            <X size={16} color={COLORS.dark} />
+          </div>
         </div>
 
         {heatmapData.length > 0 && (
           <>
             <div style={{ marginBottom: '20px' }}>
               <ResponsiveContainer width="100%" height={160}>
-                <AreaChart data={heatmapData.slice(-30)}>
+                <AreaChart data={heatmapData}>
                   <defs>
                     <linearGradient id="gradientBlue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={COLORS.info} stopOpacity={0.3}/>
@@ -1328,16 +1331,23 @@ const HeatmapRightPanel: React.FC<{
               width: '40px',
               height: '40px',
               borderRadius: '12px',
-              border: `2px solid ${COLORS.border}`,
-              backgroundColor: COLORS.white,
+              border: `2px solid #fee2e2`,
+              backgroundColor: '#fef2f2',
+              color: '#dc2626',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'all 0.2s'
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#fecaca';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#fef2f2';
+            }}
           >
-            <X size={20} color={COLORS.gray} />
+            <X size={20} />
           </button>
         </div>
 
@@ -1478,25 +1488,22 @@ const HeatmapRightPanel: React.FC<{
           backgroundColor: COLORS.bg,
           borderRadius: '12px'
         }}>
-          <button
+          <ChevronLeft
             onClick={() => navigateMonth('prev')}
-            disabled={!canGoPrev}
             style={{
               width: '40px',
               height: '40px',
               borderRadius: '8px',
               border: `2px solid ${canGoPrev ? COLORS.border : COLORS.bg}`,
-              backgroundColor: COLORS.white,
+              backgroundColor: canGoPrev ? COLORS.white : COLORS.bg,
+              color: canGoPrev ? COLORS.dark : COLORS.gray,
               cursor: canGoPrev ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              padding: '10px',
               opacity: canGoPrev ? 1 : 0.3,
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              pointerEvents: canGoPrev ? 'auto' : 'none'
             }}
-          >
-            <ChevronDown size={20} color={COLORS.gray} style={{ transform: 'rotate(90deg)' }} />
-          </button>
+          />
 
           <div style={{ textAlign: 'center', minWidth: '200px' }}>
             <div style={{ fontSize: '20px', fontWeight: '700', color: COLORS.dark }}>
@@ -1507,25 +1514,22 @@ const HeatmapRightPanel: React.FC<{
             </div>
           </div>
 
-          <button
+          <ChevronRight
             onClick={() => navigateMonth('next')}
-            disabled={!canGoNext}
             style={{
               width: '40px',
               height: '40px',
               borderRadius: '8px',
               border: `2px solid ${canGoNext ? COLORS.border : COLORS.bg}`,
-              backgroundColor: COLORS.white,
+              backgroundColor: canGoNext ? COLORS.white : COLORS.bg,
+              color: canGoNext ? COLORS.dark : COLORS.gray,
               cursor: canGoNext ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              padding: '10px',
               opacity: canGoNext ? 1 : 0.3,
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              pointerEvents: canGoNext ? 'auto' : 'none'
             }}
-          >
-            <ChevronDown size={20} color={COLORS.gray} style={{ transform: 'rotate(-90deg)' }} />
-          </button>
+          />
         </div>
 
         {monthlyData.length === 0 ? (
@@ -2689,16 +2693,26 @@ const CoreInventoryTable: React.FC<{
 const ConsumptionInventory: React.FC = () => {
   const { data: categoriesData = [], loading: categoriesLoading } = useCategories();
   const { data: itemsData = [], loading: itemsLoading } = useItems();
+  const { data: availableDateRange } = useDataRange();
   
   const categories = (categoriesData || []) as Category[];
   const items = (itemsData || []) as Item[];
   
   const getDefaultDateRange = useMemo(() => {
-    return { 
-      start: '2025-01-01', 
-      end: '2025-05-31' 
+    if (availableDateRange?.minDate && availableDateRange?.maxDate) {
+      return {
+        start: availableDateRange.minDate,
+        end: availableDateRange.maxDate
+      };
+    }
+    const fallbackEnd = new Date();
+    const fallbackStart = new Date();
+    fallbackStart.setDate(fallbackStart.getDate() - 30);
+    return {
+      start: fallbackStart.toISOString().slice(0, 10),
+      end: fallbackEnd.toISOString().slice(0, 10)
     };
-  }, []);
+  }, [availableDateRange]);
   
   const [dateRange, setDateRange] = useState(getDefaultDateRange);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);

@@ -47,13 +47,14 @@ export default defineConfig({
     },
 
     cssCodeSplit: true,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 1500,
 
     rollupOptions: {
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['antd', 'lucide-react'],
+          'antd-vendor': ['antd', '@ant-design/icons'],
+          'ui-vendor': ['lucide-react'],
           'chart-vendor': ['recharts'],
           'inventory': [
             './src/components/InventoryAnalytics.tsx',
@@ -66,6 +67,10 @@ export default defineConfig({
         },
 
         assetFileNames: (assetInfo) => {
+          if (!assetInfo.name) {
+            return `assets/[name]-[hash][extname]`
+          }
+
           const info = assetInfo.name.split('.')
           const ext = info[info.length - 1]
 

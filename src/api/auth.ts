@@ -1,3 +1,7 @@
+// ============================================================================
+// OPTIMIZED AUTH.TS - Fast Load Strategy
+// ============================================================================
+
 export type SignInRequest = {
   email: string;
   password: string;
@@ -38,9 +42,9 @@ export type AuthStatusResponse = {
 const API_BASE = (import.meta.env.VITE_AUTH_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '') as string;
 
 const TIMEOUTS = {
-  VALIDATE_TOKEN: 10000,
-  REFRESH_TOKEN: 2000,
-  AUTH_CHECK: 3000,
+  VALIDATE_TOKEN: 5000,  // Increased from 10s
+  REFRESH_TOKEN: 3000,   // Increased from 2s
+  AUTH_CHECK: 2000,      // Reduced from 3s for faster fallback
 } as const;
 
 const API_ENDPOINTS = {
@@ -55,7 +59,11 @@ const STORAGE_KEYS = {
   REFRESH_TOKEN: 'refreshToken',
   TOKEN_TYPE: 'tokenType',
   USER: 'user',
+  LAST_VALIDATED: 'lastValidated',  // NEW: Track last validation time
 } as const;
+
+// NEW: Token validation cache - 5 minutes
+const TOKEN_VALIDATION_CACHE_MS = 5 * 60 * 1000;
 
 const extractErrorMessage = (data: unknown): string => {
   if (typeof data === 'object' && data !== null) {
@@ -104,6 +112,10 @@ const storage = {
   getAccessToken: (): string | null => localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
   getRefreshToken: (): string | null => localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
   getTokenType: (): string => localStorage.getItem(STORAGE_KEYS.TOKEN_TYPE) || 'Bearer',
+  getLastValidated: (): number => {
+    const timestamp = localStorage.getItem(STORAGE_KEYS.LAST_VALIDATED);
+    return timestamp ? parseInt(timestamp, 10) : 0;
+  },
   getUser: (): User | null => {
     try {
       const userStr = localStorage.getItem(STORAGE_KEYS.USER);
@@ -117,12 +129,17 @@ const storage = {
     localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, auth.refreshToken);
     localStorage.setItem(STORAGE_KEYS.TOKEN_TYPE, auth.tokenType);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(toUser(auth)));
+    localStorage.setItem(STORAGE_KEYS.LAST_VALIDATED, Date.now().toString());
+  },
+  updateLastValidated: (): void => {
+    localStorage.setItem(STORAGE_KEYS.LAST_VALIDATED, Date.now().toString());
   },
   clear: (): void => {
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.TOKEN_TYPE);
     localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.LAST_VALIDATED);
   },
 };
 
@@ -158,6 +175,9 @@ export async function validateToken(token: string): Promise<TokenValidationRespo
       const message = extractErrorMessage(data) || `validateToken failed: ${res.status}`;
       throw new Error(message);
     }
+
+    // Update validation timestamp on success
+    storage.updateLastValidated();
 
     return {
       valid: !!data.valid,
@@ -211,53 +231,76 @@ export async function refreshToken(): Promise<AuthResponse> {
   }
 }
 
+// ============================================================================
+// OPTIMIZED: Fast Auth Check with Smart Caching
+// ============================================================================
+
 export async function checkAuthStatus(): Promise<AuthStatusResponse> {
   const storedAuth = getStoredAuth();
 
-  // 🚀 Quick exit if token missing or empty
+  // Quick exit if no token
   if (!storedAuth?.accessToken || storedAuth.accessToken === 'undefined') {
     return { isAuthenticated: false, user: null };
   }
 
   const user = toUser(storedAuth);
+  const lastValidated = storage.getLastValidated();
+  const timeSinceValidation = Date.now() - lastValidated;
 
-  // ⏱ Short timeout for validation (default 1s fallback)
-  const AUTH_CHECK_TIMEOUT = 1000;
+  // ⚡ OPTIMIZATION: Skip backend validation if recently validated
+  if (timeSinceValidation < TOKEN_VALIDATION_CACHE_MS) {
+    console.log(`✅ Using cached auth (validated ${Math.round(timeSinceValidation / 1000)}s ago)`);
+    return { isAuthenticated: true, user };
+  }
 
-  const authCheckPromise = (async (): Promise<AuthStatusResponse> => {
-    try {
-      const validation = await validateToken(storedAuth.accessToken);
-
-      if (validation.valid) {
-        return { isAuthenticated: true, user };
+  // Background validation - don't block UI
+  console.log('🔄 Background token validation...');
+  
+  validateToken(storedAuth.accessToken)
+    .then(validation => {
+      if (!validation.valid) {
+        console.log('🔄 Token invalid, attempting refresh...');
+        return refreshToken();
       }
+    })
+    .catch(err => {
+      console.warn('⚠️ Background auth check failed:', err);
+      // Don't clear auth on background failure - let user continue
+    });
 
-      // Try refresh token if access invalid
-      await refreshToken();
-      return { isAuthenticated: true, user };
-    } catch (err) {
-      console.warn("Auth validation or refresh failed:", err);
-      return { isAuthenticated: false, user: null };
-    }
-  })();
+  // Return cached auth immediately (optimistic)
+  return { isAuthenticated: true, user };
+}
 
-  // Fallback in case backend is slow or unreachable
-  const timeoutPromise = new Promise<AuthStatusResponse>((resolve) => {
-    setTimeout(() => {
-      console.log("Auth check timed out — defaulting to stored auth.");
-      resolve({ isAuthenticated: true, user });
-    }, AUTH_CHECK_TIMEOUT);
-  });
+// ============================================================================
+// NEW: Force validation (for manual refresh)
+// ============================================================================
+
+export async function forceValidateAuth(): Promise<AuthStatusResponse> {
+  const storedAuth = getStoredAuth();
+
+  if (!storedAuth?.accessToken) {
+    return { isAuthenticated: false, user: null };
+  }
+
+  const user = toUser(storedAuth);
 
   try {
-    // whichever finishes first (validation or timeout)
-    return await Promise.race([authCheckPromise, timeoutPromise]);
-  } catch (error) {
-    console.error("Auth status check error:", error);
+    const validation = await validateToken(storedAuth.accessToken);
+
+    if (validation.valid) {
+      return { isAuthenticated: true, user };
+    }
+
+    // Try refresh if validation fails
+    await refreshToken();
+    return { isAuthenticated: true, user };
+  } catch (err) {
+    console.error('Force validation failed:', err);
+    storage.clear();
     return { isAuthenticated: false, user: null };
   }
 }
-
 
 export const clearAuth = storage.clear;
 export const getCurrentUser = storage.getUser;

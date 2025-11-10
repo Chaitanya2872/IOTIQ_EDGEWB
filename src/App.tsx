@@ -71,7 +71,7 @@ const AppContent: React.FC = () => {
           </>
         ) : (
           <>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/inventory/analytics" replace />} />
             <Route
               path="/"
               element={
@@ -94,7 +94,7 @@ const AppContent: React.FC = () => {
               <Route path="inventory/consumption-inventory" element={<ConsumptionInventory />} />
               <Route path="inventory/budget-analysis" element={<BudgetAnalysis />} />
             </Route>
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/inventory/analytics" replace />} />
           </>
         )}
       </Routes>

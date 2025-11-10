@@ -11,17 +11,36 @@ type Props = {
 const AuthPage: React.FC<Props> = ({ onAuthSuccess }) => {
   const [loginForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (email: string, password: string) => {
     try {
       setLoading(true);
+      setProgress(0);
+
+      // Step 1: Authenticate (30%)
+      setProgress(30);
       await login({ email, password });
+      
+      // Step 2: Auth successful (60%)
+      setProgress(60);
       message.success('Login successful');
+      
+      // Step 3: Prepare dashboard (80%)
+      setProgress(80);
+      
+      // Small delay to ensure auth is stored
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Step 4: Navigate (100%)
+      setProgress(100);
       onAuthSuccess();
+      
     } catch (error: any) {
       message.error(error.message || 'Login failed');
+      setProgress(0);
     } finally {
       setLoading(false);
     }
@@ -39,8 +58,6 @@ const AuthPage: React.FC<Props> = ({ onAuthSuccess }) => {
             <div className="auth-logo">
               <img src={comp} alt="Logo" />
             </div>
-
-           
           </div>
 
           <Form
@@ -74,6 +91,7 @@ const AuthPage: React.FC<Props> = ({ onAuthSuccess }) => {
                   size="large"
                   className="auth-input"
                   bordered={false}
+                  disabled={loading}
                 />
               </div>
             </Form.Item>
@@ -104,6 +122,7 @@ const AuthPage: React.FC<Props> = ({ onAuthSuccess }) => {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
                   className="auth-input native-input"
+                  disabled={loading}
                 />
                 <div
                   className={`eye-toggle ${showPassword ? 'open' : ''}`}
@@ -143,9 +162,40 @@ const AuthPage: React.FC<Props> = ({ onAuthSuccess }) => {
                 block
                 className="auth-button"
               >
-                Sign In
+                {loading ? `Signing In... ${progress}%` : 'Sign In'}
               </Button>
             </Form.Item>
+
+            {/* Progress Bar */}
+            {loading && (
+              <div style={{ marginTop: '16px' }}>
+                <div style={{
+                  width: '100%',
+                  height: '4px',
+                  backgroundColor: '#f0f0f0',
+                  borderRadius: '2px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${progress}%`,
+                    height: '100%',
+                    backgroundColor: '#1890ff',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+                <div style={{
+                  textAlign: 'center',
+                  marginTop: '8px',
+                  fontSize: '12px',
+                  color: '#666'
+                }}>
+                  {progress < 30 && 'Authenticating...'}
+                  {progress >= 30 && progress < 60 && 'Verifying credentials...'}
+                  {progress >= 60 && progress < 80 && 'Setting up session...'}
+                  {progress >= 80 && 'Loading dashboard...'}
+                </div>
+              </div>
+            )}
           </Form>
         </div>
       </div>
