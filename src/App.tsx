@@ -6,8 +6,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import SimpleAuthPage from "./components/AuthPage";
 import "./App.css";
 
-// ✅ Lazy-load heavy components
-const Dashboard = lazy(() => import("./components/Dashboard"));
+// ✅ Lazy-load components (Dashboard removed)
 const AssetDashboard = lazy(() => import("./components/AssetDashboard"));
 const TicketingSystem = lazy(() => import("./components/TicketingSystem"));
 const MealForecastDashboard = lazy(() => import("./components/MealForecastDashboard"));
@@ -80,11 +79,9 @@ const AppContent: React.FC = () => {
                 </ProtectedRoute>
               }
             >
-
               <Route index element={<Navigate to="/inventory/analytics" replace />} />
 
-              {/* ✅ Lazy-loaded pages */}
-              <Route path="dashboard" element={<Dashboard />} />
+              {/* ✅ Routes (Dashboard removed) */}
               <Route path="asset-dashboard" element={<AssetDashboard />} />
               <Route path="ticketing" element={<TicketingSystem />} />
               <Route path="meal-forecast" element={<MealForecastDashboard />} />
