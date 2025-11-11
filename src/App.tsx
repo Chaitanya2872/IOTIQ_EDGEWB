@@ -80,6 +80,9 @@ const AppContent: React.FC = () => {
                 </ProtectedRoute>
               }
             >
+
+              <Route index element={<Navigate to="/inventory/analytics" replace />} />
+
               {/* ✅ Lazy-loaded pages */}
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="asset-dashboard" element={<AssetDashboard />} />
