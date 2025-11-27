@@ -20,6 +20,9 @@ const PredictiveInserts = lazy(() => import("./components/predictiveInserts"));
 const ConsumptionInventory = lazy(() => import("./components/ConsumptionInventory"));
 const BudgetAnalysis = lazy(() => import("./components/BudgetAnalysis"));
 
+// 🆕 IoT Dashboard - NEW!
+const IoTDashboard = lazy(() => import("./components/IoTDashboard"));
+
 // ✅ Inner content separated for readability
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, logout } = useAuth();
@@ -85,6 +88,11 @@ const AppContent: React.FC = () => {
               <Route path="asset-dashboard" element={<AssetDashboard />} />
               <Route path="ticketing" element={<TicketingSystem />} />
               <Route path="meal-forecast" element={<MealForecastDashboard />} />
+              
+              {/* 🆕 IoT Sensors Dashboard - NEW ROUTE! */}
+              <Route path="iot-sensors" element={<IoTDashboard />} />
+              
+              {/* Inventory Routes */}
               <Route path="inventory/categories" element={<ManageCategories />} />
               <Route path="inventory/items" element={<ManageItems />} />
               <Route path="inventory" element={<InventoryHealthDashboard />} />

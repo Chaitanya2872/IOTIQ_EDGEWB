@@ -1,0 +1,652 @@
+/* src/components/IoTScreens.css */
+
+/* Common Screen Styles */
+.iot-screen {
+  width: 100%;
+}
+
+.iot-screen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.iot-screen-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.iot-screen-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* Grid Layouts for Screens */
+.screen-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.screen-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.screen-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* With Sidebar Layout (3 + 1 columns) */
+.screen-with-sidebar {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 24px;
+}
+
+.screen-main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.screen-sidebar {
+  position: sticky;
+  top: 24px;
+  height: fit-content;
+}
+
+/* Cards */
+.screen-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.screen-card-compact {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.screen-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Stat Cards */
+.stat-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.stat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.stat-card-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  margin: 0;
+}
+
+.stat-card-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #111827;
+  margin: 8px 0;
+}
+
+.stat-card-footer {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+}
+
+.stat-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+}
+
+/* Counter Cards (Cafeteria) */
+.counter-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  transition: box-shadow 0.2s ease;
+}
+
+.counter-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.counter-card-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.counter-card-left {
+  flex: 1;
+}
+
+.counter-card-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.counter-card-count {
+  font-size: 36px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px 0;
+  line-height: 1;
+}
+
+.counter-card-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0 0 8px 0;
+}
+
+.counter-card-wait {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.counter-card-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.counter-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.counter-status-badge {
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  border: 1px solid;
+}
+
+.status-ready {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.status-busy {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde047;
+}
+
+.status-crowded {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+/* Sensor Cards (IAQ) */
+.sensor-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.sensor-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.sensor-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.sensor-card-location {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.sensor-quality-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.quality-excellent {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.quality-good {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.quality-moderate {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.quality-poor {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.quality-unhealthy {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.sensor-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.sensor-metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.sensor-metric-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.sensor-metric-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Restroom Cards */
+.restroom-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.restroom-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.restroom-card-id {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.restroom-card-location {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.restroom-status-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-occupied {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status-available {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.restroom-details {
+  margin-bottom: 12px;
+}
+
+.restroom-detail-row {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.restroom-detail-row span {
+  font-weight: 500;
+  color: #111827;
+}
+
+/* Alert Panel */
+.alert-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.alert-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.alert-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.alert-count-badge {
+  padding: 4px 8px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alert-item {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+
+.alert-high {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.alert-medium {
+  background: #ffedd5;
+  border-color: #fed7aa;
+}
+
+.alert-low {
+  background: #fef3c7;
+  border-color: #fde047;
+}
+
+.alert-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.alert-item-detail {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.alert-empty {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.alert-empty-icon {
+  width: 48px;
+  height: 48px;
+  color: #10b981;
+  margin: 0 auto 8px;
+}
+
+.alert-empty-text {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Chart Container */
+.chart-container {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.chart-wrapper {
+  height: 280px;
+  width: 100%;
+}
+
+/* Floor Selector */
+.floor-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.floor-button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.floor-button:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.floor-button.active {
+  border-color: #10b981;
+  background: #dcfce7;
+  color: #059669;
+}
+
+/* Recent Activities */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.activity-icon.alert {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.activity-icon.success {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.activity-icon.warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.activity-icon.info {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-action {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  margin: 0;
+}
+
+.activity-time {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 2px 0 0 0;
+}
+
+/* Quick Stats */
+.quick-stats {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.quick-stats-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.quick-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick-stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.quick-stat-label {
+  color: #6b7280;
+}
+
+.quick-stat-value {
+  font-weight: 500;
+  color: #111827;
+}
+
+/* Responsive */
+@media (max-width: 1280px) {
+  .screen-with-sidebar {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .screen-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .screen-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .screen-with-sidebar {
+    grid-template-columns: 1fr;
+  }
+  
+  .screen-sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .screen-grid-4,
+  .screen-grid-3,
+  .screen-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .iot-screen-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .sensor-metrics {
+    grid-template-columns: 1fr;
+  }
+}
