@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import SidebarLayout from "./pages/SidebarLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -26,6 +26,7 @@ const IoTDashboard = lazy(() => import("./components/IoTDashboard"));
 // ✅ Inner content separated for readability
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, logout } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -69,7 +70,7 @@ const AppContent: React.FC = () => {
       <Routes>
         {!isAuthenticated ? (
           <>
-            <Route path="/" element={<SimpleAuthPage onAuthSuccess={() => {}} />} />
+            <Route path="/" element={<SimpleAuthPage onAuthSuccess={() => navigate('/inventory/analytics')} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (

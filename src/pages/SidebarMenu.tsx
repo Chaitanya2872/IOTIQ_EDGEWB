@@ -38,13 +38,6 @@ type MenuConfig = {
 
 const MENU_ITEMS: MenuConfig[] = [
   {
-    key: "dashboard",
-    label: "Dashboard",
-    shortLabel: "Dash",
-    icon: <LayoutDashboard size={18} strokeWidth={2} />,
-    path: "/dashboard",
-  },
-  {
     key: "inventory",
     label: "Inventory",
     shortLabel: "Inv",

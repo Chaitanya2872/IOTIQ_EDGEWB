@@ -170,6 +170,36 @@ const IAQScreen: React.FC = () => {
           ))}
         </div>
 
+        {/* Floor Stats Summary */}
+        <div className="screen-grid-4">
+          <div className="stat-card">
+            <p className="stat-card-label">Avg Temperature</p>
+            <p style={{ fontSize: '18px', fontWeight: 600, color: '#111827', margin: '8px 0 0 0' }}>
+              {(sensors.reduce((sum, s) => sum + s.temperature, 0) / sensors.length).toFixed(1)}°C
+            </p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-card-label">Avg Humidity</p>
+            <p style={{ fontSize: '18px', fontWeight: 600, color: '#111827', margin: '8px 0 0 0' }}>
+              {Math.round(sensors.reduce((sum, s) => sum + s.humidity, 0) / sensors.length)}%
+            </p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-card-label">Avg CO₂</p>
+            <p style={{ fontSize: '18px', fontWeight: 600, color: '#111827', margin: '8px 0 0 0' }}>
+              {Math.round(sensors.reduce((sum, s) => sum + s.co2, 0) / sensors.length)} ppm
+            </p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-card-label">Sensors Active</p>
+            <p style={{ fontSize: '18px', fontWeight: 600, color: '#16a34a', margin: '8px 0 0 0' }}>
+              {sensors.length}/{sensors.length}
+            </p>
+          </div>
+        </div>
+
+         
+
         {/* Sensor Cards Grid */}
         <div className="screen-grid-2">
           {sensors.map((sensor, index) => (
@@ -228,34 +258,12 @@ const IAQScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Floor Stats Summary */}
-        <div className="screen-grid-4">
-          <div className="stat-card">
-            <p className="stat-card-label">Avg Temperature</p>
-            <p style={{ fontSize: '18px', fontWeight: 600, color: '#111827', margin: '8px 0 0 0' }}>
-              {(sensors.reduce((sum, s) => sum + s.temperature, 0) / sensors.length).toFixed(1)}°C
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-card-label">Avg Humidity</p>
-            <p style={{ fontSize: '18px', fontWeight: 600, color: '#111827', margin: '8px 0 0 0' }}>
-              {Math.round(sensors.reduce((sum, s) => sum + s.humidity, 0) / sensors.length)}%
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-card-label">Avg CO₂</p>
-            <p style={{ fontSize: '18px', fontWeight: 600, color: '#111827', margin: '8px 0 0 0' }}>
-              {Math.round(sensors.reduce((sum, s) => sum + s.co2, 0) / sensors.length)} ppm
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-card-label">Sensors Active</p>
-            <p style={{ fontSize: '18px', fontWeight: 600, color: '#16a34a', margin: '8px 0 0 0' }}>
-              {sensors.length}/{sensors.length}
-            </p>
-          </div>
-        </div>
+       
+
+        
       </div>
+
+      
 
       {/* Right Sidebar - Alerts */}
       <div className="screen-sidebar">
