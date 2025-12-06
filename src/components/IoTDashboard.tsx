@@ -6,7 +6,7 @@ import CafeteriaScreen from './CafeteriaScreen';
 import IAQScreen from './IAQScreen';
 import SmartRestroomScreen from './SmartRestroomScreen';
 import EnergyMonitoringScreen from './EnergyMonitoringScreen';
-import './IoTDashboard.css';
+import './IotDashboard.css';
 
 type TabType = 'overview' | 'cafeteria' | 'iaq' | 'restroom' | 'energy';
 
