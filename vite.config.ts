@@ -6,7 +6,6 @@ import { visualizer } from 'rollup-plugin-visualizer'
 export default defineConfig({
   plugins: [
     react(),
-    // 📊 Optional: visualize bundle
     visualizer({
       open: false,
       filename: 'build-stats.html',
@@ -101,6 +100,58 @@ export default defineConfig({
     port: 3000,
     open: true,
     cors: true,
+    proxy: {
+      // Proxy for IoT Sensor API (port 8085)
+      '/api/cafeteria': {
+        target: 'http://localhost:8085',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          // These logs appear in YOUR TERMINAL, not browser console
+          proxy.on('error', (err, _req, _res) => {
+            console.log('\n❌ [Proxy Error]', err.message);
+          });
+          
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            const timestamp = new Date().toLocaleTimeString();
+            console.log(`\n🔵 [${timestamp}] Proxying Request:`);
+            console.log(`   ${req.method} ${req.url}`);
+            console.log(`   → http://localhost:8085${req.url}`);
+          });
+          
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            const timestamp = new Date().toLocaleTimeString();
+            const statusColor = proxyRes.statusCode === 200 ? '✅' : '❌';
+            console.log(`${statusColor} [${timestamp}] Response:`);
+            console.log(`   ${req.url}`);
+            console.log(`   Status: ${proxyRes.statusCode} ${proxyRes.statusMessage}`);
+            console.log(`   Content-Type: ${proxyRes.headers['content-type']}`);
+            console.log('');
+          });
+        },
+      },
+      // Proxy for other APIs
+      '/api/auth': {
+        target: 'http://localhost:8084',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log(`🔐 [Auth API] ${req.method} ${req.url} → http://localhost:8084${req.url}`);
+          });
+        },
+      },
+      '/api/assets': {
+        target: 'http://localhost:8088',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log(`📦 [Asset API] ${req.method} ${req.url} → http://localhost:8088${req.url}`);
+          });
+        },
+      },
+    },
   },
 
   preview: {

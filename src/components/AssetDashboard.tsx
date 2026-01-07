@@ -1,1141 +1,1073 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, memo } from 'react';
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
-  AreaChart, Area
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line
 } from 'recharts';
-import * as Papa from 'papaparse';
+import {
+  Package, AlertTriangle, CheckCircle, Clock, TrendingUp,
+  DollarSign, Shield, Activity, Target, RefreshCw, Filter,
+  Download, Search, Calendar, Building, Users, Wrench, ArrowUp, ArrowDown
+} from 'lucide-react';
+import { useAssets } from '../api/useAssets';
+import type { Asset } from '../api/assets';
 
-// Type definitions
-interface CorrelationItem {
-  item_name: string;
-  corr_top_positive_item: string;
-  corr_top_positive_value?: number;
-  corr_strength_category?: string;
-  category?: string;
-  Category?: string;
-  CATEGORY?: string;
-  item_category?: string;
-  Item_Category?: string;
-  month?: string | number;
-}
+// ==================== FONT STYLING ====================
+const fontImport = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+`;
 
-interface AnomalyItem {
-  item_code: string;
-  item_name?: string;
-  final_anomaly_classification: 'Critical' | 'Moderate' | string;
-  consumption: number;
-  rolling_anomaly_score: number;
-  global_anomaly_score: number;
-  category?: string;
-  year?: number;
-  month?: number;
-  year_month?: string;
-}
-
-interface StockItem {
-  item_name: string;
-  category?: string;
-  consumption: number;
-  sih: number;
-  avg_daily_consumption: number;
-  turnover: number;
-  coverage_days: number;
-  status?: string;
-  stockStatus?: string;
-  coverageDisplay?: string;
-}
-
-interface ConsumptionTrend {
-  date: string;
-  month: number;
-  year: number;
-  totalConsumption: number;
-  anomalyScore: number;
-  itemCount?: number;
-  [key: string]: any; // For dynamic item consumption keys
-}
-
-interface ChartDataItem {
-  item: string;
-  category?: string;
-  moderateSpikes: number;
-  criticalSpikes: number;
-  totalConsumption: number;
-}
-
-interface StockMovementData {
-  name: string;
-  value: number;
-  color: string;
-}
-
-const DynamicCSVDashboard: React.FC = () => {
-  // State management with proper typing
-  const [correlationData, setCorrelationData] = useState<CorrelationItem[]>([]);
-  const [correlationLoading, setCorrelationLoading] = useState<boolean>(true);
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All Categories');
-  const [categories, setCategories] = useState<string[]>(['All Categories']);
-
-  const [anomaliesData, setAnomaliesData] = useState<AnomalyItem[]>([]);
-  const [anomaliesLoading, setAnomaliesLoading] = useState<boolean>(true);
-  const [anomaliesSelectedDateRange, setAnomaliesSelectedDateRange] = useState<string>('Last 3 Months');
-  const [anomaliesSelectedCategory, setAnomaliesSelectedCategory] = useState<string>('All Categories');
-  const [anomaliesCategories, setAnomaliesCategories] = useState<string[]>(['All Categories']);
-  const [fullAnomaliesData, setFullAnomaliesData] = useState<AnomalyItem[]>([]);
-
-  const [stockData, setStockData] = useState<StockItem[]>([]);
-  const [stockLoading, setStockLoading] = useState<boolean>(true);
-  const [stockAnalysisCategory, setStockAnalysisCategory] = useState<string>('All Categories');
-  const [stockCategories, setStockCategories] = useState<string[]>(['All Categories']);
-
-  const [consumptionTrends, setConsumptionTrends] = useState<ConsumptionTrend[]>([]);
-
-  // CSV file paths
-  const csvPaths = {
-    correlations: '/Book 2 (1)(Sheet1).csv',
-    anomalies: '/BMS_Enhanced_Inventory_with_Anomalies_20250917_090908.csv',
-    stock: '/BMS_Enhanced_Inventory_Sample_Structure.csv',
-    predictions: '/predictions_latest.csv'
-  };
-
-  // Load CSV from file path using fetch
-  const loadCSVFromPath = async (path: string): Promise<any[] | null> => {
-    try {
-      const response = await fetch(path);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const text = await response.text();
-      const parsed = Papa.parse(text, {
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true
-      });
-      return parsed.data;
-    } catch (error) {
-      console.error(`Error loading CSV from ${path}:`, error);
-      return null;
-    }
-  };
-
-  // Handle file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, dataType: string): void => {
-    const file = event.target.files?.[0];
-    if (file && file.name.endsWith('.csv')) {
-      const reader = new FileReader();
-      reader.onload = (e: ProgressEvent<FileReader>) => {
-        const text = e.target?.result as string;
-        const parsed = Papa.parse(text, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true
-        });
-        
-        console.log(`📁 Loaded ${parsed.data.length} records from uploaded ${dataType} file`);
-        
-        switch(dataType) {
-          case 'correlations':
-            processCorrelationData(parsed.data);
-            break;
-          case 'anomalies':
-            processAnomaliesData(parsed.data);
-            break;
-          case 'stock':
-            processStockData(parsed.data);
-            break;
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  // Process correlation data
-  const processCorrelationData = (data: any[]): void => {
-    const validData: CorrelationItem[] = data.filter(item => 
-      item.item_name && 
-      item.corr_top_positive_item && 
-      item.item_name.toString().trim() !== '' &&
-      item.corr_top_positive_item.toString().trim() !== ''
-    );
-    
-    setCorrelationData(validData);
-    
-    // Get all unique categories from the data
-    const allCategories = validData.map(item => {
-      return item.category || item.Category || item.CATEGORY || item.item_category || item.Item_Category || 'Uncategorized';
-    }).filter(cat => cat && cat.toString().trim() !== '' && cat !== 'Uncategorized');
-    
-    const uniqueCategories = ['All Categories', ...new Set(allCategories)].sort();
-    setCategories(uniqueCategories);
-    
-    console.log('Raw data sample:', data.slice(0, 2));
-    console.log('Available categories found:', uniqueCategories);
-    
-    if (validData.length > 0) {
-      const firstPair = validData[0];
-      setSelectedItems([firstPair.item_name, firstPair.corr_top_positive_item]);
-    }
-    
-    setCorrelationLoading(false);
-    console.log(`✅ Processed ${validData.length} correlation records across ${uniqueCategories.length - 1} categories`);
-  };
-
-  // Process anomalies data
-  const processAnomaliesData = (data: any[]): void => {
-    setFullAnomaliesData(data);
-
-    const filteredAnomalies: AnomalyItem[] = data.filter(item => 
-      item.item_code && 
-      item.item_code !== 0 && 
-      typeof item.item_code === 'string' &&
-      item.item_code.toString().trim() !== '' &&
-      (item.final_anomaly_classification === 'Critical' || 
-       item.final_anomaly_classification === 'Moderate') &&
-       (item.consumption > 0 || item.consumption === 0)
-    ).map(item => ({
-      ...item,
-      consumption: Number(item.consumption) || 0,
-      rolling_anomaly_score: Number(item.rolling_anomaly_score) || 0,
-      global_anomaly_score: Number(item.global_anomaly_score) || 0
-    }));
-
-    setAnomaliesData(filteredAnomalies);
-
-    const uniqueAnomaliesCategories = ['All Categories', ...new Set(
-      data.map(item => item.category).filter(cat => cat && cat.toString().trim() !== '')
-    )];
-    setAnomaliesCategories(uniqueAnomaliesCategories);
-
-    setAnomaliesLoading(false);
-    console.log(`✅ Processed ${filteredAnomalies.length} anomalies from ${data.length} total records`);
-  };
-
-  // Process stock data
-  const processStockData = (data: any[]): void => {
-    const processedData: StockItem[] = data.filter(item => item.item_name).map(item => ({
-      ...item,
-      consumption: Number(item.consumption) || 0,
-      sih: Number(item.sih) || 0,
-      avg_daily_consumption: Number(item.avg_daily_consumption) || 0,
-      turnover: Number(item.turnover) || 0,
-      coverage_days: Number(item.coverage_days) || 0,
-      stockStatus: item.sih === 0 ? 'Out of Stock' : (item.status || 'Normal Moving'),
-      coverageDisplay: item.sih === 0 ? '0 days' :
-                      item.coverage_days >= 999 ? '∞' : 
-                      `${Math.round(item.coverage_days)} days`
-    }));
-
-    setStockData(processedData);
-
-    const uniqueStockCategories = ['All Categories', ...new Set(
-      data.map(item => item.category).filter(cat => cat && cat.toString().trim() !== '')
-    )];
-    setStockCategories(uniqueStockCategories);
-
-    setStockLoading(false);
-    console.log(`✅ Processed ${processedData.length} stock records`);
-  };
-
-  // Auto-load CSVs from paths on component mount
-  useEffect(() => {
-    const autoLoadCSVs = async () => {
-      console.log('🔄 Attempting to auto-load CSV files...');
-      
-      // Try to load correlations
-      const correlationData = await loadCSVFromPath(csvPaths.correlations);
-      if (correlationData) {
-        processCorrelationData(correlationData);
-      } else {
-        console.log('⚠️ Could not auto-load correlation CSV, using file upload instead');
-        setCorrelationLoading(false);
-      }
-
-      // Try to load anomalies
-      const anomaliesData = await loadCSVFromPath(csvPaths.anomalies);
-      if (anomaliesData) {
-        processAnomaliesData(anomaliesData);
-      } else {
-        console.log('⚠️ Could not auto-load anomalies CSV, using file upload instead');
-        setAnomaliesLoading(false);
-      }
-
-      // Try to load stock data
-      const stockData = await loadCSVFromPath(csvPaths.stock);
-      if (stockData) {
-        processStockData(stockData);
-      } else {
-        console.log('⚠️ Could not auto-load stock CSV, using file upload instead');
-        setStockLoading(false);
-      }
-    };
-
-    autoLoadCSVs();
-  }, [csvPaths.anomalies, csvPaths.correlations, csvPaths.stock]);
-
-  // Generate consumption trends from real anomalies data
-  const generateConsumptionTrendsFromAnomalies = (data: AnomalyItem[]): void => {
-    if (!selectedItems.length || selectedItems.length !== 2 || !data.length) {
-      setConsumptionTrends([]);
-      return;
-    }
-
-    const relevantData = data.filter(item => 
-      item.item_code && 
-      (selectedItems.includes(item.item_code) || 
-       selectedItems.includes(item.item_name || ''))
-    );
-
-    if (relevantData.length === 0) {
-      // Create simulated data for demonstration
-      const months = ['2024_06', '2024_07', '2024_08', '2024_09'];
-      const simulatedTrends: ConsumptionTrend[] = months.map((month, index) => ({
-        date: month,
-        month: parseInt(month.split('_')[1]),
-        year: parseInt(month.split('_')[0]),
-        totalConsumption: Math.floor(Math.random() * 100) + 50 + (index * 10),
-        anomalyScore: Math.random() * 3 + index * 0.5,
-        [`${selectedItems[0]}_consumption`]: Math.floor(Math.random() * 50) + 25,
-        [`${selectedItems[1]}_consumption`]: Math.floor(Math.random() * 50) + 25,
-        [`${selectedItems[0]}_anomaly`]: Math.random() * 2,
-        [`${selectedItems[1]}_anomaly`]: Math.random() * 2
-      }));
-      
-      setConsumptionTrends(simulatedTrends);
-      return;
-    }
-
-    // Group by year_month and create trend data
-    const trendMap: { [key: string]: ConsumptionTrend } = {};
-    relevantData.forEach(item => {
-      const key = item.year_month || `${item.year}_${item.month}`;
-      if (!trendMap[key]) {
-        trendMap[key] = {
-          date: key,
-          month: item.month || 1,
-          year: item.year || 2024,
-          totalConsumption: 0,
-          itemCount: 0,
-          anomalyScore: 0
-        };
-      }
-      
-      trendMap[key].totalConsumption += item.consumption || 0;
-      trendMap[key].itemCount = (trendMap[key].itemCount || 0) + 1;
-      trendMap[key].anomalyScore += (item.rolling_anomaly_score || 0);
-      
-      selectedItems.forEach(selectedItem => {
-        if (item.item_code === selectedItem || item.item_name === selectedItem) {
-          trendMap[key][`${selectedItem}_consumption`] = item.consumption || 0;
-          trendMap[key][`${selectedItem}_anomaly`] = item.rolling_anomaly_score || 0;
-        }
-      });
-    });
-
-    const trends = Object.values(trendMap)
-      .sort((a, b) => {
-        const aDate = new Date(a.year, a.month - 1);
-        const bDate = new Date(b.year, b.month - 1);
-        return aDate.getTime() - bDate.getTime();
-      });
-
-    setConsumptionTrends(trends);
-  };
-
-  // Update trends when selected items change
-  useEffect(() => {
-    if (!anomaliesLoading && fullAnomaliesData.length > 0) {
-      generateConsumptionTrendsFromAnomalies(fullAnomaliesData);
-    }
-  }, [selectedItems, anomaliesLoading, fullAnomaliesData, generateConsumptionTrendsFromAnomalies]);
-
-  // Filter functions
-  const getFilteredCorrelationData = (): CorrelationItem[] => {
-    if (selectedCategory === 'All Categories') return correlationData;
-    return correlationData.filter(item => {
-      const itemCategory = item.category || item.Category || item.CATEGORY || item.item_category || item.Item_Category;
-      return itemCategory === selectedCategory;
-    });
-  };
-
-  const getFilteredAnomaliesData = (): AnomalyItem[] => {
-    let filtered = anomaliesData;
-
-    if (anomaliesSelectedDateRange !== 'All Time') {
-      filtered = filtered.filter(item => {
-        const year = item.year || 2024;
-        const month = item.month || 1;
-        
-        switch(anomaliesSelectedDateRange) {
-          case 'Last 3 Months': return year >= 2024 && month >= 9;
-          case 'Last 6 Months': return year >= 2024 && month >= 6;
-          case 'Current Year': return year >= 2024;
-          default: return true;
-        }
-      });
-    }
-
-    if (anomaliesSelectedCategory !== 'All Categories') {
-      filtered = filtered.filter(item => item.category === anomaliesSelectedCategory);
-    }
-
-    return filtered;
-  };
-
-  const getFilteredStockData = (): StockItem[] => {
-    if (stockAnalysisCategory === 'All Categories') return stockData;
-    return stockData.filter(item => item.category === stockAnalysisCategory);
-  };
-
-  // Event handlers
-  const handleCorrelationClick = (correlation: CorrelationItem): void => {
-    setSelectedItems([correlation.item_name, correlation.corr_top_positive_item]);
-  };
-
-  const isCorrelationSelected = (correlation: CorrelationItem): boolean => {
-    return selectedItems.includes(correlation.item_name) && 
-           selectedItems.includes(correlation.corr_top_positive_item);
-  };
-
-  // Chart data generators
-  const generateAnomalyChartData = (): ChartDataItem[] => {
-    const filtered = getFilteredAnomaliesData();
-    const grouped: { [key: string]: ChartDataItem } = {};
-
-    filtered.forEach(item => {
-      const key = item.item_code || item.item_name || 'Unknown';
-      if (!grouped[key]) {
-        grouped[key] = {
-          item: key,
-          category: item.category,
-          moderateSpikes: 0,
-          criticalSpikes: 0,
-          totalConsumption: 0
-        };
-      }
-      
-      grouped[key].totalConsumption += item.consumption || 0;
-      
-      if (item.final_anomaly_classification === 'Critical') {
-        grouped[key].criticalSpikes++;
-      } else if (item.final_anomaly_classification === 'Moderate') {
-        grouped[key].moderateSpikes++;
-      }
-    });
-
-    return Object.values(grouped)
-      .filter(item => item.criticalSpikes > 0 || item.moderateSpikes > 0)
-      .sort((a, b) => (b.criticalSpikes + b.moderateSpikes) - (a.criticalSpikes + a.moderateSpikes))
-      .slice(0, 15);
-  };
-
-  const generateStockMovementData = (): StockMovementData[] => {
-    const filtered = getFilteredStockData();
-    const counts: { [key: string]: number } = { 
-      'Out of Stock': 0, 
-      'Fast Moving': 0, 
-      'Normal Moving': 0, 
-      'Slow Moving': 0 
-    };
-    
-    filtered.forEach(item => {
-      const status = item.stockStatus || 'Normal Moving';
-      counts[status] = (counts[status] || 0) + 1;
-    });
-    
-    return [
-      { name: 'Out of Stock', value: counts['Out of Stock'], color: '#dc2626' },
-      { name: 'Fast Moving', value: counts['Fast Moving'], color: '#f59e0b' },
-      { name: 'Normal Moving', value: counts['Normal Moving'], color: '#3b82f6' },
-      { name: 'Slow Moving', value: counts['Slow Moving'], color: '#6b7280' }
-    ];
-  };
-
-  // Helper functions
-  const formatItemName = (name: string | undefined): string => {
-    if (!name) return 'Unknown';
-    return name.length > 25 ? name.substring(0, 25) + '...' : name;
-  };
+const globalStyles = `
+  ${fontImport}
   
-  const getCategoryColor = (category: string | undefined): string => {
-    const colors: { [key: string]: string } = {
-      'Pantry': '#3b82f6',
-      'HK Consumables': '#10b981',
-      'HK Chemicals': '#f59e0b',
-      'Toiletries': '#8b5cf6'
+  * {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes skeletonShimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+  }
+`;
+
+// Color scheme matching inventory analytics
+const COLORS = {
+  primary: '#6366F1',
+  secondary: '#8B5CF6',
+  dark: '#0F172A',
+  gray: '#64748B',
+  lightGray: '#94A3B8',
+  bg: '#FAFAFA',
+  white: '#FFFFFF',
+  border: '#F1F3F5',
+  critical: '#EF4444',
+  high: '#F59E0B',
+  success: '#10B981',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  info: '#3B82F6',
+  pink: '#EC4899',
+  purple: '#8B5CF6',
+  green: '#10B981',
+  orange: '#F59E0B',
+  cyan: '#06B6D4',
+};
+
+const CHART_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#F97316'];
+
+// ==================== UTILITY FUNCTIONS ====================
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+};
+
+const formatCompactCurrency = (value: number): string => {
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+  
+  if (absValue >= 10000000) {
+    return `${sign}₹${(absValue / 10000000).toFixed(1)}Cr`;
+  } else if (absValue >= 100000) {
+    return `${sign}₹${(absValue / 100000).toFixed(1)}L`;
+  } else if (absValue >= 1000) {
+    return `${sign}₹${(absValue / 1000).toFixed(1)}K`;
+  }
+  
+  return `${sign}₹${absValue.toFixed(0)}`;
+};
+
+// ==================== COUNTUP ANIMATION ====================
+const CountUp: React.FC<{
+  end: number;
+  duration?: number;
+  decimals?: number;
+}> = ({ end, duration = 1200, decimals = 0 }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      setCount(easeOutQuart * end);
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      } else {
+        setCount(end);
+      }
     };
-    return colors[category || ''] || '#6b7280';
+
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [end, duration]);
+
+  const displayValue = decimals > 0
+    ? count.toFixed(decimals)
+    : Math.floor(count).toLocaleString('en-IN');
+  return <>{displayValue}</>;
+};
+
+// ==================== STYLES ====================
+const styles = {
+  container: {
+    fontFamily: `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif`,
+    padding: '24px',
+    backgroundColor: COLORS.bg,
+    minHeight: '100vh',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    animation: 'fadeIn 0.6s ease-out',
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 600,
+    color: COLORS.dark,
+    margin: '0 0 6px 0',
+    letterSpacing: '-0.02em',
+  },
+  subtitle: {
+    fontSize: '13px',
+    color: COLORS.gray,
+    margin: 0,
+    fontWeight: 400,
+    letterSpacing: '-0.01em',
+  },
+  buttonGroup: {
+    display: 'flex',
+    gap: '12px',
+  },
+  button: {
+    padding: '9px 16px',
+    fontSize: '13px',
+    fontWeight: 500,
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: '8px',
+    backgroundColor: COLORS.white,
+    color: COLORS.dark,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    transition: 'all 0.2s ease',
+    fontFamily: 'inherit',
+  },
+  kpiGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '16px',
+    marginBottom: '16px',
+    animation: 'fadeIn 0.8s ease-out',
+  },
+  kpiCard: {
+    background: COLORS.white,
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: 12,
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 16,
+    transition: 'all 0.2s',
+    animation: 'slideIn 0.5s ease-out',
+  },
+  kpiHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  kpiTitle: {
+    fontSize: '13px',
+    fontWeight: 400,
+    color: COLORS.gray,
+    letterSpacing: '-0.01em',
+  },
+  kpiValue: {
+    fontSize: '28px',
+    fontWeight: 600,
+    color: COLORS.dark,
+    letterSpacing: '-0.02em',
+    lineHeight: 1,
+  },
+  kpiTrend: (isPositive: boolean) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '12px',
+    fontWeight: 500,
+    color: isPositive ? COLORS.success : COLORS.danger,
+    marginTop: '8px',
+  }),
+  iconBadge: (color: string) => ({
+    width: 40,
+    height: 40,
+    background: `${color}15`,
+    borderRadius: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  }),
+  chartCard: {
+    background: COLORS.white,
+    borderRadius: 12,
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
+    border: `1px solid ${COLORS.border}`,
+    animation: 'slideIn 0.7s ease-out',
+    transition: 'all 0.3s ease',
+  },
+  chartHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  chartTitle: {
+    fontSize: '16px',
+    fontWeight: 500,
+    color: COLORS.dark,
+    margin: 0,
+    letterSpacing: '-0.015em',
+  },
+  badge: (color: string) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '4px 12px',
+    background: color,
+    color: COLORS.white,
+    borderRadius: 16,
+    fontSize: '11px',
+    fontWeight: 500,
+    letterSpacing: '0.01em',
+    boxShadow: `0 2px 8px ${color}40`,
+  }),
+  tableContainer: {
+    overflowX: 'auto' as const,
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+  },
+  th: {
+    padding: '12px 16px',
+    textAlign: 'left' as const,
+    fontSize: '11px',
+    fontWeight: 500,
+    color: COLORS.gray,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+    borderBottom: `1px solid ${COLORS.border}`,
+    backgroundColor: COLORS.bg,
+  },
+  td: {
+    padding: '16px',
+    fontSize: '13px',
+    fontWeight: 400,
+    color: COLORS.dark,
+    borderBottom: `1px solid ${COLORS.border}`,
+  },
+  alertCard: (severity: string) => {
+    const colors = {
+      high: { bg: '#FEE2E2', border: COLORS.critical },
+      medium: { bg: '#FEF3C7', border: COLORS.warning },
+      low: { bg: '#DBEAFE', border: COLORS.info },
+    };
+    const color = colors[severity] || colors.low;
+    return {
+      padding: '12px 16px',
+      borderRadius: 10,
+      backgroundColor: color.bg,
+      border: `1px solid ${color.border}`,
+      marginBottom: '10px',
+      transition: 'all 0.2s',
+      cursor: 'pointer',
+    };
+  },
+  statusBadge: (status: string) => {
+    const colors = {
+      active: { bg: '#DCFCE7', text: '#15803D' },
+      maintenance: { bg: '#FEF3C7', text: '#D97706' },
+      retired: { bg: '#FEE2E2', text: '#DC2626' },
+      inactive: { bg: '#F1F5F9', text: '#475569' },
+    };
+    const color = colors[status.toLowerCase()] || colors.active;
+    return {
+      display: 'inline-block',
+      padding: '4px 10px',
+      fontSize: '11px',
+      fontWeight: 500,
+      borderRadius: 12,
+      backgroundColor: color.bg,
+      color: color.text,
+      letterSpacing: '0.01em',
+    };
+  },
+};
+
+// ==================== KPI CARD COMPONENT ====================
+interface KPICardProps {
+  title: string;
+  value: number;
+  prefix?: string;
+  suffix?: string;
+  icon: React.ComponentType<any>;
+  trend?: number;
+  iconColor: string;
+  loading?: boolean;
+}
+
+const KPICard: React.FC<KPICardProps> = memo(({
+  title,
+  value,
+  prefix = '',
+  suffix = '',
+  icon: Icon,
+  trend,
+  iconColor,
+  loading = false
+}) => {
+  return (
+    <div 
+      style={styles.kpiCard}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.12)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.transform = 'translateY(0)';
+      }}
+    >
+      <div style={styles.kpiHeader}>
+        <div style={{ flex: 1 }}>
+          <div style={styles.kpiTitle}>{title}</div>
+          <div style={styles.kpiValue}>
+            {loading ? (
+              <div style={{ width: 100, height: 28, background: '#F1F5F9', borderRadius: 6, animation: 'skeletonShimmer 1.2s ease-in-out infinite' }} />
+            ) : (
+              <>
+                {prefix}
+                <CountUp end={value} decimals={suffix === '%' ? 1 : 0} />
+                {suffix}
+              </>
+            )}
+          </div>
+          {trend !== undefined && !loading && (
+            <div style={styles.kpiTrend(trend >= 0)}>
+              {trend >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+              <span>{Math.abs(trend)}%</span>
+            </div>
+          )}
+        </div>
+        <div style={styles.iconBadge(iconColor)}>
+          <Icon size={20} color={iconColor} />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ==================== CUSTOM DONUT CHART ====================
+const CustomDonutChart: React.FC<{
+  data: Array<{ name: string; value: number; color: string }>;
+  total: number;
+  loading?: boolean;
+}> = ({ data, total, loading = false }) => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  const renderCustomLabel = (entry: any) => {
+    const percent = ((entry.value / total) * 100).toFixed(1);
+    return `${percent}%`;
   };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 280 }}>
+        <div style={{
+          width: 40,
+          height: 40,
+          border: '3px solid #F3F4F6',
+          borderTop: '3px solid #6366F1',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+      </div>
+    );
+  }
 
   return (
-    <div style={{ 
-      padding: '24px', 
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f9fafb, #f3f4f6)',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ 
-            fontSize: '32px', 
-            fontWeight: 'bold', 
-            color: '#111827', 
-            margin: '0 0 8px 0'
-          }}>
-            BMS Dynamic CSV Inventory Analysis
-          </h1>
-          <p style={{ 
-            fontSize: '16px', 
-            color: '#6b7280', 
-            margin: 0 
-          }}>
-            Live data from your CSV files - Upload or auto-load from scripts folder
-          </p>
-        </div>
-
-        {/* File Upload Section */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          padding: '24px',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-          border: '1px solid #f3f4f6',
-          marginBottom: '24px'
-        }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-            📁 CSV Data Sources
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                Correlation Data (Book 2)
-              </label>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={(e) => handleFileUpload(e, 'correlations')}
+    <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+      <ResponsiveContainer width="60%" height={280}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={70}
+            outerRadius={100}
+            paddingAngle={2}
+            dataKey="value"
+            label={renderCustomLabel}
+            labelLine={false}
+            onMouseEnter={(_, index) => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(null)}
+          >
+            {data.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={entry.color}
+                stroke={COLORS.white}
+                strokeWidth={2}
                 style={{
-                  padding: '8px',
-                  fontSize: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  width: '100%'
+                  filter: activeIndex === index ? 'brightness(1.1)' : 'brightness(1)',
+                  transition: 'all 0.3s',
+                  cursor: 'pointer',
                 }}
               />
-              <div style={{ fontSize: '10px', color: correlationData.length > 0 ? '#166534' : '#6b7280', marginTop: '4px' }}>
-                {correlationData.length > 0 ? `✅ ${correlationData.length} records loaded` : 'No data loaded'}
-              </div>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                Anomalies Data
-              </label>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={(e) => handleFileUpload(e, 'anomalies')}
-                style={{
-                  padding: '8px',
-                  fontSize: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  width: '100%'
-                }}
-              />
-              <div style={{ fontSize: '10px', color: anomaliesData.length > 0 ? '#166534' : '#6b7280', marginTop: '4px' }}>
-                {anomaliesData.length > 0 ? `✅ ${anomaliesData.length} anomalies loaded` : 'No data loaded'}
-              </div>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                Stock Data
-              </label>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={(e) => handleFileUpload(e, 'stock')}
-                style={{
-                  padding: '8px',
-                  fontSize: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  width: '100%'
-                }}
-              />
-              <div style={{ fontSize: '10px', color: stockData.length > 0 ? '#166534' : '#6b7280', marginTop: '4px' }}>
-                {stockData.length > 0 ? `✅ ${stockData.length} items loaded` : 'No data loaded'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Cross Item Correlation Analysis */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          padding: '32px',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-          border: '1px solid #f3f4f6',
-          marginBottom: '32px'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '32px'
-          }}>
-            <h2 style={{ 
-              fontSize: '24px', 
-              fontWeight: '600', 
-              color: '#111827', 
-              margin: 0 
-            }}>
-              Cross Item Correlation Analysis
-            </h2>
-            <div style={{
-              padding: '8px 12px',
-              backgroundColor: correlationLoading ? '#fef3c7' : (correlationData.length > 0 ? '#dcfce7' : '#fef2f2'),
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: correlationLoading ? '#92400e' : (correlationData.length > 0 ? '#166534' : '#991b1b')
-            }}>
-              {correlationLoading ? 'Loading...' : 
-               correlationData.length > 0 ? `✅ ${correlationData.length} correlations loaded` : 
-               '❌ No data - please upload CSV'}
-            </div>
-          </div>
-
-          {correlationData.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '60px 20px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '8px',
-              border: '2px dashed #d1d5db'
-            }}>
-              <h3 style={{ fontSize: '18px', color: '#6b7280', marginBottom: '8px' }}>No Correlation Data</h3>
-              <p style={{ fontSize: '14px', color: '#9ca3af' }}>Upload your "Book 2 (1)(Sheet1).csv" file above to see correlations</p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '24px' }}>
-              {/* Correlation Table */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0 }}>
-                    Item Correlation Matrix
-                  </h3>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    style={{
-                      padding: '6px 12px',
-                      fontSize: '13px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      backgroundColor: 'white'
-                    }}
-                  >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                    <thead style={{ position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10 }}>
-                      <tr style={{ backgroundColor: '#f1f5f9' }}>
-                        <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
-                          Primary Item
-                        </th>
-                        <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
-                          Correlated Item
-                        </th>
-                        <th style={{ padding: '12px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0', width: '60px' }}>
-                          Month
-                        </th>
-                        <th style={{ padding: '12px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #e2e8f0', width: '70px' }}>
-                          Strength
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getFilteredCorrelationData().map((correlation, index) => {
-                        const isSelected = isCorrelationSelected(correlation);
-                        return (
-                          <tr 
-                            key={index}
-                            onClick={() => handleCorrelationClick(correlation)}
-                            style={{ 
-                              backgroundColor: isSelected ? '#dbeafe' : index % 2 === 0 ? '#ffffff' : '#f8fafc',
-                              cursor: 'pointer',
-                              borderLeft: isSelected ? '4px solid #3b82f6' : '4px solid transparent'
-                            }}
-                          >
-                            <td style={{ padding: '10px 8px', fontWeight: isSelected ? '600' : '500', borderRight: '1px solid #e2e8f0' }}>
-                              {formatItemName(correlation.item_name)}
-                            </td>
-                            <td style={{ padding: '10px 8px', fontWeight: isSelected ? '600' : '500', borderRight: '1px solid #e2e8f0' }}>
-                              {formatItemName(correlation.corr_top_positive_item)}
-                            </td>
-                            <td style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
-                              {correlation.month || 'N/A'}
-                            </td>
-                            <td style={{ padding: '10px 8px', textAlign: 'center' }}>
-                              <span style={{ 
-                                padding: '2px 4px',
-                                borderRadius: '6px',
-                                fontSize: '8px',
-                                fontWeight: 'bold',
-                                backgroundColor: correlation.corr_strength_category === 'Strong' ? '#f59e0b' : '#6b7280',
-                                color: 'white'
-                              }}>
-                                {(correlation.corr_top_positive_value || 0).toFixed(2)}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Consumption Trends Visualization */}
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                  Consumption Trends: {selectedItems.length === 2 ? selectedItems.join(' ↔ ') : 'None selected'}
-                </h3>
-                <div style={{ height: '300px' }}>
-                  {selectedItems.length === 2 && consumptionTrends.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={consumptionTrends} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                        <XAxis 
-                          dataKey="date" 
-                          tick={{ fontSize: 10, fill: '#6b7280' }}
-                          tickFormatter={(value) => value.replace('_', '/')}
-                        />
-                        <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                        <Tooltip 
-                          labelFormatter={(value) => `Period: ${value}`.replace('_', '/')}
-                          formatter={(value, name) => [
-                            typeof value === 'number' ? value.toFixed(1) : value, 
-                            (name as string).replace('_', ' ').replace('consumption', 'Units').replace('anomaly', 'Score')
-                          ]}
-                        />
-                        <Legend />
-                        <Area 
-                          type="monotone" 
-                          dataKey="totalConsumption" 
-                          stackId="1"
-                          stroke="#3b82f6" 
-                          fill="#3b82f6" 
-                          fillOpacity={0.3}
-                          name="Total Consumption"
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="anomalyScore" 
-                          stackId="2"
-                          stroke="#dc2626" 
-                          fill="#dc2626" 
-                          fillOpacity={0.3}
-                          name="Anomaly Score"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div style={{ 
-                      height: '100%', 
-                      backgroundColor: '#f8fafc', 
-                      borderRadius: '8px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      border: '2px dashed #d1d5db'
-                    }}>
-                      <div style={{ textAlign: 'center', color: '#6b7280' }}>
-                        <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
-                          {selectedItems.length === 2 ? 'Loading trends...' : 'Select correlation pair above'}
-                        </div>
-                        <div style={{ fontSize: '12px' }}>
-                          {selectedItems.length === 2 ? `${selectedItems[0]} ↔ ${selectedItems[1]}` : 'Click on correlation rows to view trends'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* BMS Consumption Anomalies Analysis */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          padding: '32px',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-          border: '1px solid #f3f4f6',
-          marginBottom: '32px'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '32px'
-          }}>
-            <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#111827', margin: 0 }}>
-              BMS Consumption Anomalies Analysis
-            </h2>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{
-                padding: '8px 12px',
-                backgroundColor: anomaliesLoading ? '#fef3c7' : (anomaliesData.length > 0 ? '#dcfce7' : '#fef2f2'),
-                borderRadius: '8px',
-                fontSize: '12px',
-                color: anomaliesLoading ? '#92400e' : (anomaliesData.length > 0 ? '#166534' : '#991b1b')
-              }}>
-                {anomaliesLoading ? 'Loading...' : 
-                 anomaliesData.length > 0 ? `✅ ${anomaliesData.length} anomalies loaded` : 
-                 '❌ Upload anomalies CSV'}
-              </div>
-              <select
-                value={anomaliesSelectedDateRange}
-                onChange={(e) => setAnomaliesSelectedDateRange(e.target.value)}
-                disabled={anomaliesData.length === 0}
-                style={{ padding: '8px 16px', fontSize: '14px', border: '1px solid #d1d5db', borderRadius: '8px' }}
-              >
-                <option value="Last 3 Months">Last 3 Months</option>
-                <option value="Last 6 Months">Last 6 Months</option>
-                <option value="Current Year">Current Year</option>
-                <option value="All Time">All Time</option>
-              </select>
-              <select
-                value={anomaliesSelectedCategory}
-                onChange={(e) => setAnomaliesSelectedCategory(e.target.value)}
-                disabled={anomaliesData.length === 0}
-                style={{ padding: '8px 16px', fontSize: '14px', border: '1px solid #d1d5db', borderRadius: '8px' }}
-              >
-                {anomaliesCategories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {anomaliesData.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '60px 20px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '8px',
-              border: '2px dashed #d1d5db'
-            }}>
-              <h3 style={{ fontSize: '18px', color: '#6b7280', marginBottom: '8px' }}>No Anomalies Data</h3>
-              <p style={{ fontSize: '14px', color: '#9ca3af' }}>Upload your anomalies CSV file above to see analysis</p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px' }}>
-              {/* Anomalies Chart */}
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                  Top Anomaly Items (Real Data)
-                </h3>
-                <ResponsiveContainer width="100%" height={350}>
-                  <ComposedChart data={generateAnomalyChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                    <XAxis 
-                      dataKey="item" 
-                      tick={{ fontSize: 10, fill: '#6b7280' }} 
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                      tickFormatter={(value) => formatItemName(value)}
-                    />
-                    <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="moderateSpikes" name="Moderate" fill="#f59e0b" />
-                    <Bar dataKey="criticalSpikes" name="Critical" fill="#dc2626" />
-                    <Line dataKey="totalConsumption" name="Total Consumption" stroke="#3b82f6" strokeWidth={2} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Anomalies Summary */}
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                  Real Anomaly Summary
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                  <div style={{ padding: '16px', backgroundColor: '#fef3c7', borderRadius: '8px', textAlign: 'center' }}>
-                    <h4 style={{ fontSize: '14px', color: '#92400e', margin: '0 0 8px 0' }}>Moderate Anomalies</h4>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#92400e', margin: 0 }}>
-                      {getFilteredAnomaliesData().filter(item => item.final_anomaly_classification === 'Moderate').length}
-                    </p>
+            ))}
+          </Pie>
+          <Tooltip
+            content={({ payload }) => {
+              if (!payload || !payload[0]) return null;
+              const data = payload[0].payload;
+              return (
+                <div style={{
+                  background: COLORS.white,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  border: `1px solid ${COLORS.border}`,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.dark }}>
+                    {data.name}
                   </div>
-                  <div style={{ padding: '16px', backgroundColor: '#fef2f2', borderRadius: '8px', textAlign: 'center' }}>
-                    <h4 style={{ fontSize: '14px', color: '#991b1b', margin: '0 0 8px 0' }}>Critical Anomalies</h4>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#991b1b', margin: 0 }}>
-                      {getFilteredAnomaliesData().filter(item => item.final_anomaly_classification === 'Critical').length}
-                    </p>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: data.color, marginTop: 4 }}>
+                    {data.value.toLocaleString('en-IN')} ({((data.value / total) * 100).toFixed(1)}%)
                   </div>
                 </div>
-
-                {/* Anomalies List */}
-                <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', maxHeight: '250px', overflowY: 'auto' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>Recent Anomalies:</h4>
-                  {getFilteredAnomaliesData().slice(0, 8).map((item, index) => (
-                    <div key={index} style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      padding: '8px 0',
-                      borderBottom: index < 7 ? '1px solid #e5e7eb' : 'none'
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '12px', fontWeight: '500' }}>
-                          {formatItemName(item.item_code)}
-                        </div>
-                        <div style={{ fontSize: '10px', color: '#6b7280' }}>
-                          {item.category} • {item.year_month?.replace('_', '/')} • Score: {(item.rolling_anomaly_score || 0).toFixed(2)}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ 
-                          fontSize: '10px', 
-                          padding: '2px 6px',
-                          backgroundColor: item.final_anomaly_classification === 'Critical' ? '#dc2626' : '#f59e0b',
-                          color: 'white',
-                          borderRadius: '4px'
-                        }}>
-                          {item.final_anomaly_classification}
-                        </div>
-                        <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>
-                          {item.consumption || 0} units
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Stock Movement Analysis */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2.5fr', gap: '24px' }}>
-          {/* Stock Movement Pie Chart */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            padding: '24px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #f3f4f6'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0 }}>Stock Movement Analysis</h3>
-              <select
-                value={stockAnalysisCategory}
-                onChange={(e) => setStockAnalysisCategory(e.target.value)}
-                disabled={stockData.length === 0}
-                style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '6px' }}
-              >
-                {stockCategories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div style={{
+              );
+            }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {data.map((item, index) => (
+          <div
+            key={index}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
               padding: '8px 12px',
-              backgroundColor: stockLoading ? '#fef3c7' : (stockData.length > 0 ? '#dcfce7' : '#fef2f2'),
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: stockLoading ? '#92400e' : (stockData.length > 0 ? '#166534' : '#991b1b'),
-              marginBottom: '16px'
-            }}>
-              {stockLoading ? 'Loading...' : 
-               stockData.length > 0 ? `✅ ${stockData.length} items loaded` : 
-               '❌ Upload stock CSV'}
+              borderRadius: 8,
+              backgroundColor: activeIndex === index ? COLORS.bg : 'transparent',
+              transition: 'all 0.2s',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={() => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(null)}
+          >
+            <div style={{
+              width: 12,
+              height: 12,
+              borderRadius: 3,
+              backgroundColor: item.color,
+              flexShrink: 0,
+            }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: COLORS.dark }}>
+                {item.name}
+              </div>
+              <div style={{ fontSize: 11, color: COLORS.gray, marginTop: 2 }}>
+                {item.value.toLocaleString('en-IN')} assets
+              </div>
             </div>
-
-            {stockData.length === 0 ? (
-              <div style={{ 
-                height: '280px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#f8fafc',
-                borderRadius: '8px',
-                border: '2px dashed #d1d5db'
-              }}>
-                <div style={{ textAlign: 'center', color: '#6b7280' }}>
-                  <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>No Stock Data</div>
-                  <div style={{ fontSize: '12px' }}>Upload stock CSV file above</div>
-                </div>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={generateStockMovementData()}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={35}
-                    outerRadius={75}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {generateStockMovementData().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} items`, 'Count']} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
+            <div style={{ fontSize: 13, fontWeight: 600, color: item.color }}>
+              {((item.value / total) * 100).toFixed(1)}%
+            </div>
           </div>
-
-          {/* Detailed Stock Table */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            padding: '24px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #f3f4f6'
-          }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
-              Stock Analysis - Live Data {stockData.length > 0 ? `(${getFilteredStockData().length} items)` : ''}
-            </h3>
-            
-            {stockData.length === 0 ? (
-              <div style={{ 
-                height: '380px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#f8fafc',
-                borderRadius: '8px',
-                border: '2px dashed #d1d5db'
-              }}>
-                <div style={{ textAlign: 'center', color: '#6b7280' }}>
-                  <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>No Stock Data</div>
-                  <div style={{ fontSize: '12px' }}>Upload your stock CSV file to see detailed analysis</div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ maxHeight: '380px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                  <thead style={{ position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10 }}>
-                    <tr style={{ backgroundColor: '#f1f5f9' }}>
-                      <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
-                        Item Name
-                      </th>
-                      {stockAnalysisCategory === 'All Categories' && (
-                        <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
-                          Category
-                        </th>
-                      )}
-                      <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
-                        Consumption
-                      </th>
-                      <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
-                        SIH
-                      </th>
-                      <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
-                        Coverage
-                      </th>
-                      <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
-                        Turnover
-                      </th>
-                      <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #e2e8f0' }}>
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getFilteredStockData()
-                      .sort((a, b) => {
-                        const priority: { [key: string]: number } = { 
-                          'Out of Stock': 1, 
-                          'Fast Moving': 2, 
-                          'Slow Moving': 3, 
-                          'Normal Moving': 4 
-                        };
-                        return (priority[a.stockStatus || ''] || 5) - (priority[b.stockStatus || ''] || 5);
-                      })
-                      .map((item, index) => (
-                      <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '10px 8px', fontWeight: '500', borderRight: '1px solid #e2e8f0' }}>
-                          {formatItemName(item.item_name)}
-                        </td>
-                        {stockAnalysisCategory === 'All Categories' && (
-                          <td style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
-                            <span style={{ 
-                              fontSize: '9px', 
-                              backgroundColor: getCategoryColor(item.category), 
-                              color: 'white', 
-                              padding: '2px 4px', 
-                              borderRadius: '3px'
-                            }}>
-                              {item.category?.replace(' Consumables', '').replace(' Chemicals', '')}
-                            </span>
-                          </td>
-                        )}
-                        <td style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
-                          {item.consumption}
-                        </td>
-                        <td style={{ 
-                          padding: '10px 8px', 
-                          textAlign: 'center', 
-                          fontWeight: 'bold',
-                          color: item.sih === 0 ? '#dc2626' : '#1e40af',
-                          borderRight: '1px solid #e2e8f0'
-                        }}>
-                          {item.sih}
-                        </td>
-                        <td style={{ 
-                          padding: '10px 8px', 
-                          textAlign: 'center',
-                          color: item.sih === 0 ? '#dc2626' : item.coverage_days <= 7 ? '#f59e0b' : '#10b981',
-                          fontWeight: 'bold',
-                          borderRight: '1px solid #e2e8f0'
-                        }}>
-                          {item.coverageDisplay}
-                        </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
-                          {(item.turnover || 0).toFixed(2)}
-                        </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'center' }}>
-                          <span style={{ 
-                            padding: '3px 5px',
-                            borderRadius: '8px',
-                            fontSize: '8px',
-                            fontWeight: 'bold',
-                            backgroundColor: item.stockStatus === 'Out of Stock' ? '#dc2626' :
-                                           item.stockStatus === 'Fast Moving' ? '#f59e0b' : 
-                                           item.stockStatus === 'Slow Moving' ? '#6b7280' : '#3b82f6',
-                            color: 'white'
-                          }}>
-                            {item.stockStatus}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
 };
 
-export default DynamicCSVDashboard;
+// ==================== MAIN COMPONENT ====================
+const AssetManagementDashboard: React.FC = () => {
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const { assets, loading, error, refresh } = useAssets();
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(() => {
+      refresh(true);
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, refresh]);
+
+  // Calculate statistics from real data
+  const stats = useMemo(() => {
+    const total = assets.length;
+    const active = assets.filter(a => a.status?.toLowerCase() === 'active').length;
+    const maintenance = assets.filter(a => a.status?.toLowerCase() === 'maintenance').length;
+    const retired = assets.filter(a => a.status?.toLowerCase() === 'retired' || a.status?.toLowerCase() === 'inactive').length;
+
+    // Group by category
+    const categoryGroups = assets.reduce((acc, asset) => {
+      const cat = asset.assetCategory || 'Uncategorized';
+      if (!acc[cat]) {
+        acc[cat] = { count: 0, assets: [] };
+      }
+      acc[cat].count++;
+      acc[cat].assets.push(asset);
+      return acc;
+    }, {} as Record<string, { count: number; assets: Asset[] }>);
+
+    // Get top 5 categories
+    const topCategories = Object.entries(categoryGroups)
+      .map(([category, data]) => ({
+        category,
+        count: data.count,
+        utilization: 75 + Math.random() * 20, // Mock utilization
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Recent assets (last 5 created/updated)
+    const recentAssets = [...assets]
+      .sort((a, b) => {
+        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return dateB - dateA;
+      })
+      .slice(0, 5);
+
+    // Calculate utilization rate
+    const utilizationRate = total > 0 ? (active / total) * 100 : 0;
+
+    return {
+      total,
+      active,
+      maintenance,
+      retired,
+      utilizationRate,
+      topCategories,
+      recentAssets,
+    };
+  }, [assets]);
+
+  // Asset status distribution for donut chart
+  const assetStatusData = useMemo(() => [
+    { name: 'Active', value: stats.active, color: COLORS.success },
+    { name: 'Maintenance', value: stats.maintenance, color: COLORS.warning },
+    { name: 'Retired/Inactive', value: stats.retired, color: COLORS.danger }
+  ], [stats]);
+
+  // Generate mock value trend data (would come from API in production)
+  const valueTrendData = useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    return months.map((month, i) => ({
+      month,
+      value: 8000 + Math.random() * 1000 + i * 100
+    }));
+  }, []);
+
+  // Mock alerts (would come from API)
+  const criticalAlerts = [
+    {
+      id: 1,
+      type: 'maintenance',
+      severity: 'high',
+      message: `${stats.maintenance} Assets in Maintenance`,
+      detail: 'Assets currently under maintenance',
+      count: stats.maintenance
+    },
+    {
+      id: 2,
+      type: 'warranty',
+      severity: 'medium',
+      message: 'Asset Health Check Required',
+      detail: 'Regular maintenance recommended',
+      count: Math.floor(stats.total * 0.1)
+    },
+    {
+      id: 3,
+      type: 'depreciation',
+      severity: 'low',
+      message: 'Asset Utilization Tracking',
+      detail: 'Monitor asset performance',
+      count: Math.floor(stats.total * 0.15)
+    }
+  ];
+
+  const handleExport = () => {
+    const csv = [
+      ['Asset ID', 'Name', 'Category', 'Status', 'Location', 'Installation Date'].join(','),
+      ...assets.map(a => 
+        [a.assetId, a.assetName, a.assetCategory, a.status, a.location, a.dateOfInstallation].join(',')
+      )
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `assets_dashboard_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  if (error) {
+    return (
+      <>
+        <style>{globalStyles}</style>
+        <div style={styles.container}>
+          <div style={{
+            ...styles.chartCard,
+            padding: '40px',
+            textAlign: 'center',
+            color: COLORS.danger
+          }}>
+            <AlertTriangle size={48} style={{ margin: '0 auto 16px' }} />
+            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Error Loading Dashboard</h3>
+            <p style={{ fontSize: 14, color: COLORS.gray, marginBottom: 20 }}>{error}</p>
+            <button
+              style={styles.button}
+              onClick={() => refresh(true)}
+            >
+              <RefreshCw size={16} />
+              Retry
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <style>{globalStyles}</style>
+      <div style={styles.container}>
+        {/* Header */}
+        <div style={styles.header}>
+          <div>
+            <h2 style={styles.title}>Asset Management Dashboard</h2>
+            <p style={styles.subtitle}>
+              Real-time asset tracking and lifecycle management • {stats.total} Total Assets
+            </p>
+          </div>
+          <div style={styles.buttonGroup}>
+            <button
+              style={{
+                ...styles.button,
+                backgroundColor: autoRefresh ? COLORS.success : COLORS.white,
+                color: autoRefresh ? COLORS.white : COLORS.dark,
+                borderColor: autoRefresh ? COLORS.success : COLORS.border,
+              }}
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              onMouseEnter={(e) => {
+                if (!autoRefresh) {
+                  e.currentTarget.style.backgroundColor = COLORS.bg;
+                  e.currentTarget.style.borderColor = COLORS.lightGray;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!autoRefresh) {
+                  e.currentTarget.style.backgroundColor = COLORS.white;
+                  e.currentTarget.style.borderColor = COLORS.border;
+                }
+              }}
+            >
+              <RefreshCw size={16} />
+              {autoRefresh ? 'Auto-Refresh ON' : 'Auto-Refresh OFF'}
+            </button>
+            <button
+              style={styles.button}
+              onClick={handleExport}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.bg;
+                e.currentTarget.style.borderColor = COLORS.lightGray;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.white;
+                e.currentTarget.style.borderColor = COLORS.border;
+              }}
+            >
+              <Download size={16} />
+              Export Report
+            </button>
+          </div>
+        </div>
+
+        {/* KPI Cards */}
+        <div style={styles.kpiGrid}>
+          <KPICard
+            title="Total Assets"
+            value={stats.total}
+            icon={Package}
+            trend={5.2}
+            iconColor={COLORS.primary}
+            loading={loading}
+          />
+          <KPICard
+            title="Active Assets"
+            value={stats.active}
+            icon={CheckCircle}
+            trend={3.8}
+            iconColor={COLORS.success}
+            loading={loading}
+          />
+          <KPICard
+            title="In Maintenance"
+            value={stats.maintenance}
+            icon={Wrench}
+            trend={-12.5}
+            iconColor={COLORS.warning}
+            loading={loading}
+          />
+          <KPICard
+            title="Utilization Rate"
+            value={stats.utilizationRate}
+            suffix="%"
+            icon={Activity}
+            trend={2.1}
+            iconColor={COLORS.info}
+            loading={loading}
+          />
+        </div>
+
+        {/* Charts Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          {/* Asset Status Distribution - Donut Chart */}
+          <div style={styles.chartCard}>
+            <div style={styles.chartHeader}>
+              <h3 style={styles.chartTitle}>Asset Status Distribution</h3>
+              <span style={styles.badge(COLORS.primary)}>
+                {stats.total} Total
+              </span>
+            </div>
+            <CustomDonutChart
+              data={assetStatusData}
+              total={stats.total}
+              loading={loading}
+            />
+          </div>
+
+          {/* Monthly Asset Value Trend */}
+          <div style={styles.chartCard}>
+            <div style={styles.chartHeader}>
+              <h3 style={styles.chartTitle}>Monthly Asset Value Trend</h3>
+              <div style={{ fontSize: '13px', color: COLORS.gray, fontWeight: 400 }}>
+                Last 6 months
+              </div>
+            </div>
+            {loading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 280 }}>
+                <div style={{
+                  width: 40,
+                  height: 40,
+                  border: '3px solid #F3F4F6',
+                  borderTop: '3px solid #6366F1',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={valueTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11, fill: COLORS.gray }}
+                    stroke={COLORS.border}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: COLORS.gray }}
+                    stroke={COLORS.border}
+                    tickFormatter={(value) => `₹${value}K`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: COLORS.white,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                    formatter={(value: number) => [formatCompactCurrency(value * 1000), 'Value']}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke={COLORS.primary}
+                    strokeWidth={3}
+                    dot={{ fill: COLORS.primary, r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Asset Category Performance Table */}
+        <div style={{ ...styles.chartCard, marginBottom: '16px' }}>
+          <div style={styles.chartHeader}>
+            <h3 style={styles.chartTitle}>Asset Category Performance</h3>
+            <div style={{ fontSize: '13px', color: COLORS.gray, fontWeight: 400 }}>
+              Top {stats.topCategories.length} categories
+            </div>
+          </div>
+          <div style={styles.tableContainer}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Category</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>Count</th>
+                  <th style={{ ...styles.th, textAlign: 'center' }}>Utilization</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={3} style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
+                      <div style={{
+                        width: 40,
+                        height: 40,
+                        border: '3px solid #F3F4F6',
+                        borderTop: '3px solid #6366F1',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        margin: '0 auto'
+                      }} />
+                    </td>
+                  </tr>
+                ) : stats.topCategories.length > 0 ? (
+                  stats.topCategories.map((item, index) => (
+                    <tr
+                      key={index}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.bg;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <td style={styles.td}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 2,
+                            backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+                          }} />
+                          <span style={{ fontWeight: 500 }}>{item.category}</span>
+                        </div>
+                      </td>
+                      <td style={{ ...styles.td, textAlign: 'right', fontWeight: 500 }}>
+                        {item.count.toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
+                        <div style={{
+                          display: 'inline-block',
+                          padding: '4px 10px',
+                          borderRadius: 12,
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          backgroundColor: item.utilization >= 90 ? '#DCFCE7' : item.utilization >= 80 ? '#FEF3C7' : '#FEE2E2',
+                          color: item.utilization >= 90 ? COLORS.success : item.utilization >= 80 ? COLORS.warning : COLORS.danger,
+                        }}>
+                          {item.utilization.toFixed(0)}%
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} style={{ ...styles.td, textAlign: 'center', padding: '40px', color: COLORS.gray }}>
+                      No category data available
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Alerts and Recent Activity Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          {/* Critical Alerts */}
+          <div style={styles.chartCard}>
+            <div style={styles.chartHeader}>
+              <h3 style={styles.chartTitle}>Critical Alerts</h3>
+              <span style={styles.badge(COLORS.danger)}>
+                {criticalAlerts.reduce((sum, alert) => sum + alert.count, 0)} Items
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {criticalAlerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  style={styles.alertCard(alert.severity)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateX(4px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateX(0)';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      background: alert.severity === 'high' ? '#FCA5A5' : alert.severity === 'medium' ? '#FDE047' : '#93C5FD',
+                      borderRadius: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {alert.type === 'maintenance' ? (
+                        <Wrench size={16} color={alert.severity === 'high' ? '#991B1B' : '#A16207'} />
+                      ) : alert.type === 'warranty' ? (
+                        <Shield size={16} color={alert.severity === 'high' ? '#991B1B' : '#A16207'} />
+                      ) : (
+                        <Clock size={16} color={COLORS.info} />
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: COLORS.dark, marginBottom: 4 }}>
+                        {alert.message}
+                      </div>
+                      <div style={{ fontSize: '11px', color: COLORS.gray }}>
+                        {alert.detail}
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: '4px 12px',
+                      borderRadius: 12,
+                      backgroundColor: COLORS.primary,
+                      color: COLORS.white,
+                      fontSize: '11px',
+                      fontWeight: 500
+                    }}>
+                      {alert.count}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Asset Activity */}
+          <div style={styles.chartCard}>
+            <div style={styles.chartHeader}>
+              <h3 style={styles.chartTitle}>Recent Asset Activity</h3>
+              <span style={styles.badge(COLORS.info)}>
+                Latest {stats.recentAssets.length}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {loading ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200 }}>
+                  <div style={{
+                    width: 32,
+                    height: 32,
+                    border: '3px solid #F3F4F6',
+                    borderTop: '3px solid #6366F1',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                </div>
+              ) : stats.recentAssets.length > 0 ? (
+                stats.recentAssets.map((asset) => (
+                  <div
+                    key={asset.assetId}
+                    style={{
+                      padding: 12,
+                      borderRadius: 10,
+                      backgroundColor: COLORS.bg,
+                      border: `1px solid ${COLORS.border}`,
+                      transition: 'all 0.2s',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.white;
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.bg;
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 6 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 500, color: COLORS.dark, marginBottom: 4 }}>
+                          {asset.assetName}
+                        </div>
+                        <div style={{ fontSize: '11px', color: COLORS.gray }}>
+                          {asset.assetId} • {asset.assetCategory}
+                        </div>
+                      </div>
+                      <span style={styles.statusBadge(asset.status || 'active')}>
+                        {asset.status || 'Active'}
+                      </span>
+                    </div>
+                    {asset.location && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        fontSize: '11px',
+                        fontWeight: 400,
+                        color: COLORS.gray,
+                        marginTop: 6
+                      }}>
+                        <Building size={12} />
+                        {asset.location}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: COLORS.gray }}>
+                  No recent activity
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default AssetManagementDashboard;

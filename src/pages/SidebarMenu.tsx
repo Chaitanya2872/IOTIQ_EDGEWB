@@ -16,9 +16,13 @@ import {
   HelpCircle,
   Settings as SettingsIcon,
   User,
+  Users,          // For Vendors
+  Wrench,         // For Maintenance
+  ClipboardList,  // For Work Orders
+  FileText,       // For Documents
 } from "lucide-react";
 import classNames from "classnames";
-import logo from '../assets/comp.svg';  // Updated this line
+import logo from '../assets/comp.svg';
 
 import styles from "./SidebarMenu.module.css";
 
@@ -56,7 +60,16 @@ const MENU_ITEMS: MenuConfig[] = [
     label: "Assets",
     shortLabel: "Ast",
     icon: <Boxes size={18} strokeWidth={2} />,
-    path: "/asset-dashboard",
+    children: [
+      { key: "assets-dashboard", label: "Asset Management", path: "/asset-dashboard" },
+      { key: "assets-inventory", label: "Asset Inventory", path: "/assets/inventory" },
+      { key: "assets-tracking", label: "Asset Tracking", path: "/assets/tracking" },
+      // NEW: Vendor Management Section
+      { key: "assets-vendors", label: "Vendor Management", path: "/assets/vendors" },
+      { key: "assets-maintenance", label: "Maintenance Schedule", path: "/assets/maintenance" },
+      { key: "assets-work-orders", label: "Work Orders", path: "/assets/work-orders" },
+      { key: "assets-documents", label: "Documents", path: "/assets/documents" },
+    ],
   },
   {
     key: "ticketing",
@@ -67,8 +80,15 @@ const MENU_ITEMS: MenuConfig[] = [
   {
     key: "iot",
     label: "IoT Sensors",
+    shortLabel: "IoT",
     icon: <Radar size={18} strokeWidth={2} />,
-    path: "/iot-sensors",
+    children: [
+      { key: "iot-dashboard", label: "IoT Overview", path: "/iot-sensors" },
+      { key: "iot-cafeteria", label: "Cafeteria Queue", path: "/iot-sensors/cafeteria" },
+      { key: "iot-iaq", label: "Indoor Air Quality", path: "/iot-sensors/iaq" },
+      { key: "iot-restroom", label: "Smart Restroom", path: "/iot-sensors/restroom" },
+      { key: "iot-sensors-hub", label: "Sensors Hub", path: "/iot-sensors/sensors-hub" },
+    ],
   },
   {
     key: "energy",
@@ -92,7 +112,7 @@ const MENU_ITEMS: MenuConfig[] = [
 
 const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth, onLogout }) => {
   const location = useLocation();
-  const { logout, user } = useAuth(); // Assuming useAuth provides user data
+  const { logout, user } = useAuth();
   const [openGroups, setOpenGroups] = useState(() => new Set<string>());
 
   const selectedKey = location.pathname;

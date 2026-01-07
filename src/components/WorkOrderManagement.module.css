@@ -1,0 +1,511 @@
+/* WorkOrderManagement.module.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+.container {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  padding: 24px;
+  background-color: #FAFAFA;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.header {
+  margin-bottom: 24px;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.headerContent {
+  flex: 1;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0F172A;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.02em;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.card {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #F1F3F5;
+  overflow: hidden;
+  animation: scaleIn 0.5s ease-out;
+}
+
+/* Error Alert */
+.errorAlert {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background-color: #FEE2E2;
+  border: 1px solid #FCA5A5;
+  border-radius: 8px;
+}
+
+.errorText {
+  color: #DC2626;
+  font-size: 13px;
+  font-weight: 400;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.dismissButton {
+  margin-top: 8px;
+  padding: 0;
+  font-size: 12px;
+  color: #DC2626;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.dismissButton:hover {
+  text-decoration: underline;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #F1F3F5;
+  padding: 0 20px;
+  gap: 4px;
+  background-color: #FAFAFA;
+}
+
+.tab {
+  padding: 14px 20px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #64748B;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s ease;
+  border-radius: 8px 8px 0 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.tab:hover {
+  color: #0F172A;
+  background-color: #F8FAFC;
+}
+
+.tabActive {
+  font-weight: 500;
+  color: #0F172A;
+  background: #FFFFFF;
+  border-bottom: 2px solid #6366F1;
+}
+
+/* Form Section */
+.formSection {
+  margin-bottom: 24px;
+  background-color: #FFFFFF;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #F1F3F5;
+}
+
+.formTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0F172A;
+  margin: 0 0 20px 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.formFieldFull {
+  grid-column: 1 / -1;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+}
+
+.formLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0F172A;
+  margin-bottom: 8px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.formInput,
+.formSelect,
+.formTextarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 400;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  outline: none;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #FAFAFA;
+  transition: all 0.2s ease;
+  color: #0F172A;
+}
+
+.formInput:focus,
+.formSelect:focus,
+.formTextarea:focus {
+  border-color: #6366F1;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.formTextarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.formActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* Buttons */
+.button {
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  color: #0F172A;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.button:hover {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.primaryButton {
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  background-color: #6366F1;
+  color: #FFFFFF;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  box-shadow: 0 1px 2px rgba(99, 102, 241, 0.2);
+}
+
+.primaryButton:hover {
+  background-color: #4F46E5;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Table */
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #F1F3F5;
+  background-color: #FAFAFA;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.td {
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #0F172A;
+  border-bottom: 1px solid #F8FAFC;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.tr {
+  transition: background-color 0.2s;
+  animation: slideIn 0.3s ease-out;
+}
+
+.tr:hover {
+  background-color: #FAFAFA;
+}
+
+.cellInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cellHeader {
+  font-weight: 500;
+  color: #0F172A;
+}
+
+.cellSubtext {
+  font-size: 11px;
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.costInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.costEstimate {
+  color: #64748B;
+  font-size: 13px;
+}
+
+.costActual {
+  font-weight: 500;
+  color: #0F172A;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748B;
+}
+
+.loadingRow {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.loadingText {
+  color: #64748B;
+  font-size: 13px;
+  font-weight: 400;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Status Select in Table */
+.statusSelect {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 24px 4px 8px;
+  border-radius: 12px;
+  border: 1px solid;
+  outline: none;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  cursor: pointer;
+  appearance: none;
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 10px;
+}
+
+.statusCompleted {
+  background-color: #DCFCE7;
+  color: #15803D;
+  border-color: #86EFAC;
+}
+
+.statusInProgress {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+  border-color: #93C5FD;
+}
+
+.statusAssigned {
+  background-color: #FEF3C7;
+  color: #D97706;
+  border-color: #FCD34D;
+}
+
+.statusOnHold {
+  background-color: #FED7AA;
+  color: #EA580C;
+  border-color: #FDBA74;
+}
+
+.statusCancelled {
+  background-color: #F1F5F9;
+  color: #475569;
+  border-color: #CBD5E1;
+}
+
+.statusOpen {
+  background-color: #E0E7FF;
+  color: #4F46E5;
+  border-color: #A5B4FC;
+}
+
+.statusClosed {
+  background-color: #E5E7EB;
+  color: #374151;
+  border-color: #9CA3AF;
+}
+
+/* Priority Badges */
+.priorityBadge {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 12px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin-top: 4px;
+}
+
+.priorityCritical {
+  background-color: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+}
+
+.priorityHigh {
+  background-color: #FED7AA;
+  color: #EA580C;
+  border: 1px solid #FDBA74;
+}
+
+.priorityMedium {
+  background-color: #FEF3C7;
+  color: #D97706;
+  border: 1px solid #FCD34D;
+}
+
+.priorityLow {
+  background-color: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+}
+
+/* Action Buttons */
+.actionButtons {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.actionButton {
+  padding: 6px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #64748B;
+}
+
+.actionButton:hover {
+  background-color: #F8FAFC;
+  border-color: #6366F1;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+}
