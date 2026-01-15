@@ -38,6 +38,13 @@ const AppContent: React.FC = () => {
   const { isAuthenticated, loading, logout, user } = useAuth();
   const navigate = useNavigate();
 
+  // Redirect demo user to Cafeteria on successful login
+  React.useEffect(() => {
+    if (isAuthenticated && user?.email === "iotiqedgedemo@gmail.com") {
+      navigate('/iot-sensors/cafeteria', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
+
   if (loading) {
     return (
       <div
@@ -80,14 +87,7 @@ const AppContent: React.FC = () => {
       <Routes>
         {!isAuthenticated ? (
           <>
-            <Route path="/" element={<SimpleAuthPage onAuthSuccess={() => {
-              // Redirect demo user to Cafeteria Screen
-              if (user?.email === "iotiqedgedemo@gmail.com") {
-                navigate('/iot-sensors/cafeteria');
-              } else {
-                navigate('/inventory/analytics');
-              }
-            }} />} />
+            <Route path="/" element={<SimpleAuthPage onAuthSuccess={() => {}} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (
