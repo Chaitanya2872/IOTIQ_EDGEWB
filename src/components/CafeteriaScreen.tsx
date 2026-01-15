@@ -26,14 +26,16 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Sparkles // New icon for Smart Insights button
+  Sparkles
 } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
+import CustomizableDashboard from './CustomizableDashboardComponent';
 
 import { useCafeteriaData, useAllRecords } from '../api/hooks/useCafeteriaData';
-import { useSmartInsights } from '../api/hooks/useCafeteriaAnalytics'; // NEW IMPORT
+import { useSmartInsights } from '../api/hooks/useCafeteriaAnalytics';
 import type { CafeteriaCounter } from '../api/types';
 
-// Font styles - UNCHANGED
+// Font styles
 const fontStyle = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
   * {
@@ -43,7 +45,7 @@ const fontStyle = `
   }
 `;
 
-// Loading Spinner - UNCHANGED
+// Loading Spinner
 const LoadingSpinner: React.FC<{ message?: string }> = memo(({ message = 'Loading...' }) => (
   <div style={{
     display: 'flex',
@@ -65,7 +67,7 @@ const LoadingSpinner: React.FC<{ message?: string }> = memo(({ message = 'Loadin
   </div>
 ));
 
-// Animated counter - UNCHANGED
+// Animated counter
 const CountUp: React.FC<{ end: number; duration?: number; decimals?: number }> = memo(({ 
   end, 
   duration = 800,
@@ -97,7 +99,7 @@ const CountUp: React.FC<{ end: number; duration?: number; decimals?: number }> =
   return <>{decimals > 0 ? count.toFixed(decimals) : Math.floor(count)}</>;
 });
 
-// Custom DateTime Picker Component - UNCHANGED
+// Custom DateTime Picker Component
 const DateTimePicker: React.FC<{
   label: string;
   value: string;
@@ -444,7 +446,7 @@ const DateTimePicker: React.FC<{
   );
 });
 
-// Custom Dropdown Component - UNCHANGED
+// Custom Dropdown Component
 const CustomDropdown: React.FC<{
   label: string;
   value: string;
@@ -616,7 +618,7 @@ interface CounterDisplay {
   floor?: number;
 }
 
-// Enhanced Counter Card Component - ADDED THROUGHPUT DISPLAY
+// Enhanced Counter Card Component
 const CounterCard: React.FC<{ counter: CounterDisplay; index: number }> = memo(({ counter, index }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -678,14 +680,19 @@ const CounterCard: React.FC<{ counter: CounterDisplay; index: number }> = memo((
             borderRadius: 10,
             overflow: 'hidden',
             border: '2px solid #F1F3F5',
-            background: '#FFFFFF'
+            background: counter.color,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
-            <img 
-              src={counter.image} 
-              alt={counter.name} 
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              loading="lazy"
-            />
+            <span style={{ 
+              fontSize: 14, 
+              fontWeight: 700, 
+              color: '#FFFFFF',
+              textAlign: 'center'
+            }}>
+              {counter.name.includes('Bisi') ? 'BO' : counter.name.includes('Two Good') ? 'TG' : 'HS'}
+            </span>
           </div>
           <div>
             <h3 style={{ fontSize: 15, fontWeight: 500, color: '#111827', marginBottom: 2 }}>
@@ -696,7 +703,6 @@ const CounterCard: React.FC<{ counter: CounterDisplay; index: number }> = memo((
             </p>
           </div>
         </div>
-        {/* SIMPLIFIED: Just Wait Time */}
         <div style={{
           padding: '8px 12px',
           borderRadius: 8,
@@ -737,625 +743,7 @@ const CounterCard: React.FC<{ counter: CounterDisplay; index: number }> = memo((
   );
 });
 
-// KEEP ALL YOUR EXISTING CHART COMPONENTS EXACTLY AS THEY ARE
-// Enhanced Hourly Chart - UNCHANGED
-const EnhancedHourlyChart: React.FC<{ globalFromDate: string; globalToDate: string }> = memo(({ globalFromDate, globalToDate }) => {
-  const [selectedCounter, setSelectedCounter] = useState<string>('all');
-  const [selectedMeal, setSelectedMeal] = useState<string>('all'); // Changed default to 'all'
-  const [interval, setInterval] = useState<number>(15);
-  
-  const { from, to } = useMemo(() => {
-    const fromValue = globalFromDate ? `${globalFromDate}:00` : undefined;
-    const toValue = globalToDate ? `${globalToDate}:00` : undefined;
-    
-    return {
-      from: fromValue,
-      to: toValue
-    };
-  }, [globalFromDate, globalToDate]);
-
-  const { data, loading, error } = useAllRecords(
-    from, 
-    to,
-    selectedCounter === 'all' ? undefined : selectedCounter
-  );
-
-  // Define meal time ranges
-  const mealTimeRanges = {
-    all: { start: 0, end: 23 },         // All day
-    breakfast: { start: 8, end: 10 },   // 8:00 AM – 10:00 AM
-    lunch: { start: 12, end: 14 },      // 12:00 PM – 2:30 PM
-    snacks: { start: 16, end: 18 },     // 4:00 PM – 6:30 PM
-    dinner: { start: 19, end: 23 }      // 7:00 PM – 11:30 PM
-  };
-
-  const chartData = useMemo(() => {
-    if (!data || !data.counters) {
-      console.log('❌ No data or counters available');
-      return [];
-    }
-
-    console.log('=== PROCESSING CHART DATA ===');
-    console.log('Selected counter:', selectedCounter);
-    console.log('Selected meal:', selectedMeal);
-    console.log('Interval:', interval);
-    console.log('Date range:', globalFromDate, 'to', globalToDate);
-    
-    const mealRange = mealTimeRanges[selectedMeal as keyof typeof mealTimeRanges] || mealTimeRanges.all;
-    console.log('Meal time range:', `${mealRange.start}:00 - ${mealRange.end}:00`);
-
-    const timeMap = new Map<string, any>();
-    const globalFrom = new Date(globalFromDate);
-    const globalTo = new Date(globalToDate);
-    
-    console.log('Global date range (parsed):', globalFrom.toISOString(), 'to', globalTo.toISOString());
-
-    let totalRecordsProcessed = 0;
-    let recordsInDateRange = 0;
-    let recordsInMealRange = 0;
-
-    Object.entries(data.counters).forEach(([counterName, records]: [string, any]) => {
-      if (!Array.isArray(records)) {
-        console.log(`⚠️ Records for ${counterName} is not an array`);
-        return;
-      }
-      
-      console.log(`Processing ${counterName}: ${records.length} total records`);
-      totalRecordsProcessed += records.length;
-      
-      records.forEach((record: any) => {
-        const timestamp = new Date(record.timestamp);
-        
-        // PRIMARY FILTER: Global date range
-        if (timestamp >= globalFrom && timestamp <= globalTo) {
-          recordsInDateRange++;
-          
-          const hour = timestamp.getHours();
-          
-          // SECONDARY FILTER: Meal time range (only if not 'all')
-          if (hour >= mealRange.start && hour <= mealRange.end) {
-            recordsInMealRange++;
-            
-            const minutes = timestamp.getMinutes();
-            
-            const intervalMinutes = Math.floor(minutes / interval) * interval;
-            const timeKey = `${hour.toString().padStart(2, '0')}:${intervalMinutes.toString().padStart(2, '0')}`;
-            
-            if (!timeMap.has(timeKey)) {
-              timeMap.set(timeKey, {
-                time: timeKey,
-                timestamp: timeKey,
-                TwoGood: 0,
-                UttarDakshin: 0,
-                Tandoor: 0,
-                totalQueue: 0,
-                count: 0
-              });
-            }
-            
-            const entry = timeMap.get(timeKey);
-            if (entry) {
-              const queueCount = record.queueCount || 0;
-              entry[counterName] = (entry[counterName] || 0) + queueCount;
-              entry.count++;
-            }
-          }
-        }
-      });
-    });
-
-    console.log('📊 Processing summary:');
-    console.log('  - Total records:', totalRecordsProcessed);
-    console.log('  - In date range:', recordsInDateRange);
-    console.log('  - In meal time range:', recordsInMealRange);
-
-    const result = Array.from(timeMap.entries())
-      .map(([timeKey, entry]) => {
-        const count = entry.count || 1;
-        return {
-          time: timeKey,
-          timestamp: timeKey,
-          TwoGood: Math.round(entry.TwoGood / count),
-          UttarDakshin: Math.round(entry.UttarDakshin / count),
-          Tandoor: Math.round(entry.Tandoor / count),
-          totalQueue: Math.round((entry.TwoGood + entry.UttarDakshin + entry.Tandoor) / count)
-        };
-      })
-      .sort((a, b) => a.time.localeCompare(b.time));
-    
-    console.log(`✅ Final chart data: ${result.length} points`);
-    if (result.length > 0) {
-      console.log('  - Time range:', result[0].time, 'to', result[result.length - 1].time);
-      console.log('  - Sample:', result.slice(0, 2));
-    } else {
-      console.log('⚠️ NO DATA POINTS GENERATED');
-      if (recordsInDateRange === 0) {
-        console.log('  → No records in selected date range. Try selecting dates that have data.');
-      } else if (recordsInMealRange === 0) {
-        console.log(`  → No records in ${selectedMeal} time range (${mealRange.start}:00-${mealRange.end}:00). Try selecting "All Day" or different meal time.`);
-      }
-    }
-    
-    return result;
-  }, [data, selectedCounter, selectedMeal, interval, globalFromDate, globalToDate]);
-
-  const counterOptions = [
-    { value: 'all', label: 'All Counters' },
-    { value: 'TwoGood', label: 'Two Good' },
-    { value: 'UttarDakshin', label: 'Uttar Dakshin' },
-    { value: 'Tandoor', label: 'Tandoor' }
-  ];
-
-  return (
-    <div style={{
-      background: '#FFFFFF',
-      border: '1px solid #F1F3F5',
-      borderRadius: 12,
-      padding: '24px',
-      gridColumn: '1 / -1'
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        marginBottom: 20,
-        gap: 24,
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ flex: '0 0 auto' }}>
-          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#111827', marginBottom: 4 }}>
-            Hourly Queue Analysis
-          </h3>
-          <p style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>
-            {selectedCounter === 'all' 
-              ? 'All counters' 
-              : counterOptions.find(c => c.value === selectedCounter)?.label
-            } • {selectedMeal === 'all' ? 'All Day' : selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1)} • {interval}min intervals
-          </p>
-        </div>
-
-        <div style={{ 
-          display: 'flex', 
-          gap: 12, 
-          flexWrap: 'wrap',
-          alignItems: 'flex-end',
-          flex: '1 1 auto',
-          justifyContent: 'flex-end'
-        }}>
-          <CustomDropdown
-            label="Meal Time"
-            value={selectedMeal}
-            onChange={(value) => {
-              console.log('Meal time changed to:', value);
-              setSelectedMeal(value);
-              
-              // Automatically set date range based on meal selection
-              const now = new Date();
-              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-              
-              if (value === 'breakfast') {
-                // 8:00 AM - 10:00 AM
-                const start = new Date(today);
-                start.setHours(8, 0, 0, 0);
-                const end = new Date(today);
-                end.setHours(10, 0, 0, 0);
-                setGlobalFromDate(start.toISOString().slice(0, 16));
-                setGlobalToDate(end.toISOString().slice(0, 16));
-              } else if (value === 'lunch') {
-                // 12:00 PM - 2:30 PM
-                const start = new Date(today);
-                start.setHours(12, 0, 0, 0);
-                const end = new Date(today);
-                end.setHours(14, 30, 0, 0);
-                setGlobalFromDate(start.toISOString().slice(0, 16));
-                setGlobalToDate(end.toISOString().slice(0, 16));
-              } else if (value === 'snacks') {
-                // 4:00 PM - 6:30 PM
-                const start = new Date(today);
-                start.setHours(16, 0, 0, 0);
-                const end = new Date(today);
-                end.setHours(18, 30, 0, 0);
-                setGlobalFromDate(start.toISOString().slice(0, 16));
-                setGlobalToDate(end.toISOString().slice(0, 16));
-              } else if (value === 'dinner') {
-                // 7:00 PM - 11:30 PM
-                const start = new Date(today);
-                start.setHours(19, 0, 0, 0);
-                const end = new Date(today);
-                end.setHours(23, 30, 0, 0);
-                setGlobalFromDate(start.toISOString().slice(0, 16));
-                setGlobalToDate(end.toISOString().slice(0, 16));
-              }
-              // If 'all', keep current date range
-            }}
-            options={[
-              { value: 'all', label: 'All Day (Show All Data)' },
-              { value: 'breakfast', label: 'Breakfast (8:00 AM – 10:00 AM)' },
-              { value: 'lunch', label: 'Lunch (12:00 PM – 2:30 PM)' },
-              { value: 'snacks', label: 'Snacks (4:00 PM – 6:30 PM)' },
-              { value: 'dinner', label: 'Dinner (7:00 PM – 11:30 PM)' }
-            ]}
-            placeholder="Select meal time"
-          />
-
-          <CustomDropdown
-            label="Counter"
-            value={selectedCounter}
-            onChange={setSelectedCounter}
-            options={counterOptions}
-            placeholder="Select counter"
-          />
-        </div>
-      </div>
-
-      {loading ? (
-        <div style={{ height: 450, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <LoadingSpinner message="Loading chart data..." />
-        </div>
-      ) : error ? (
-        <div style={{ 
-          height: 450, 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          color: '#EF4444',
-          gap: 12
-        }}>
-          <AlertCircle size={48} />
-          <p style={{ fontSize: 16, fontWeight: 500 }}>Error loading data</p>
-          <p style={{ fontSize: 14, color: '#6B7280' }}>{error}</p>
-        </div>
-      ) : chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={450}>
-          <LineChart 
-            data={chartData} 
-            margin={{ top: 10, right: 30, left: 0, bottom: 60 }}
-          >
-            <CartesianGrid 
-              strokeDasharray="0" 
-              stroke="#F1F5F9" 
-              vertical={false}
-              strokeWidth={1}
-            />
-            
-            <XAxis 
-              dataKey="time" 
-              axisLine={false}
-              tickLine={false}
-              tick={{ 
-                fill: '#94A3B8', 
-                fontSize: 11,
-                fontWeight: 500
-              }}
-              dy={10}
-              interval={0}
-              angle={-45}
-              textAnchor="end"
-              height={80}
-            />
-            
-            <YAxis 
-              axisLine={false}
-              tickLine={false}
-              tick={{ 
-                fill: '#94A3B8', 
-                fontSize: 13,
-                fontWeight: 500
-              }}
-              dx={-10}
-              label={{ 
-                value: 'Queue Count', 
-                angle: -90, 
-                position: 'insideLeft',
-                style: { 
-                  fontSize: 13, 
-                  fill: '#6B7280', 
-                  fontWeight: 500 
-                } 
-              }}
-              tickFormatter={(value) => {
-                if (value >= 1000) {
-                  return `${(value / 1000).toFixed(1)}k`;
-                }
-                return value;
-              }}
-            />
-            
-            <Tooltip 
-              content={({ active, payload, label }) => {
-                if (!active || !payload || payload.length === 0) return null;
-                
-                const data = payload[0].payload;
-                
-                return (
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: 8,
-                    padding: '10px 12px',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                    minWidth: '140px',
-                    maxWidth: '200px'
-                  }}>
-                    <div style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: '#64748B',
-                      marginBottom: 8,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4
-                    }}>
-                      <Clock size={12} />
-                      {label}
-                    </div>
-                    
-                    {selectedCounter === 'all' ? (
-                      <>
-                        <div style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: '#0F172A',
-                          marginBottom: 8,
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}>
-                          <span>Total</span>
-                          <span style={{ color: '#6366F1', fontSize: 16 }}>{data.totalQueue}</span>
-                        </div>
-                        
-                        {data.TwoGood > 0 && (
-                          <div style={{ 
-                            fontSize: 11, 
-                            color: '#475569', 
-                            marginBottom: 4, 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <span style={{ 
-                                width: 6, 
-                                height: 6, 
-                                borderRadius: '50%', 
-                                background: '#5B8FF9'
-                              }}></span>
-                              Two Good
-                            </span>
-                            <span style={{ fontWeight: 600, color: '#0F172A' }}>{data.TwoGood}</span>
-                          </div>
-                        )}
-                        {data.UttarDakshin > 0 && (
-                          <div style={{ 
-                            fontSize: 11, 
-                            color: '#475569', 
-                            marginBottom: 4, 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <span style={{ 
-                                width: 6, 
-                                height: 6, 
-                                borderRadius: '50%', 
-                                background: '#9E77ED'
-                              }}></span>
-                              Uttar Dakshin
-                            </span>
-                            <span style={{ fontWeight: 600, color: '#0F172A' }}>{data.UttarDakshin}</span>
-                          </div>
-                        )}
-                        {data.Tandoor > 0 && (
-                          <div style={{ 
-                            fontSize: 11, 
-                            color: '#475569', 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <span style={{ 
-                                width: 6, 
-                                height: 6, 
-                                borderRadius: '50%', 
-                                background: '#F97316'
-                              }}></span>
-                              Tandoor
-                            </span>
-                            <span style={{ fontWeight: 600, color: '#0F172A' }}>{data.Tandoor}</span>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div style={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: '#0F172A',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <span>{counterOptions.find(c => c.value === selectedCounter)?.label}</span>
-                        <span style={{ color: '#6366F1', fontSize: 16 }}>{payload[0].value}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              }}
-              cursor={{ 
-                stroke: '#CBD5E1', 
-                strokeWidth: 1,
-                strokeDasharray: '4 4'
-              }}
-            />
-            
-            {selectedCounter === 'all' && (
-              <Legend 
-                wrapperStyle={{
-                  paddingTop: '20px',
-                  fontSize: '13px',
-                  fontWeight: 500
-                }}
-                iconType="line"
-                iconSize={16}
-                formatter={(value) => {
-                  const counterColors: Record<string, string> = {
-                    'Two Good': '#5B8FF9',
-                    'Uttar Dakshin': '#9E77ED',
-                    'Tandoor': '#F97316'
-                  };
-                  return <span style={{ color: counterColors[value] || '#6B7280' }}>{value}</span>;
-                }}
-              />
-            )}
-            
-            {selectedCounter === 'all' ? (
-              <>
-                <Line
-                  type="monotone"
-                  dataKey="TwoGood"
-                  stroke="#5B8FF9"
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                  name="Two Good"
-                  animationDuration={1000}
-                  isAnimationActive={true}
-                />
-                
-                <Line
-                  type="monotone"
-                  dataKey="UttarDakshin"
-                  stroke="#9E77ED"
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                  name="Uttar Dakshin"
-                  animationDuration={1000}
-                  isAnimationActive={true}
-                />
-                
-                <Line
-                  type="monotone"
-                  dataKey="Tandoor"
-                  stroke="#F97316"
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                  name="Tandoor"
-                  animationDuration={1000}
-                  isAnimationActive={true}
-                />
-              </>
-            ) : (
-              <Line
-                type="monotone"
-                dataKey={selectedCounter}
-                stroke="#6366F1"
-                strokeWidth={2.5}
-                dot={false}
-                activeDot={{ r: 4 }}
-                name={counterOptions.find(c => c.value === selectedCounter)?.label || selectedCounter}
-                animationDuration={1000}
-                isAnimationActive={true}
-              />
-            )}
-          </LineChart>
-        </ResponsiveContainer>
-      ) : (
-        <div style={{ 
-          height: 450, 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          color: '#94A3B8',
-          gap: 12
-        }}>
-          <Activity size={48} />
-          <p style={{ fontSize: 16, fontWeight: 500 }}>No data available</p>
-          <p style={{ fontSize: 14 }}>Try selecting a different time range or counter</p>
-        </div>
-      )}
-
-      <div style={{ 
-        marginTop: 20,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12
-      }}>
-        <label style={{ fontSize: 13, fontWeight: 500, color: '#6B7280' }}>
-          Interval (minutes):
-        </label>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0,
-          border: '1.5px solid #E5E7EB',
-          borderRadius: 10,
-          background: '#FFFFFF',
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
-        }}>
-          <button
-            onClick={() => setInterval(Math.max(5, interval - 5))}
-            style={{
-              padding: '8px 12px',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#6B7280',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#F3F4F6'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <div style={{
-            padding: '8px 16px',
-            fontSize: 14,
-            fontWeight: 600,
-            color: '#111827',
-            textAlign: 'center',
-            minWidth: 50,
-            borderLeft: '1px solid #E5E7EB',
-            borderRight: '1px solid #E5E7EB'
-          }}>
-            {interval}
-          </div>
-          <button
-            onClick={() => setInterval(Math.min(60, interval + 5))}
-            style={{
-              padding: '8px 12px',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#6B7280',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#F3F4F6'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// Wait Time Chart - UNCHANGED (KEEP YOUR EXISTING ONE)
+// ENHANCED: Wait Time Chart with proper header and no close button conflicts
 const WaitTimeChart: React.FC = memo(() => {
   const { todayStart, todayEnd } = useMemo(() => {
     const now = new Date();
@@ -1465,10 +853,22 @@ const WaitTimeChart: React.FC = memo(() => {
       background: '#FFFFFF',
       border: '1px solid #F1F3F5',
       borderRadius: 12,
-      padding: '24px'
+      padding: '24px',
+      position: 'relative' // Added to ensure proper stacking context
     }}>
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+      {/* FIXED: Header with proper z-index and positioning */}
+      <div style={{ 
+        marginBottom: 24,
+        position: 'relative',
+        zIndex: 1 // Ensures header is above chart but below modals
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start', 
+          flexWrap: 'wrap', 
+          gap: 12 
+        }}>
           <div>
             <h3 style={{ fontSize: 18, fontWeight: 600, color: '#111827', marginBottom: 4 }}>
               Current Day Wait Time Analysis
@@ -1516,6 +916,7 @@ const WaitTimeChart: React.FC = memo(() => {
         </div>
       </div>
 
+      {/* Chart content remains the same */}
       {loading ? (
         <div style={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <LoadingSpinner message="Loading today's wait time data..." />
@@ -1793,7 +1194,618 @@ const WaitTimeChart: React.FC = memo(() => {
   );
 });
 
-// NEW: Smart Insights Side Panel Component
+// Enhanced Hourly Chart Component (keeping your existing implementation)
+const EnhancedHourlyChart: React.FC<{ globalFromDate: string; globalToDate: string }> = memo(({ globalFromDate, globalToDate }) => {
+  const [selectedCounter, setSelectedCounter] = useState<string>('all');
+  const [selectedMeal, setSelectedMeal] = useState<string>('all');
+  const [interval, setInterval] = useState<number>(15);
+  
+  const { from, to } = useMemo(() => {
+    const fromValue = globalFromDate ? `${globalFromDate}:00` : undefined;
+    const toValue = globalToDate ? `${globalToDate}:00` : undefined;
+    
+    return {
+      from: fromValue,
+      to: toValue
+    };
+  }, [globalFromDate, globalToDate]);
+
+  const { data, loading, error } = useAllRecords(
+    from, 
+    to,
+    selectedCounter === 'all' ? undefined : selectedCounter
+  );
+
+  const mealTimeRanges = {
+    all: { start: 0, end: 23 },
+    breakfast: { start: 8, end: 10 },
+    lunch: { start: 12, end: 14 },
+    snacks: { start: 16, end: 18 },
+    dinner: { start: 19, end: 23 }
+  };
+
+  const chartData = useMemo(() => {
+    if (!data || !data.counters) {
+      return [];
+    }
+
+    const mealRange = mealTimeRanges[selectedMeal as keyof typeof mealTimeRanges] || mealTimeRanges.all;
+    const timeMap = new Map<string, any>();
+    const globalFrom = new Date(globalFromDate);
+    const globalTo = new Date(globalToDate);
+
+    Object.entries(data.counters).forEach(([counterName, records]: [string, any]) => {
+      if (!Array.isArray(records)) return;
+      
+      records.forEach((record: any) => {
+        const timestamp = new Date(record.timestamp);
+        
+        if (timestamp >= globalFrom && timestamp <= globalTo) {
+          const hour = timestamp.getHours();
+          
+          if (hour >= mealRange.start && hour <= mealRange.end) {
+            const minutes = timestamp.getMinutes();
+            const intervalMinutes = Math.floor(minutes / interval) * interval;
+            const timeKey = `${hour.toString().padStart(2, '0')}:${intervalMinutes.toString().padStart(2, '0')}`;
+            
+            if (!timeMap.has(timeKey)) {
+              timeMap.set(timeKey, {
+                time: timeKey,
+                timestamp: timeKey,
+                BisiOota: 0,
+                TwoGood: 0,
+                HealthyStation: 0,
+                totalQueue: 0,
+                count: 0
+              });
+            }
+            
+            const entry = timeMap.get(timeKey);
+            if (entry) {
+              const queueCount = record.queueCount || 0;
+              entry[counterName] = (entry[counterName] || 0) + queueCount;
+              entry.count++;
+            }
+          }
+        }
+      });
+    });
+
+    const result = Array.from(timeMap.entries())
+      .map(([timeKey, entry]) => {
+        const count = entry.count || 1;
+        return {
+          time: timeKey,
+          timestamp: timeKey,
+          BisiOota: Math.round(entry.BisiOota / count),
+          TwoGood: Math.round(entry.TwoGood / count),
+          HealthyStation: Math.round(entry.HealthyStation / count),
+          totalQueue: Math.round((entry.BisiOota + entry.TwoGood + entry.HealthyStation) / count)
+        };
+      })
+      .sort((a, b) => a.time.localeCompare(b.time));
+    
+    return result;
+  }, [data, selectedCounter, selectedMeal, interval, globalFromDate, globalToDate]);
+
+  const counterOptions = [
+    { value: 'all', label: 'All Counters' },
+    { value: 'BisiOota', label: 'Bisi Oota/ Mini meals Counter' },
+    { value: 'TwoGood', label: 'Two Good Counter' },
+    { value: 'HealthyStation', label: 'Healthy Station Counter' }
+  ];
+
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      border: '1px solid #F1F3F5',
+      borderRadius: 12,
+      padding: '24px',
+      gridColumn: '1 / -1'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'flex-start',
+        marginBottom: 20,
+        gap: 24,
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ flex: '0 0 auto' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#111827', marginBottom: 4 }}>
+            Hourly Queue Analysis
+          </h3>
+          <p style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>
+            {selectedCounter === 'all' 
+              ? 'All counters' 
+              : counterOptions.find(c => c.value === selectedCounter)?.label
+            } • {selectedMeal === 'all' ? 'All Day' : selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1)} • {interval}min intervals
+          </p>
+        </div>
+
+        <div style={{ 
+          display: 'flex', 
+          gap: 12, 
+          flexWrap: 'wrap',
+          alignItems: 'flex-end',
+          flex: '1 1 auto',
+          justifyContent: 'flex-end'
+        }}>
+          <CustomDropdown
+            label="Meal Time"
+            value={selectedMeal}
+            onChange={setSelectedMeal}
+            options={[
+              { value: 'all', label: 'All Day (Show All Data)' },
+              { value: 'breakfast', label: 'Breakfast (8:00 AM – 10:00 AM)' },
+              { value: 'lunch', label: 'Lunch (12:00 PM – 2:30 PM)' },
+              { value: 'snacks', label: 'Snacks (4:00 PM – 6:30 PM)' },
+              { value: 'dinner', label: 'Dinner (7:00 PM – 11:30 PM)' }
+            ]}
+            placeholder="Select meal time"
+          />
+
+          <CustomDropdown
+            label="Counter"
+            value={selectedCounter}
+            onChange={setSelectedCounter}
+            options={counterOptions}
+            placeholder="Select counter"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ height: 450, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <LoadingSpinner message="Loading chart data..." />
+        </div>
+      ) : error ? (
+        <div style={{ 
+          height: 450, 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          color: '#EF4444',
+          gap: 12
+        }}>
+          <AlertCircle size={48} />
+          <p style={{ fontSize: 16, fontWeight: 500 }}>Error loading data</p>
+          <p style={{ fontSize: 14, color: '#6B7280' }}>{error}</p>
+        </div>
+      ) : chartData.length > 0 ? (
+        <ResponsiveContainer width="100%" height={450}>
+          <LineChart 
+            data={chartData} 
+            margin={{ top: 10, right: 30, left: 0, bottom: 60 }}
+          >
+            <CartesianGrid 
+              strokeDasharray="0" 
+              stroke="#F1F5F9" 
+              vertical={false}
+              strokeWidth={1}
+            />
+            
+            <XAxis 
+              dataKey="time" 
+              axisLine={false}
+              tickLine={false}
+              tick={{ 
+                fill: '#94A3B8', 
+                fontSize: 11,
+                fontWeight: 500
+              }}
+              dy={10}
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            
+            <YAxis 
+              axisLine={false}
+              tickLine={false}
+              tick={{ 
+                fill: '#94A3B8', 
+                fontSize: 13,
+                fontWeight: 500
+              }}
+              dx={-10}
+              label={{ 
+                value: 'Queue Count', 
+                angle: -90, 
+                position: 'insideLeft',
+                style: { 
+                  fontSize: 13, 
+                  fill: '#6B7280', 
+                  fontWeight: 500 
+                } 
+              }}
+              tickFormatter={(value) => {
+                if (value >= 1000) {
+                  return `${(value / 1000).toFixed(1)}k`;
+                }
+                return value;
+              }}
+            />
+            
+            <Tooltip 
+              content={({ active, payload, label }) => {
+                if (!active || !payload || payload.length === 0) return null;
+                
+                const data = payload[0].payload;
+                
+                return (
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.98)',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                    minWidth: '140px',
+                    maxWidth: '200px'
+                  }}>
+                    <div style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: '#64748B',
+                      marginBottom: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}>
+                      <Clock size={12} />
+                      {label}
+                    </div>
+                    
+                    {selectedCounter === 'all' ? (
+                      <>
+                        <div style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: '#0F172A',
+                          marginBottom: 8,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <span>Total</span>
+                          <span style={{ color: '#6366F1', fontSize: 16 }}>{data.totalQueue}</span>
+                        </div>
+                        
+                        {data.BisiOota > 0 && (
+                          <div style={{ 
+                            fontSize: 11, 
+                            color: '#475569', 
+                            marginBottom: 4, 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ 
+                                width: 6, 
+                                height: 6, 
+                                borderRadius: '50%', 
+                                background: '#5B8FF9'
+                              }}></span>
+                              Bisi Oota/ Mini meals Counter
+                            </span>
+                            <span style={{ fontWeight: 600, color: '#0F172A' }}>{data.BisiOota}</span>
+                          </div>
+                        )}
+                        {data.TwoGood > 0 && (
+                          <div style={{ 
+                            fontSize: 11, 
+                            color: '#475569', 
+                            marginBottom: 4, 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ 
+                                width: 6, 
+                                height: 6, 
+                                borderRadius: '50%', 
+                                background: '#9E77ED'
+                              }}></span>
+                              Two Good Counter
+                            </span>
+                            <span style={{ fontWeight: 600, color: '#0F172A' }}>{data.TwoGood}</span>
+                          </div>
+                        )}
+                        {data.HealthyStation > 0 && (
+                          <div style={{ 
+                            fontSize: 11, 
+                            color: '#475569', 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ 
+                                width: 6, 
+                                height: 6, 
+                                borderRadius: '50%', 
+                                background: '#F97316'
+                              }}></span>
+                              Healthy Station Counter
+                            </span>
+                            <span style={{ fontWeight: 600, color: '#0F172A' }}>{data.HealthyStation}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: '#0F172A',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <span>{counterOptions.find(c => c.value === selectedCounter)?.label}</span>
+                        <span style={{ color: '#6366F1', fontSize: 16 }}>{payload[0].value}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+              cursor={{ 
+                stroke: '#CBD5E1', 
+                strokeWidth: 1,
+                strokeDasharray: '4 4'
+              }}
+            />
+            
+            {selectedCounter === 'all' && (
+              <Legend 
+                wrapperStyle={{
+                  paddingTop: '20px',
+                  fontSize: '13px',
+                  fontWeight: 500
+                }}
+                iconType="line"
+                iconSize={16}
+                formatter={(value) => {
+                  const counterColors: Record<string, string> = {
+                    'Bisi Oota/ Mini meals Counter': '#5B8FF9',
+                    'Two Good Counter': '#9E77ED',
+                    'Healthy Station Counter': '#F97316'
+                  };
+                  return <span style={{ color: counterColors[value] || '#6B7280' }}>{value}</span>;
+                }}
+              />
+            )}
+            
+            {selectedCounter === 'all' ? (
+              <>
+                <Line
+                  type="monotone"
+                  dataKey="BisiOota"
+                  stroke="#5B8FF9"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  name="Bisi Oota/ Mini meals Counter"
+                  animationDuration={1000}
+                  isAnimationActive={true}
+                />
+                
+                <Line
+                  type="monotone"
+                  dataKey="TwoGood"
+                  stroke="#9E77ED"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  name="Two Good Counter"
+                  animationDuration={1000}
+                  isAnimationActive={true}
+                />
+                
+                <Line
+                  type="monotone"
+                  dataKey="HealthyStation"
+                  stroke="#F97316"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  name="Healthy Station Counter"
+                  animationDuration={1000}
+                  isAnimationActive={true}
+                />
+              </>
+            ) : (
+              <Line
+                type="monotone"
+                dataKey={selectedCounter}
+                stroke="#6366F1"
+                strokeWidth={2.5}
+                dot={false}
+                activeDot={{ r: 4 }}
+                name={counterOptions.find(c => c.value === selectedCounter)?.label || selectedCounter}
+                animationDuration={1000}
+                isAnimationActive={true}
+              />
+            )}
+          </LineChart>
+        </ResponsiveContainer>
+      ) : (
+        <div style={{ 
+          height: 450, 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          color: '#94A3B8',
+          gap: 12
+        }}>
+          <Activity size={48} />
+          <p style={{ fontSize: 16, fontWeight: 500 }}>No data available</p>
+          <p style={{ fontSize: 14 }}>Try selecting a different time range or counter</p>
+        </div>
+      )}
+
+      <div style={{ 
+        marginTop: 20,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12
+      }}>
+        <label style={{ fontSize: 13, fontWeight: 500, color: '#6B7280' }}>
+          Interval (minutes):
+        </label>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0,
+          border: '1.5px solid #E5E7EB',
+          borderRadius: 10,
+          background: '#FFFFFF',
+          overflow: 'hidden',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+        }}>
+          <button
+            onClick={() => setInterval(Math.max(5, interval - 5))}
+            style={{
+              padding: '8px 12px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#6B7280',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#F3F4F6'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <div style={{
+            padding: '8px 16px',
+            fontSize: 14,
+            fontWeight: 600,
+            color: '#111827',
+            textAlign: 'center',
+            minWidth: 50,
+            borderLeft: '1px solid #E5E7EB',
+            borderRight: '1px solid #E5E7EB'
+          }}>
+            {interval}
+          </div>
+          <button
+            onClick={() => setInterval(Math.min(60, interval + 5))}
+            style={{
+              padding: '8px 12px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#6B7280',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#F3F4F6'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// Customizable Dashboard Modal Component
+const CustomizableDashboardModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  // Don't render anything when closed
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 999,
+          animation: 'fadeIn 0.2s ease-out',
+          pointerEvents: 'auto'
+        }}
+        onClick={onClose}
+      />
+
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        maxHeight: '90vh',
+        background: '#FFFFFF',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)',
+        zIndex: 1000,
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        animation: 'slideUp 0.3s ease-out'
+      }}>
+        <div style={{
+          padding: '24px',
+          borderBottom: '1px solid #E5E7EB',
+          background: '#FFFFFF',
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center'
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 6,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#F3F4F6'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+          >
+            <X size={20} color="#6B7280" />
+          </button>
+        </div>
+
+        <div style={{
+          padding: '24px',
+          flex: 1,
+          overflowY: 'auto'
+        }}>
+          <CustomizableDashboard 
+            isOpen={isOpen} 
+            onClose={onClose} 
+          />
+        </div>
+      </div>
+    </>
+  );
+};
+
+// Smart Insights Side Panel Component - FIXED: Only renders when open
 const SmartInsightsPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const today = useMemo(() => {
     const date = new Date();
@@ -1802,40 +1814,39 @@ const SmartInsightsPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = (
 
   const { data: insights, loading } = useSmartInsights(today);
 
+  // Don't render anything when closed
+  if (!isOpen) return null;
+
   return (
     <>
-      {/* Overlay */}
-      {isOpen && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 999,
-            animation: 'fadeIn 0.2s ease-out'
-          }}
-          onClick={onClose}
-        />
-      )}
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 999,
+          animation: 'fadeIn 0.2s ease-out',
+          pointerEvents: 'auto'
+        }}
+        onClick={onClose}
+      />
 
-      {/* Side Panel */}
       <div style={{
         position: 'fixed',
         top: 0,
-        right: isOpen ? 0 : '-500px',
+        right: 0,
         width: '500px',
         maxWidth: '90vw',
         height: '100vh',
         background: '#FFFFFF',
         boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.15)',
         zIndex: 1000,
-        transition: 'right 0.3s ease-out',
-        overflowY: 'auto'
+        overflowY: 'auto',
+        animation: 'slideInRight 0.3s ease-out'
       }}>
-        {/* Panel Header */}
         <div style={{
           padding: '24px',
           borderBottom: '1px solid #E5E7EB',
@@ -1871,13 +1882,11 @@ const SmartInsightsPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = (
           </div>
         </div>
 
-        {/* Panel Content */}
         <div style={{ padding: '24px' }}>
           {loading ? (
             <LoadingSpinner message="Loading insights..." />
           ) : insights ? (
             <>
-              {/* Peak Hour */}
               {insights.peakHour && (
                 <div style={{
                   padding: 16,
@@ -1899,7 +1908,6 @@ const SmartInsightsPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                 </div>
               )}
 
-              {/* Footfall Status */}
               <div style={{
                 padding: 16,
                 background: insights.footfallStatus === 'HIGH' ? '#FEF2F2' : insights.footfallStatus === 'LOW' ? '#FEF9C3' : '#F0FDF4',
@@ -1919,7 +1927,6 @@ const SmartInsightsPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                 </div>
               </div>
 
-              {/* Throughput */}
               {insights.throughput && (
                 <div style={{
                   padding: 16,
@@ -1941,7 +1948,6 @@ const SmartInsightsPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                 </div>
               )}
 
-              {/* Counter Performance */}
               {insights.counters && Object.keys(insights.counters).length > 0 && (
                 <div>
                   <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111827', marginBottom: 12 }}>
@@ -2001,36 +2007,30 @@ const CafeteriaScreen: React.FC = () => {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isInsightsPanelOpen, setIsInsightsPanelOpen] = useState(false);
+  const [isCustomDashboardOpen, setIsCustomDashboardOpen] = useState(false);
 
-  // Determine current meal period and set default date range
   const [globalFromDate, setGlobalFromDate] = useState(() => {
     const now = new Date();
     const hour = now.getHours();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Determine current meal period
     if (hour >= 8 && hour < 10) {
-      // Breakfast
       const start = new Date(today);
       start.setHours(8, 0, 0, 0);
       return start.toISOString().slice(0, 16);
     } else if (hour >= 12 && hour < 14.5) {
-      // Lunch
       const start = new Date(today);
       start.setHours(12, 0, 0, 0);
       return start.toISOString().slice(0, 16);
     } else if (hour >= 16 && hour < 18.5) {
-      // Snacks
       const start = new Date(today);
       start.setHours(16, 0, 0, 0);
       return start.toISOString().slice(0, 16);
     } else if (hour >= 19 && hour < 23.5) {
-      // Dinner
       const start = new Date(today);
       start.setHours(19, 0, 0, 0);
       return start.toISOString().slice(0, 16);
     } else {
-      // Default to current hour
       return now.toISOString().slice(0, 16);
     }
   });
@@ -2040,29 +2040,23 @@ const CafeteriaScreen: React.FC = () => {
     const hour = now.getHours();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Determine current meal period
     if (hour >= 8 && hour < 10) {
-      // Breakfast
       const end = new Date(today);
       end.setHours(10, 0, 0, 0);
       return end.toISOString().slice(0, 16);
     } else if (hour >= 12 && hour < 14.5) {
-      // Lunch
       const end = new Date(today);
       end.setHours(14, 30, 0, 0);
       return end.toISOString().slice(0, 16);
     } else if (hour >= 16 && hour < 18.5) {
-      // Snacks
       const end = new Date(today);
       end.setHours(18, 30, 0, 0);
       return end.toISOString().slice(0, 16);
     } else if (hour >= 19 && hour < 23.5) {
-      // Dinner
       const end = new Date(today);
       end.setHours(23, 30, 0, 0);
       return end.toISOString().slice(0, 16);
     } else {
-      // Default to next hour
       const nextHour = new Date(now);
       nextHour.setHours(now.getHours() + 1, 0, 0, 0);
       return nextHour.toISOString().slice(0, 16);
@@ -2093,11 +2087,17 @@ const CafeteriaScreen: React.FC = () => {
   const counters: CounterDisplay[] = useMemo(() => {
     const apiCounters = getCountersArray();
     
+    const counterDisplayNames: Record<string, string> = {
+      'TwoGood': 'Bisi Oota/ Mini meals Counter',
+      'UttarDakshin': 'Two Good Counter',
+      'Tandoor': 'Healthy Station Counter'
+    };
+    
     return apiCounters.map(counter => {
       const config = counterConfig[counter.counterName as keyof typeof counterConfig] || counterConfig['TwoGood'];
       
       return {
-        name: counter.counterName,
+        name: counterDisplayNames[counter.counterName] || counter.counterName,
         queueLength: counter.queueCount,
         avgWaitTime: counter.waitTimeMinutes,
         waitTimeText: counter.waitTimeText,
@@ -2198,10 +2198,18 @@ const CafeteriaScreen: React.FC = () => {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
       `}</style>
 
-      {/* Smart Insights Side Panel */}
       <SmartInsightsPanel isOpen={isInsightsPanelOpen} onClose={() => setIsInsightsPanelOpen(false)} />
+      <CustomizableDashboardModal isOpen={isCustomDashboardOpen} onClose={() => setIsCustomDashboardOpen(false)} />
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
@@ -2260,7 +2268,36 @@ const CafeteriaScreen: React.FC = () => {
               />
               Refresh
             </button>
-            {/* Smart Insights Button - Moved to Header */}
+            <button
+              onClick={() => setIsCustomDashboardOpen(true)}
+              style={{
+                padding: '8px 16px',
+                background: '#6366F1',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(99, 102, 241, 0.3)';
+              }}
+            >
+              <LayoutDashboard size={16} />
+              My Dashboard
+            </button>
+            
             <button
               onClick={() => setIsInsightsPanelOpen(true)}
               style={{
@@ -2294,9 +2331,6 @@ const CafeteriaScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI CARDS REMOVED AS PER REQUIREMENTS */}
-
-      {/* Counter Cards */}
       {counters.length > 0 && (
         <div style={{ 
           display: 'grid', 
@@ -2310,7 +2344,6 @@ const CafeteriaScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Enhanced Analytics Charts */}
       {counters.length > 0 && (
         <div>
           <div style={{ 
@@ -2369,10 +2402,10 @@ const CafeteriaScreen: React.FC = () => {
             marginBottom: 20
           }}>
             <WaitTimeChart />
-            {/* COUNTER CORRELATION CHART REMOVED AS PER REQUIREMENTS */}
           </div>
         </div>
       )}
+
     </div>
   );
 };

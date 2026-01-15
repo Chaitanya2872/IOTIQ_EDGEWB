@@ -35,7 +35,7 @@ const SensorsHub = lazy(() => import("./components/SensorsHub"));
 
 // ✅ Inner content separated for readability
 const AppContent: React.FC = () => {
-  const { isAuthenticated, loading, logout } = useAuth();
+  const { isAuthenticated, loading, logout, user } = useAuth();
   const navigate = useNavigate();
 
   if (loading) {
@@ -80,7 +80,14 @@ const AppContent: React.FC = () => {
       <Routes>
         {!isAuthenticated ? (
           <>
-            <Route path="/" element={<SimpleAuthPage onAuthSuccess={() => navigate('/inventory/analytics')} />} />
+            <Route path="/" element={<SimpleAuthPage onAuthSuccess={() => {
+              // Redirect demo user to Cafeteria Screen
+              if (user?.email === "iotiqedgedemo@gmail.com") {
+                navigate('/iot-sensors/cafeteria');
+              } else {
+                navigate('/inventory/analytics');
+              }
+            }} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (

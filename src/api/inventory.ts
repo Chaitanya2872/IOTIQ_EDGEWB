@@ -1,3 +1,17 @@
+/**
+ * The code defines various types and API functions for managing inventory data, including categories,
+ * items, analytics, footfall data, and upload functionality.
+ * @param {string} path - The `path` parameter in the `http` and `cachedHttp` functions represents the
+ * endpoint URL to which the HTTP request will be made. It is used to specify the specific API endpoint
+ * that the request should target.
+ * @param {RequestInit} config - The `config` parameter in the `http` and `cachedHttp` functions is a
+ * `RequestInit` object that contains configurations for the HTTP request such as method, headers,
+ * body, etc. It allows you to customize the request before sending it to the server.
+ * @returns The code provided includes TypeScript type definitions for various data structures related
+ * to inventory management and analytics. Additionally, it includes API functions for interacting with
+ * the backend server to fetch and upload data related to items, consumption, footfall, analytics, and
+ * more.
+ */
 export type Category = {
   id: number;
   categoryName: string;
@@ -1053,26 +1067,26 @@ async function cachedHttp<T>(path: string, config: RequestInit): Promise<T> {
 }
 
 export const CategoriesAPI = {
-  list: () => http<Category[]>("/api/categories", { method: "GET" }),
-  get: (id: number) => http<Category>(`/api/categories/${id}`, { method: "GET" }),
+  list: () => http<Category[]>("categories", { method: "GET" }),
+  get: (id: number) => http<Category>(`categories/${id}`, { method: "GET" }),
   create: (body: { categoryName: string; categoryDescription: string }) =>
-    http<Category>("/api/categories", {
+    http<Category>("categories", {
       method: "POST",
       body: JSON.stringify(body),
     }),
   update: (id: number, body: { categoryName: string; categoryDescription: string }) =>
-    http<Category>(`/api/categories/${id}`, {
+    http<Category>(`categories/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),
     }),
-  remove: (id: number) => http<void>(`/api/categories/${id}`, { method: "DELETE" }),
+  remove: (id: number) => http<void>(`categories/${id}`, { method: "DELETE" }),
 };
 
 export const ItemsAPI = {
-  list: () => http<Item[]>("/api/items", { method: "GET" }),
-  get: (id: number) => http<Item>(`/api/items/${id}`, { method: "GET" }),
+  list: () => http<Item[]>("/items", { method: "GET" }),
+  get: (id: number) => http<Item>(`/items/${id}`, { method: "GET" }),
   create: (body: Omit<Item, "id">) =>
-    http<Item>("/api/items", {
+    http<Item>("/items", {
       method: "POST",
       body: JSON.stringify(body),
     }),

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
   LayoutDashboard,
@@ -20,9 +20,10 @@ import {
   Wrench,         // For Maintenance
   ClipboardList,  // For Work Orders
   FileText,       // For Documents
+  AlertCircle,
 } from "lucide-react";
 import classNames from "classnames";
-import logo from '../assets/comp.svg';
+import logo from '../assets/IOTIQEdge.png';
 
 import styles from "./SidebarMenu.module.css";
 
@@ -112,10 +113,21 @@ const MENU_ITEMS: MenuConfig[] = [
 
 const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth, onLogout }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout, user } = useAuth();
   const [openGroups, setOpenGroups] = useState(() => new Set<string>());
+  const [demoNotification, setDemoNotification] = useState<string | null>(null);
 
   const selectedKey = location.pathname;
+  const isDemoUser = user?.email === "iotiqedgedemo@gmail.com";
+
+  // Show demo notification
+  useEffect(() => {
+    if (demoNotification) {
+      const timer = setTimeout(() => setDemoNotification(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [demoNotification]);
 
   // Get user initials for avatar
   const getUserInitials = (name: string) => {
@@ -182,6 +194,10 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth, onLogout }) 
 
     const iconClass = classNames(styles.iconWrap, active && styles.iconWrapActive);
 
+    // Check if this is a restricted route for demo user (only allow Cafeteria Queue)
+    const isCafeteriaQueueRoute = item.key === "iot-cafeteria" || item.path === "/iot-sensors/cafeteria";
+    const isDemoRestricted = isDemoUser && !isCafeteriaQueueRoute;
+
     if (item.children) {
       const maxHeight = opened ? `${item.children.length * 38}px` : "0";
 
@@ -191,43 +207,63 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth, onLogout }) 
             type="button"
             {...containerProps}
             className={classNames(containerProps.className, styles.buttonReset)}
-            onClick={() => toggleGroup(item.key)}
+            onClick={(e) => {
+              if (isDemoRestricted) {
+                e.preventDefault();
+                setDemoNotification("This feature is for demo purposes. Please contact admin for full access.");
+              } else {
+                toggleGroup(item.key);
+              }
+            }}
           >
             {item.icon && <span className={iconClass}>{item.icon}</span>}
             <span className={styles.label}>{item.label}</span>
-            <span
-              className={classNames(
-                styles.chevron,
-                opened ? styles.chevronOpen : styles.chevronClosed
-              )}
-            >
-              {opened ? <ChevronDown size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />}
-            </span>
+            {!isDemoRestricted && (
+              <span
+                className={classNames(
+                  styles.chevron,
+                  opened ? styles.chevronOpen : styles.chevronClosed
+                )}
+              >
+                {opened ? <ChevronDown size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />}
+              </span>
+            )}
           </button>
 
-          <div
-            className={styles.submenuWrapper}
-            style={{ maxHeight }}
-          >
-            <ul className={styles.submenuList}>
-              {item.children.map((child) => {
-                const childActive = child.path ? selectedKey === child.path : false;
-                return (
-                  <li key={child.key}>
-                    <Link
-                      to={child.path || "#"}
-                      className={classNames(
-                        styles.submenuItem,
-                        childActive && styles.submenuItemActive
-                      )}
-                    >
-                      {child.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          {!isDemoRestricted && (
+            <div
+              className={styles.submenuWrapper}
+              style={{ maxHeight }}
+            >
+              <ul className={styles.submenuList}>
+                {item.children.map((child) => {
+                  const childActive = child.path ? selectedKey === child.path : false;
+                  const isChildCafeteria = child.path === "/iot-sensors/cafeteria" || child.key === "iot-cafeteria";
+                  const isChildRestricted = isDemoUser && !isChildCafeteria;
+                  
+                  return (
+                    <li key={child.key}>
+                      <Link
+                        to={isChildRestricted ? "#" : (child.path || "#")}
+                        className={classNames(
+                          styles.submenuItem,
+                          childActive && styles.submenuItemActive
+                        )}
+                        onClick={(e) => {
+                          if (isChildRestricted) {
+                            e.preventDefault();
+                            setDemoNotification("This feature is for demo purposes. Please contact admin for full access.");
+                          }
+                        }}
+                      >
+                        {child.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </li>
       );
     }
@@ -239,8 +275,14 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth, onLogout }) 
     return (
       <li key={item.key}>
         <Link
-          to={item.path}
+          to={isDemoRestricted ? "#" : item.path}
           {...containerProps}
+          onClick={(e) => {
+            if (isDemoRestricted) {
+              e.preventDefault();
+              setDemoNotification("This feature is for demo purposes. Please contact admin for full access.");
+            }
+          }}
         >
           {item.icon && <span className={iconClass}>{item.icon}</span>}
           <span className={styles.label}>{item.label}</span>
@@ -253,12 +295,42 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth, onLogout }) 
     <div className={styles.sidebarShell}>
       <div className={styles.accentBar} />
 
-      {/* Bristol Myers Logo at TOP */}
-      <div className={styles.bristolLogoContainer}>
+      {/* Demo Notification Toast */}
+      {demoNotification && (
+        <div style={{
+          position: 'fixed',
+          top: 20,
+          right: 20,
+          background: '#FEE2E2',
+          border: '1px solid #FECACA',
+          borderRadius: 8,
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          zIndex: 9999,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          maxWidth: 350,
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          <AlertCircle size={20} color="#DC2626" strokeWidth={2} />
+          <span style={{
+            color: '#7F1D1D',
+            fontSize: 13,
+            fontWeight: 500
+          }}>
+            {demoNotification}
+          </span>
+        </div>
+      )}
+
+      {/* Bristol Myers Logo at TOP - Increased Size */}
+      <div className={styles.bristolLogoContainer} style={{ padding: '20px 10px' }}>
         <img 
           src={logo}
           alt="Bristol Myers"
           className={styles.bristolLogo}
+          style={{ width: '100%', height: 'auto', maxWidth: 200 }}
         />
       </div>
 
@@ -298,6 +370,19 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth, onLogout }) 
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(100px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };

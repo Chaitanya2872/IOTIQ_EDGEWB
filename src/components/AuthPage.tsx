@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, message } from 'antd';
 import { useAuth } from '../contexts/AuthContext';
-import comp from '../assets/comp.svg';
+import comp from '../assets/IOTIQEdge.png';
 import './AuthPage.css';
 
 type Props = {

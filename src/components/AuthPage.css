@@ -36,10 +36,10 @@
 } */
 
 .auth-logo img {
-  width: 220px;     /* increased width */
-  height: 50px;     /* increased height */
+  width: 200px;     /* increased width */
+  height: 70px;     /* increased height */
   margin-bottom: 20px;
-  object-fit: fill;   /* keeps aspect ratio safe */
+  object-fit: contain;   /* keeps aspect ratio safe */
   
 }
 
