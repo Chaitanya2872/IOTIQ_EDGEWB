@@ -1099,7 +1099,7 @@ export const ItemsAPI = {
   search: (q: string) => http<Item[]>(`/api/items/search?q=${encodeURIComponent(q)}`, { method: "GET" }),
   lowStock: (threshold = 10) => http<Item[]>(`/api/items/low-stock?threshold=${threshold}`, { method: "GET" }),
   expiring: (days = 30) => http<Item[]>(`/api/items/expiring?days=${days}`, { method: "GET" }),
-  expired: () => http<Item[]>("/api/items/expired", { method: "GET" }),
+  expired: () => http<Item[]>("/items/expired", { method: "GET" }),
   consume: (id: number, req: ConsumptionRequest) =>
     http<Item>(`/api/items/${id}/consume`, {
       method: "POST",
@@ -1114,9 +1114,9 @@ export const ItemsAPI = {
 
 export const AnalyticsAPI = {
   // Dashboard & Basic Stats
-  basic: () => cachedHttp<any>('/api/analytics', { method: "GET" }),
+  basic: () => cachedHttp<any>('/analytics', { method: "GET" }),
   
-  dashboard: () => cachedHttp<any>('/api/analytics/dashboard', { method: "GET" }),
+  dashboard: () => cachedHttp<any>('/analytics/dashboard', { method: "GET" }),
   
   dashboardBulk: (year?: number, month?: number, categoryId?: number) => {
     const params = new URLSearchParams();
@@ -1124,7 +1124,7 @@ export const AnalyticsAPI = {
     if (month) params.append('month', month.toString());
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<DashboardBulkResponse>(`/api/analytics/dashboard-bulk${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<DashboardBulkResponse>(`/analytics/dashboard-bulk${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Consumption & Trends
@@ -1134,7 +1134,7 @@ export const AnalyticsAPI = {
     if (groupBy) params.append('groupBy', groupBy);
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<ConsumptionTrendsResponse>(`/api/analytics/consumption-trends${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<ConsumptionTrendsResponse>(`/analytics/consumption-trends${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Add inside AnalyticsAPI object
@@ -1144,7 +1144,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
   if (startDate) params.append('startDate', startDate);
   if (endDate) params.append('endDate', endDate);
   const query = params.toString();
-  return cachedHttp<costConsumptionResponse>(`/api/analytics/cost-consumption-scatter${query ? `?${query}` : ''}`, { method: "GET" });
+  return cachedHttp<costConsumptionResponse>(`/analytics/cost-consumption-scatter${query ? `?${query}` : ''}`, { method: "GET" });
 },
 
   topConsumingItems: (days?: number, limit?: number) => {
@@ -1152,7 +1152,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (days) params.append('days', days.toString());
     if (limit) params.append('limit', limit.toString());
     const query = params.toString();
-    return cachedHttp<TopConsumersResponse>(`/api/analytics/top-consuming-items${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<TopConsumersResponse>(`/analytics/top-consuming-items${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Stock Analysis
@@ -1160,7 +1160,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams();
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<StockUsageResponse>(`/api/analytics/stock-usage${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<StockUsageResponse>(`/analytics/stock-usage${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   stockLevels: (categoryId?: number, alertLevel?: string, sortBy?: string, sortOrder?: string) => {
@@ -1170,11 +1170,11 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (sortBy) params.append('sortBy', sortBy);
     if (sortOrder) params.append('sortOrder', sortOrder);
     const query = params.toString();
-    return cachedHttp<StockLevelsResponse>(`/api/analytics/stock-levels${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<StockLevelsResponse>(`/analytics/stock-levels${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   stockDistributionCategory: () => 
-    cachedHttp<StockDistributionCategoryResponse>('/api/analytics/stock-distribution-category', { method: "GET" }),
+    cachedHttp<StockDistributionCategoryResponse>('/analytics/stock-distribution-category', { method: "GET" }),
 
   monthlyStockValueTrend: (startDate?: string, endDate?: string, categoryId?: number) => {
     const params = new URLSearchParams();
@@ -1182,7 +1182,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (endDate) params.append('endDate', endDate);
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<MonthlyStockValueTrendResponse>(`/api/analytics/monthly-stock-value-trend${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<MonthlyStockValueTrendResponse>(`/analytics/monthly-stock-value-trend${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   stockMovements: (period?: string, startDate?: string, endDate?: string, categoryId?: number, itemId?: number) => {
@@ -1193,7 +1193,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (categoryId) params.append('categoryId', categoryId.toString());
     if (itemId) params.append('itemId', itemId.toString());
     const query = params.toString();
-    return cachedHttp<any>(`/api/analytics/stock-movements${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<any>(`/analytics/stock-movements${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   
@@ -1205,7 +1205,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (minConfidence !== undefined) params.append('minConfidence', minConfidence.toString());
     if (includeRecommendations !== undefined) params.append('includeRecommendations', includeRecommendations.toString());
     const query = params.toString();
-    return cachedHttp<SmartInsightsResponse>(`/api/analytics/smart-insights${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<SmartInsightsResponse>(`/analytics/smart-insights${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Smart Insights - Summary Only
@@ -1213,7 +1213,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams();
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<SmartInsightsSummaryResponse>(`/api/analytics/smart-insights/summary${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<SmartInsightsSummaryResponse>(`/analytics/smart-insights/summary${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Smart Insights - Recommendations
@@ -1223,7 +1223,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (minPriority) params.append('minPriority', minPriority.toString());
     if (limit) params.append('limit', limit.toString());
     const query = params.toString();
-    return cachedHttp<SmartRecommendationsResponse>(`/api/analytics/smart-insights/recommendations${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<SmartRecommendationsResponse>(`/analytics/smart-insights/recommendations${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Smart Insights - Alerts
@@ -1233,7 +1233,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (severity) params.append('severity', severity);
     if (limit) params.append('limit', limit.toString());
     const query = params.toString();
-    return cachedHttp<SmartAlertsResponse>(`/api/analytics/smart-insights/alerts${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<SmartAlertsResponse>(`/analytics/smart-insights/alerts${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Smart Insights - Anomalies
@@ -1243,7 +1243,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (minConfidence) params.append('minConfidence', minConfidence.toString());
     if (limit) params.append('limit', limit.toString());
     const query = params.toString();
-    return cachedHttp<SmartAnomaliesResponse>(`/api/analytics/smart-insights/anomalies${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<SmartAnomaliesResponse>(`/analytics/smart-insights/anomalies${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Smart Insights - Health Check
@@ -1251,19 +1251,19 @@ costConsumption: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams();
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<SmartHealthResponse>(`/api/analytics/smart-insights/health${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<SmartHealthResponse>(`/analytics/smart-insights/health${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
 
   // Legacy stock analytics (keep for backward compatibility)
-  stockAnalytics: () => cachedHttp<StockAnalyticsResponse>('/api/analytics/stock-levels', { method: "GET" }),
-  stockAlerts: () => cachedHttp<any>('/api/analytics/stock-alerts', { method: "GET" }),
+  stockAnalytics: () => cachedHttp<StockAnalyticsResponse>('/analytics/stock-levels', { method: "GET" }),
+  stockAlerts: () => cachedHttp<any>('/analytics/stock-alerts', { method: "GET" }),
   topConsumers: (days?: number) => {
     const query = days ? `?days=${days}` : '';
-    return cachedHttp<TopConsumersResponse>(`/api/analytics/top-consuming-items${query}`, { method: "GET" });
+    return cachedHttp<TopConsumersResponse>(`/analytics/top-consuming-items${query}`, { method: "GET" });
   },
-  inventoryValue: () => cachedHttp<any>('/api/analytics/inventory-value', { method: "GET" }),
-  turnoverRatio: () => cachedHttp<any>('/api/analytics/turnover-ratio', { method: "GET" }),
+  inventoryValue: () => cachedHttp<any>('/analytics/inventory-value', { method: "GET" }),
+  turnoverRatio: () => cachedHttp<any>('/analytics/turnover-ratio', { method: "GET" }),
 
   // Forecasting & Predictions
   monthlyForecast: (year?: number, month?: number, categoryId?: number) => {
@@ -1272,7 +1272,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (month) params.append('month', month.toString());
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<MonthlyForecastResponse>(`/api/analytics/monthly-forecast${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<MonthlyForecastResponse>(`/analytics/monthly-forecast${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   forecastVsActualBins: (year?: number, month?: number, categoryId?: number) => {
@@ -1281,17 +1281,17 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (month) params.append('month', month.toString());
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<ForecastVsActualBinsResponse>(`/api/analytics/forecast-vs-actual-bins${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<ForecastVsActualBinsResponse>(`/analytics/forecast-vs-actual-bins${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   binVarianceAnalysis: () => 
-    cachedHttp<BinVarianceAnalysisResponse>('/api/analytics/bin-variance-analysis', { method: "GET" }),
+    cachedHttp<BinVarianceAnalysisResponse>('/analytics/bin-variance-analysis', { method: "GET" }),
 
   itemHeatmap: (itemId: number, period?: string) => {
     const params = new URLSearchParams();
     if (period) params.append('period', period);
     const query = params.toString();
-    return cachedHttp<ItemHeatmapResponse>(`/api/analytics/item-heatmap/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<ItemHeatmapResponse>(`/analytics/item-heatmap/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   consumptionPatterns: (itemId: number, startDate?: string, endDate?: string) => {
@@ -1299,7 +1299,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     const query = params.toString();
-    return cachedHttp<ConsumptionPatternsResponse>(`/api/analytics/consumption-patterns/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<ConsumptionPatternsResponse>(`/analytics/consumption-patterns/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   priceTrends: (itemId: number, startDate?: string, endDate?: string) => {
@@ -1307,14 +1307,14 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     const query = params.toString();
-    return cachedHttp<PriceTrendsResponse>(`/api/analytics/price-trends/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<PriceTrendsResponse>(`/analytics/price-trends/${itemId}${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   leadTimeAnalysis: (supplierId?: number) => {
     const params = new URLSearchParams();
     if (supplierId) params.append('supplierId', supplierId.toString());
     const query = params.toString();
-    return cachedHttp<LeadTimeAnalysisResponse>(`/api/analytics/lead-time-analysis${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<LeadTimeAnalysisResponse>(`/analytics/lead-time-analysis${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Budget Analysis
@@ -1328,18 +1328,18 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (department) params.append('department', department);
     if (includeProjections !== undefined) params.append('includeProjections', includeProjections.toString());
     const query = params.toString();
-    return cachedHttp<BudgetConsumptionResponse>(`/api/analytics/budget-consumption${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<BudgetConsumptionResponse>(`/analytics/budget-consumption${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   budgetKPIs: () => 
-    cachedHttp<BudgetKPIResponse>('/api/analytics/budget-kpis', { method: "GET" }),
+    cachedHttp<BudgetKPIResponse>('/analytics/budget-kpis', { method: "GET" }),
 
   budgetComparison: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     const query = params.toString();
-    return cachedHttp<BudgetComparisonResponse>(`/api/analytics/budget-comparison${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<BudgetComparisonResponse>(`/analytics/budget-comparison${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   costDistribution: (period?: string, startDate?: string, endDate?: string, categoryId?: number, groupBy?: string) => {
@@ -1350,19 +1350,19 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (categoryId) params.append('categoryId', categoryId.toString());
     if (groupBy) params.append('groupBy', groupBy);
     const query = params.toString();
-    return cachedHttp<CostDistributionResponse>(`/api/analytics/cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<CostDistributionResponse>(`/analytics/cost-distribution${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Performance Metrics
   availableDateRange: () => 
-    cachedHttp<AvailableDateResponse>('/api/analytics/available-date-range', { method: "GET" }),
+    cachedHttp<AvailableDateResponse>('/analytics/available-date-range', { method: "GET" }),
 
   inventoryTurnover: (period?: string, categoryId?: number) => {
     const params = new URLSearchParams();
     if (period) params.append('period', period);
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<InventoryTurnoverResponse>(`/api/analytics/inventory-turnover${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<InventoryTurnoverResponse>(`/analytics/inventory-turnover${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   supplierPerformance: (startDate?: string, endDate?: string, supplierId?: number) => {
@@ -1371,7 +1371,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (endDate) params.append('endDate', endDate);
     if (supplierId) params.append('supplierId', supplierId.toString());
     const query = params.toString();
-    return cachedHttp<SupplierPerformanceResponse>(`/api/analytics/supplier-performance${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<SupplierPerformanceResponse>(`/analytics/supplier-performance${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   reorderRecommendations: (categoryId?: number, urgencyLevel?: string) => {
@@ -1379,7 +1379,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (categoryId) params.append('categoryId', categoryId.toString());
     if (urgencyLevel) params.append('urgencyLevel', urgencyLevel);
     const query = params.toString();
-    return cachedHttp<ReorderRecommendationsResponse>(`/api/analytics/reorder-recommendations${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<ReorderRecommendationsResponse>(`/analytics/reorder-recommendations${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   expiryAnalysis: (daysThreshold?: number, categoryId?: number) => {
@@ -1387,7 +1387,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (daysThreshold) params.append('daysThreshold', daysThreshold.toString());
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
-    return cachedHttp<ExpiryAnalysisResponse>(`/api/analytics/expiry-analysis${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<ExpiryAnalysisResponse>(`/analytics/expiry-analysis${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Department & Footfall
@@ -1398,7 +1398,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (endDate) params.append('endDate', endDate);
     if (department) params.append('department', department);
     const query = params.toString();
-    return cachedHttp<DepartmentCostAnalysisResponse>(`/api/analytics/department-cost-analysis${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<DepartmentCostAnalysisResponse>(`/analytics/department-cost-analysis${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   footfallTrends: (period?: string, startDate?: string, endDate?: string) => {
@@ -1407,7 +1407,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     const query = params.toString();
-    return cachedHttp<FootfallTrendsResponse>(`/api/analytics/footfall-trends${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<FootfallTrendsResponse>(`/analytics/footfall-trends${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   perEmployeeConsumption: (startDate?: string, endDate?: string, categoryId?: number, itemId?: number) => {
@@ -1417,7 +1417,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (categoryId) params.append('categoryId', categoryId.toString());
     if (itemId) params.append('itemId', itemId.toString());
     const query = params.toString();
-    return cachedHttp<PerEmployeeConsumptionResponse>(`/api/analytics/footfall/per-employee-consumption${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<PerEmployeeConsumptionResponse>(`/analytics/footfall/per-employee-consumption${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Legacy methods kept for backward compatibility
@@ -1430,7 +1430,7 @@ costConsumption: (startDate?: string, endDate?: string) => {
     if (department) params.append('department', department);
     if (includeComparisons !== undefined) params.append('includeComparisons', includeComparisons.toString());
     const query = params.toString();
-    return cachedHttp<any>(`/api/analytics/cost-per-employee${query ? `?${query}` : ''}`, { method: "GET" });
+    return cachedHttp<any>(`/analytics/cost-per-employee${query ? `?${query}` : ''}`, { method: "GET" });
   }
 };
 
@@ -1451,7 +1451,7 @@ export const FootfallAPI = {
     params.append('sortOrder', 'ASC');
     
     const query = params.toString();
-    return http<FootfallListResponse>(`/api/footfall?${query}`, { method: "GET" });
+    return http<FootfallListResponse>(`/footfall?${query}`, { method: "GET" });
   },
 
   getByDate: (date: string) => {
@@ -1461,7 +1461,7 @@ export const FootfallAPI = {
       data?: FootfallData;
       message?: string;
       error?: string;
-    }>(`/api/footfall/date/${date}`, { method: "GET" });
+    }>(`/footfall/date/${date}`, { method: "GET" });
   },
 
   statistics: async (startDate?: string, endDate?: string): Promise<FootfallStatistics> => {
@@ -1474,7 +1474,7 @@ export const FootfallAPI = {
     params.append('endDate', endDate);
     
     const query = params.toString();
-    return http<FootfallStatistics>(`/api/footfall/statistics?${query}`, { method: "GET" });
+    return http<FootfallStatistics>(`/footfall/statistics?${query}`, { method: "GET" });
   },
 
   debug: () => {
@@ -1494,7 +1494,7 @@ export const FootfallAPI = {
         maxDate: string;
       };
       error?: string;
-    }>("/api/footfall/debug", { method: "GET" });
+    }>("/footfall/debug", { method: "GET" });
   },
 
   exists: (date?: string) => {
@@ -1507,7 +1507,7 @@ export const FootfallAPI = {
       date: string; 
       exists: boolean; 
       message: string; 
-    }>(`/api/footfall/exists${query ? `?${query}` : ''}`, { method: "GET" });
+    }>(`/footfall/exists${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   dataRange: () => {
@@ -1519,7 +1519,7 @@ export const FootfallAPI = {
         maxDate: string;
       };
       error?: string;
-    }>("/api/footfall/data-range", { method: "GET" });
+    }>("/footfall/data-range", { method: "GET" });
   },
 
   // Upload footfall data
@@ -1533,7 +1533,7 @@ export const FootfallAPI = {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
     
-    const res = await fetch(`${API_BASE}/api/analytics/footfall/upload`, {
+    const res = await fetch(`${API_BASE}/analytics/footfall/upload`, {
       method: 'POST',
       body: form,
       headers,
@@ -1558,7 +1558,7 @@ export const FootfallAPI = {
       date: string;
       data?: FootfallData;
       message?: string;
-    }>(`/api/analytics/footfall/check${query ? `?${query}` : ''}`, { method: "GET" });
+    }>(`/analytics/footfall/check${query ? `?${query}` : ''}`, { method: "GET" });
   },
 
   // Get footfall data range
@@ -1572,7 +1572,7 @@ export const FootfallAPI = {
       };
       totalRecords: number;
       message?: string;
-    }>("/api/analytics/footfall/data-range", { method: "GET" });
+    }>("/analytics/footfall/data-range", { method: "GET" });
   },
 
   health: () => {
@@ -1580,7 +1580,7 @@ export const FootfallAPI = {
       status: string; 
       timestamp: string; 
       service: string; 
-    }>("/api/footfall/health", { method: "GET" });
+    }>("/footfall/health", { method: "GET" });
   },
 };
 
@@ -1603,7 +1603,7 @@ export const UploadAPI = {
     }
     
     try {
-      const res = await fetch(`${API_BASE}/api/upload/items`, {
+      const res = await fetch(`${API_BASE}/upload/items`, {
         method: 'POST',
         body: form,
         headers,
@@ -1656,7 +1656,7 @@ export const UploadAPI = {
     }
     
     try {
-      const res = await fetch(`${API_BASE}/api/upload/consumption`, {
+      const res = await fetch(`${API_BASE}/upload/consumption`, {
         method: 'POST',
         body: form,
         headers,
@@ -1697,7 +1697,7 @@ export const UploadAPI = {
    * Download items template
    */
   getItemsTemplate: async (): Promise<Blob> => {
-    console.log('📥 Downloading items template from:', `${API_BASE}/api/templates/items`);
+    console.log('📥 Downloading items template from:', `${API_BASE}/templates/items`);
     
     const accessToken = localStorage.getItem('accessToken');
     const headers: HeadersInit = {};
@@ -1706,7 +1706,7 @@ export const UploadAPI = {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/templates/items`, {
+      const response = await fetch(`${API_BASE}/templates/items`, {
         method: 'GET',
         headers,
       });
@@ -1740,7 +1740,7 @@ export const UploadAPI = {
     if (categoryId) params.append('categoryId', categoryId.toString());
     const query = params.toString();
     
-    const url = `${API_BASE}/api/templates/consumption${query ? `?${query}` : ''}`;
+    const url = `${API_BASE}/templates/consumption${query ? `?${query}` : ''}`;
     console.log('📥 Downloading consumption template from:', url);
 
     const accessToken = localStorage.getItem('accessToken');
@@ -1790,7 +1790,7 @@ export const UploadAPI = {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
     
-    const res = await fetch(`${API_BASE}/api/upload/items/validate`, {
+    const res = await fetch(`${API_BASE}/upload/items/validate`, {
       method: 'POST',
       body: form,
       headers,
@@ -1822,7 +1822,7 @@ export const UploadAPI = {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
     
-    const res = await fetch(`${API_BASE}/api/upload/consumption/validate`, {
+    const res = await fetch(`${API_BASE}/upload/consumption/validate`, {
       method: 'POST',
       body: form,
       headers,
@@ -1842,8 +1842,8 @@ export const UploadAPI = {
   /**
    * Get upload instructions
    */
-  getItemsInstructions: () => http<any>(`/api/upload/instructions`, { method: 'GET' }),
-  getConsumptionInstructions: () => http<any>(`/api/upload/consumption/instructions`, { method: 'GET' }),
+  getItemsInstructions: () => http<any>(`/upload/instructions`, { method: 'GET' }),
+  getConsumptionInstructions: () => http<any>(`/upload/consumption/instructions`, { method: 'GET' }),
 };
 
 // API Base URL - log it for debugging
@@ -1855,7 +1855,7 @@ export async function testAPIConnection() {
   console.log('🏥 Testing API connection...');
   
   try {
-    const response = await fetch(`${API_BASE}/api/upload/health`, {
+    const response = await fetch(`${API_BASE}/upload/health`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`

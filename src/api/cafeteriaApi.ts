@@ -8,7 +8,7 @@ import type {
 } from './types';
 
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: '/api/iot',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
