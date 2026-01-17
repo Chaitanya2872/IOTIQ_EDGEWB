@@ -1068,18 +1068,18 @@ async function cachedHttp<T>(path: string, config: RequestInit): Promise<T> {
 
 export const CategoriesAPI = {
   list: () => http<Category[]>("categories", { method: "GET" }),
-  get: (id: number) => http<Category>(`categories/${id}`, { method: "GET" }),
+  get: (id: number) => http<Category>(`/categories/${id}`, { method: "GET" }),
   create: (body: { categoryName: string; categoryDescription: string }) =>
     http<Category>("categories", {
       method: "POST",
       body: JSON.stringify(body),
     }),
   update: (id: number, body: { categoryName: string; categoryDescription: string }) =>
-    http<Category>(`categories/${id}`, {
+    http<Category>(`/categories/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),
     }),
-  remove: (id: number) => http<void>(`categories/${id}`, { method: "DELETE" }),
+  remove: (id: number) => http<void>(`/categories/${id}`, { method: "DELETE" }),
 };
 
 export const ItemsAPI = {
