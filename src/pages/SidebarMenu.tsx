@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import {
   LayoutDashboard,
   Package,
+  Coffee,
   Boxes,
   Ticket,
   Radar,
@@ -76,7 +77,7 @@ const MENU_ITEMS: MenuConfig[] = [
   {
     key: "ticketing",
     label: "Cafeteria",
-    icon: <Ticket size={18} strokeWidth={2} />,
+    icon: <Coffee size={18} strokeWidth={2} />,
     path: "/ticketing",
   },
   {

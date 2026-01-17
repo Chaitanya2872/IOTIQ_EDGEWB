@@ -23,6 +23,7 @@ import {
   Checkbox,
   message,
   Tabs,
+  Tooltip,
 } from 'antd';
 import {
   LineChart,
@@ -310,83 +311,83 @@ const mockCafeteriaData = {
     }));
   },
 
-  generateFootfallComparison: (hours: number): FootfallComparison[] => {
-    const data: FootfallComparison[] = [];
-    const now = new Date();
+  // generateFootfallComparison: (hours: number): FootfallComparison[] => {
+  //   const data: FootfallComparison[] = [];
+  //   const now = new Date();
     
-    for (let i = hours; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-      const hour = time.getHours();
-      const cafeteriaFootfall = Math.floor(Math.random() * 100) + 50;
-      const countersFootfall = Math.floor(Math.random() * 80) + 30;
-      const ratio = cafeteriaFootfall / countersFootfall;
+  //   for (let i = hours; i >= 0; i--) {
+  //     const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+  //     const hour = time.getHours();
+  //     const cafeteriaFootfall = Math.floor(Math.random() * 100) + 50;
+  //     const countersFootfall = Math.floor(Math.random() * 80) + 30;
+  //     const ratio = cafeteriaFootfall / countersFootfall;
       
-      let insight = 'Normal flow';
-      if (ratio > 1.5) {
-        insight = 'Counter hopping detected - people browsing multiple counters';
-      } else if (ratio < 0.8) {
-        insight = 'Potential congestion at counters - delays expected';
-      }
+  //     let insight = 'Normal flow';
+  //     if (ratio > 1.5) {
+  //       insight = 'Counter hopping detected - people browsing multiple counters';
+  //     } else if (ratio < 0.8) {
+  //       insight = 'Potential congestion at counters - delays expected';
+  //     }
       
-      data.push({
-        timestamp: time.getHours() + ':00',
-        cafeteriaFootfall,
-        countersFootfall,
-        ratio,
-        insight,
-      });
-    }
-    return data;
-  },
+  //     data.push({
+  //       timestamp: time.getHours() + ':00',
+  //       cafeteriaFootfall,
+  //       countersFootfall,
+  //       ratio,
+  //       insight,
+  //     });
+  //   }
+  //   return data;
+  // },
 
-  generateOccupancyTrendData: (hours: number) => {
-    const data: any[] = [];
-    const now = new Date();
+  // generateOccupancyTrendData: (hours: number) => {
+  //   const data: any[] = [];
+  //   const now = new Date();
     
-    for (let i = hours; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-      const hour = time.getHours();
-      let occupancy = Math.floor(Math.random() * 100) + 50;
+  //   for (let i = hours; i >= 0; i--) {
+  //     const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+  //     const hour = time.getHours();
+  //     let occupancy = Math.floor(Math.random() * 100) + 50;
       
-      // Peak hours: 12-14 (lunch) and 19-21 (dinner)
-      if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
-        occupancy += 100;
-      }
+  //     // Peak hours: 12-14 (lunch) and 19-21 (dinner)
+  //     if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
+  //       occupancy += 100;
+  //     }
       
-      data.push({
-        timestamp: time.getHours() + ':00',
-        occupancy: Math.min(occupancy, 250),
-        hour: time.getHours(),
-      });
-    }
-    return data;
-  },
+  //     data.push({
+  //       timestamp: time.getHours() + ':00',
+  //       occupancy: Math.min(occupancy, 250),
+  //       hour: time.getHours(),
+  //     });
+  //   }
+  //   return data;
+  // },
 
-  generateCounterCongestionTrendData: (hours: number) => {
-    const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter'];
-    const data: any[] = [];
-    const now = new Date();
+  // generateCounterCongestionTrendData: (hours: number) => {
+  //   const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter'];
+  //   const data: any[] = [];
+  //   const now = new Date();
     
-    for (let i = hours; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-      const hour = time.getHours();
-      const entry: any = { timestamp: time.getHours() + ':00' };
+  //   for (let i = hours; i >= 0; i--) {
+  //     const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+  //     const hour = time.getHours();
+  //     const entry: any = { timestamp: time.getHours() + ':00' };
       
-      counters.forEach(counter => {
-        let queueLength = Math.floor(Math.random() * 10) + 2;
+  //     counters.forEach(counter => {
+  //       let queueLength = Math.floor(Math.random() * 10) + 2;
         
-        // Peak hours
-        if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
-          queueLength += 8;
-        }
+  //       // Peak hours
+  //       if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
+  //         queueLength += 8;
+  //       }
         
-        entry[counter] = Math.min(queueLength, 25);
-      });
+  //       entry[counter] = Math.min(queueLength, 25);
+  //     });
       
-      data.push(entry);
-    }
-    return data;
-  },
+  //     data.push(entry);
+  //   }
+  //   return data;
+  // },
 
   generateWeeklyHeatmapData: () => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -898,6 +899,51 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   const renderTodaysVisitors = () => {
     if (!todaysVisitors) return null;
 
+    // Smart comparison logic
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    // Determine comparison day
+    let comparisonDay: string;
+    let comparisonDate: Date;
+    
+    if (isWeekend) {
+      // If today is weekend, compare with same day last week
+      comparisonDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      comparisonDay = `Same day last week (${days[dayOfWeek]})`;
+    } else {
+      // Check if yesterday was weekend
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      const yesterdayDayOfWeek = yesterday.getDay();
+      const yesterdayIsWeekend = yesterdayDayOfWeek === 0 || yesterdayDayOfWeek === 6;
+      
+      if (yesterdayIsWeekend) {
+        // If yesterday was weekend, compare with same day last week
+        comparisonDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        comparisonDay = `Same day last week (${days[dayOfWeek]})`;
+      } else {
+        // Normal weekday comparison with yesterday
+        comparisonDate = yesterday;
+        comparisonDay = 'Yesterday';
+      }
+    }
+
+    const tooltipContent = (
+      <div>
+        <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Comparison: {comparisonDay}</div>
+        <div>Previous: {todaysVisitors.total - Math.floor(todaysVisitors.total * todaysVisitors.percentageChange / 100)} visitors</div>
+        <div>Today: {todaysVisitors.total} visitors</div>
+        <div style={{ marginTop: 4, fontSize: '11px', color: '#d9d9d9' }}>
+          {isWeekend || (new Date(today.getTime() - 24 * 60 * 60 * 1000).getDay() === 0 || new Date(today.getTime() - 24 * 60 * 60 * 1000).getDay() === 6) 
+            ? '📊 Weekend comparison uses same day last week' 
+            : '📊 Weekday comparison uses previous day'}
+        </div>
+      </div>
+    );
+
     return (
       <Card
         style={{ height: '100%' }}
@@ -926,13 +972,16 @@ const CafeteriaAnalyticsDashboard: React.FC<{
               <Text style={{ fontSize: '36px', fontWeight: 'bold', lineHeight: 1 }}>
                 {todaysVisitors.total.toLocaleString()}
               </Text>
-              <Badge 
-                count={`${todaysVisitors.trend === 'up' ? '↑' : '↓'} ${Math.abs(todaysVisitors.percentageChange)}%`}
-                style={{ 
-                  backgroundColor: todaysVisitors.trend === 'up' ? '#52c41a' : '#ff4d4f',
-                  fontSize: '12px',
-                }}
-              />
+              <Tooltip title={tooltipContent} placement="top">
+                <Badge 
+                  count={`${todaysVisitors.trend === 'up' ? '↑' : '↓'} ${Math.abs(todaysVisitors.percentageChange)}%`}
+                  style={{ 
+                    backgroundColor: todaysVisitors.trend === 'up' ? '#52c41a' : '#ff4d4f',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                />
+              </Tooltip>
             </Space>
           </div>
           
@@ -1327,28 +1376,47 @@ const CafeteriaAnalyticsDashboard: React.FC<{
       );
     }
 
-    // Line chart visualization
+    // Use Bar chart for monthly view, Line chart otherwise
+    const useBarChart = dateFilter === 'monthly';
+
     return (
       <Card 
         title={
           <Space>
             {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
             <TeamOutlined />
-            <span>Cafeteria Occupancy Trend (People vs Time)</span>
+            <span>Cafeteria Occupancy Trend (Footfall vs Time)</span>
           </Space>
         } 
         size={userConfig.compactMode ? 'small' : 'default'}
         bodyStyle={{ padding: '24px' }}
       >
         <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
-          <LineChart data={occupancyTrendData} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="timestamp" stroke="#8c8c8c" />
-            <YAxis stroke="#8c8c8c" />
-            <RechartsTooltip />
-            <Legend />
-            <Line type="monotone" dataKey="occupancy" stroke="#1890ff" strokeWidth={2} dot={false} name="Occupancy" />
-          </LineChart>
+          {useBarChart ? (
+            <BarChart data={occupancyTrendData} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
+              <defs>
+                <linearGradient id="colorOccupancy" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#1890ff" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#1890ff" stopOpacity={0.3}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="timestamp" stroke="#8c8c8c" />
+              <YAxis stroke="#8c8c8c" />
+              <RechartsTooltip />
+              <Legend />
+              <Bar dataKey="occupancy" fill="url(#colorOccupancy)" name="Occupancy" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          ) : (
+            <LineChart data={occupancyTrendData} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="timestamp" stroke="#8c8c8c" />
+              <YAxis stroke="#8c8c8c" />
+              <RechartsTooltip />
+              <Legend />
+              <Line type="monotone" dataKey="occupancy" stroke="#1890ff" strokeWidth={2} dot={false} name="Occupancy" />
+            </LineChart>
+          )}
         </ResponsiveContainer>
       </Card>
     );
@@ -1460,7 +1528,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
           <Space>
             {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
             <FireOutlined />
-            <span>Weekly Occupancy Heatmap</span>
+            <span>Weekly Cafeteria Congestion Heatmap</span>
           </Space>
         }
         size={userConfig.compactMode ? 'small' : 'default'}
@@ -1825,7 +1893,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
       <Row justify="space-between" align="middle" style={{ marginBottom: 32 }} gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Space size="middle">
-            <Title level={2} style={{ margin: 0 }}>Cafeteria Analytics Dashboard</Title>
+            <Title level={2} style={{ margin: 0 }}>Cafeteria Congestion Analytics Dashboard</Title>
             {mockMode && <Badge count="DEMO" style={{ backgroundColor: '#52c41a' }} />}
           </Space>
         </Col>
