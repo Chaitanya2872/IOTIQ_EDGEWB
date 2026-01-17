@@ -75,7 +75,7 @@ const MENU_ITEMS: MenuConfig[] = [
   },
   {
     key: "ticketing",
-    label: "Ticketing",
+    label: "Cafeteria",
     icon: <Ticket size={18} strokeWidth={2} />,
     path: "/ticketing",
   },

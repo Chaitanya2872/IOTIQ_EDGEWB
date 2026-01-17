@@ -65,7 +65,7 @@ const { Option } = Select;
 interface OccupancyData {
   currentOccupancy: number;
   capacity: number;
-  congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   timestamp: string;
 }
 
@@ -80,7 +80,7 @@ interface CounterStatus {
   counterName: string;
   queueLength: number;
   waitingTime: number;
-  congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   lastUpdated: string;
 }
 
@@ -162,11 +162,10 @@ const mockCafeteriaData = {
     const currentOccupancy = Math.floor(Math.random() * capacity);
     const percentage = (currentOccupancy / capacity) * 100;
     
-    let congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-    if (percentage < 30) congestionLevel = 'LOW';
-    else if (percentage < 60) congestionLevel = 'MEDIUM';
-    else if (percentage < 85) congestionLevel = 'HIGH';
-    else congestionLevel = 'CRITICAL';
+    let congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    if (percentage < 40) congestionLevel = 'LOW';
+    else if (percentage < 75) congestionLevel = 'MEDIUM';
+    else congestionLevel = 'HIGH';
 
     return {
       currentOccupancy,
@@ -201,16 +200,15 @@ const mockCafeteriaData = {
   },
 
   generateCounterStatus: (): CounterStatus[] => {
-    const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter', 'Salad Bar', 'Dessert Corner'];
+    const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter'];
     return counters.map(counter => {
       const queueLength = Math.floor(Math.random() * 25);
       const waitingTime = Math.floor(queueLength * 1.5);
-      let congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+      let congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH';
       
-      if (queueLength < 5) congestionLevel = 'LOW';
-      else if (queueLength < 10) congestionLevel = 'MEDIUM';
-      else if (queueLength < 18) congestionLevel = 'HIGH';
-      else congestionLevel = 'CRITICAL';
+      if (queueLength < 8) congestionLevel = 'LOW';
+      else if (queueLength < 15) congestionLevel = 'MEDIUM';
+      else congestionLevel = 'HIGH';
 
       return {
         counterName: counter,
@@ -220,6 +218,84 @@ const mockCafeteriaData = {
         lastUpdated: new Date().toISOString(),
       };
     });
+  },
+
+  generateOccupancyTrendData: (hours: number) => {
+    const data: any[] = [];
+    const now = new Date();
+    
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      let occupancy = Math.floor(Math.random() * 100) + 50;
+      
+      // Peak hours: 12-14 (lunch) and 19-21 (dinner)
+      if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
+        occupancy += 100;
+      }
+      
+      data.push({
+        timestamp: time.getHours() + ':00',
+        occupancy: Math.min(occupancy, 250),
+        hour: time.getHours(),
+      });
+    }
+    return data;
+  },
+
+  generateCounterCongestionTrendData: (hours: number) => {
+    const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter'];
+    const data: any[] = [];
+    const now = new Date();
+    
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      const entry: any = { timestamp: time.getHours() + ':00' };
+      
+      counters.forEach(counter => {
+        let queueLength = Math.floor(Math.random() * 10) + 2;
+        
+        // Peak hours
+        if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
+          queueLength += 8;
+        }
+        
+        entry[counter] = Math.min(queueLength, 25);
+      });
+      
+      data.push(entry);
+    }
+    return data;
+  },
+
+  generateFootfallComparison: (hours: number): FootfallComparison[] => {
+    const data: FootfallComparison[] = [];
+    const now = new Date();
+    
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      const cafeteriaFootfall = Math.floor(Math.random() * 100) + 50;
+      const countersFootfall = Math.floor(Math.random() * 80) + 30;
+      const ratio = cafeteriaFootfall / countersFootfall;
+      
+      let insight = 'Normal flow';
+      if (ratio > 1.5) {
+        insight = 'Counter hopping detected - people browsing multiple counters';
+      } else if (ratio < 0.8) {
+        insight = 'Potential congestion at counters - delays expected';
+      }
+      
+      data.push({
+        timestamp: time.getHours() + ':00',
+        cafeteriaFootfall,
+        countersFootfall,
+        ratio,
+        insight,
+      });
+    }
+    return data;
   },
 
   generateDwellTimeData: (): DwellTimeData[] => {
@@ -405,8 +481,7 @@ const getCongestionColor = (level: string) => {
   switch (level) {
     case 'LOW': return '#52c41a';
     case 'MEDIUM': return '#faad14';
-    case 'HIGH': return '#ff7a45';
-    case 'CRITICAL': return '#f5222d';
+    case 'HIGH': return '#ff4d4f';
     default: return '#d9d9d9';
   }
 };
@@ -415,8 +490,7 @@ const getCongestionText = (level: string) => {
   switch (level) {
     case 'LOW': return 'Low - Free Flow';
     case 'MEDIUM': return 'Medium - Moderate';
-    case 'HIGH': return 'High - Congested';
-    // case 'CRITICAL': return 'Critical - Very Crowded';
+    case 'HIGH': return 'High - Crowded';
     default: return 'Unknown';
   }
 };
@@ -496,51 +570,169 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   const [selectedLocation, setSelectedLocation] = useState<string>('Intel, RMZ Ecoworld, Bangalore');
   const [selectedCafeteria, setSelectedCafeteria] = useState<string>('SRR 4A');
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [dateFilter, setDateFilter] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [selectedDwellCounter, setSelectedDwellCounter] = useState<string>('all');
+  const [visibleCounters, setVisibleCounters] = useState<{[key: string]: boolean}>({
+    'Bisi Oota/ Mini meals Counter': true,
+    'Two Good Counter': true,
+    'Healthy Station Counter': true,
+  });
 
   const colors = getColorScheme(userConfig.colorScheme || 'default');
 
   // ============================================
   // DATA FETCHING
   // ============================================
+  // Helper function to format timestamp based on date filter
+  const formatTimestampForFilter = (dateIndex: number, filter: 'daily' | 'weekly' | 'monthly') => {
+    const now = new Date();
+    
+    if (filter === 'daily') {
+      const time = new Date(now.getTime() - dateIndex * 60 * 60 * 1000);
+      return time.getHours().toString().padStart(2, '0') + ':00';
+    } else if (filter === 'weekly') {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const time = new Date(now.getTime() - dateIndex * 60 * 60 * 1000);
+      return days[time.getDay()];
+    } else { // monthly
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      // Calculate actual date going backwards
+      const time = new Date(now.getTime() - dateIndex * 60 * 60 * 1000);
+      return months[time.getMonth()];
+    }
+  };
+
+  // Helper to aggregate data for weekly/monthly views
+  const aggregateDataByFilter = (data: any[], filter: 'daily' | 'weekly' | 'monthly') => {
+    if (filter === 'daily') return data;
+    
+    const aggregated: any = {};
+    
+    data.forEach(item => {
+      const key = item.timestamp;
+      if (!aggregated[key]) {
+        aggregated[key] = { ...item, count: 1 };
+      } else {
+        // Average the values for weekly/monthly
+        Object.keys(item).forEach(k => {
+          if (k !== 'timestamp' && typeof item[k] === 'number') {
+            aggregated[key][k] = (aggregated[key][k] * aggregated[key].count + item[k]) / (aggregated[key].count + 1);
+          }
+        });
+        aggregated[key].count++;
+      }
+    });
+    
+    return Object.values(aggregated).map((item: any) => {
+      const { count, ...rest } = item;
+      // Round the averaged values
+      Object.keys(rest).forEach(k => {
+        if (k !== 'timestamp' && typeof rest[k] === 'number') {
+          rest[k] = Math.round(rest[k]);
+        }
+      });
+      return rest;
+    });
+  };
+
   const fetchMockData = () => {
     setLoading(true);
     setError(null);
 
     setTimeout(() => {
       try {
+        // Calculate time range based on date filter
+        let dataTimeRange = timeRange;
+        let samplingInterval = 1; // hours
+        
+        if (dateFilter === 'weekly') {
+          dataTimeRange = 168; // 7 days * 24 hours
+          samplingInterval = 24; // Sample every 24 hours (1 per day)
+        } else if (dateFilter === 'monthly') {
+          dataTimeRange = 8760; // 365 days * 24 hours (1 year)
+          samplingInterval = 730; // Sample every ~30 days to get 12 months
+        }
+
         if (userConfig.widgets.occupancyStatus.enabled) {
           setOccupancyData(mockCafeteriaData.generateOccupancyData());
         }
+        
         if (userConfig.widgets.inflowOutflow.enabled) {
-          setFlowData(mockCafeteriaData.generateFlowData(timeRange));
+          const rawData = mockCafeteriaData.generateFlowData(dataTimeRange);
+          const formattedData = rawData
+            .filter((_, index) => index % Math.ceil(samplingInterval) === 0)
+            .map((item, index) => ({
+              ...item,
+              timestamp: formatTimestampForFilter(index * Math.ceil(samplingInterval), dateFilter)
+            }));
+          const aggregated = aggregateDataByFilter(formattedData, dateFilter);
+          // Reverse for chronological order (oldest to newest)
+          setFlowData(aggregated.reverse());
         }
+        
         if (userConfig.widgets.counterStatus.enabled) {
           setCounterStatus(mockCafeteriaData.generateCounterStatus());
         }
+        
         if (userConfig.widgets.dwellTime.enabled) {
           setDwellTimeData(mockCafeteriaData.generateDwellTimeData());
         }
+        
         if (userConfig.widgets.footfallComparison.enabled) {
-          setFootfallComparison(mockCafeteriaData.generateFootfallComparison(timeRange));
+          const rawData = mockCafeteriaData.generateFootfallComparison(dataTimeRange);
+          const formattedData = rawData
+            .filter((_, index) => index % Math.ceil(samplingInterval) === 0)
+            .map((item, index) => ({
+              ...item,
+              timestamp: formatTimestampForFilter(index * Math.ceil(samplingInterval), dateFilter)
+            }));
+          const aggregated = aggregateDataByFilter(formattedData, dateFilter);
+          // Reverse for chronological order (oldest to newest)
+          setFootfallComparison(aggregated.reverse());
         }
+        
         if (userConfig.widgets.occupancyTrend.enabled) {
-          setOccupancyTrendData(mockCafeteriaData.generateOccupancyTrendData(timeRange));
+          const rawData = mockCafeteriaData.generateOccupancyTrendData(dataTimeRange);
+          const formattedData = rawData
+            .filter((_, index) => index % Math.ceil(samplingInterval) === 0)
+            .map((item, index) => ({
+              ...item,
+              timestamp: formatTimestampForFilter(index * Math.ceil(samplingInterval), dateFilter)
+            }));
+          const aggregated = aggregateDataByFilter(formattedData, dateFilter);
+          // Reverse for chronological order (oldest to newest)
+          setOccupancyTrendData(aggregated.reverse());
         }
+        
         if (userConfig.widgets.counterCongestionTrend.enabled) {
-          setCounterCongestionData(mockCafeteriaData.generateCounterCongestionTrendData(timeRange));
+          const rawData = mockCafeteriaData.generateCounterCongestionTrendData(dataTimeRange);
+          const formattedData = rawData
+            .filter((_, index) => index % Math.ceil(samplingInterval) === 0)
+            .map((item, index) => ({
+              ...item,
+              timestamp: formatTimestampForFilter(index * Math.ceil(samplingInterval), dateFilter)
+            }));
+          const aggregated = aggregateDataByFilter(formattedData, dateFilter);
+          // Reverse for chronological order (oldest to newest)
+          setCounterCongestionData(aggregated.reverse());
         }
+        
         if (userConfig.widgets.weeklyHeatmap.enabled) {
           setWeeklyHeatmapData(mockCafeteriaData.generateWeeklyHeatmapData());
         }
+        
         if (userConfig.widgets.counterEfficiency.enabled) {
           setCounterEfficiencyData(mockCafeteriaData.generateCounterEfficiencyData());
         }
+        
         if (userConfig.widgets.todaysVisitors.enabled) {
           setTodaysVisitors(mockCafeteriaData.generateTodaysVisitors());
         }
+        
         if (userConfig.widgets.avgDwellTime.enabled) {
           setAvgDwellTime(mockCafeteriaData.generateAvgDwellTime());
         }
+        
         setLastUpdated(new Date().toLocaleTimeString());
         setLoading(false);
       } catch (err: any) {
@@ -559,7 +751,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
       (userConfig.refreshInterval || 30) * 1000
     );
     return () => clearInterval(interval);
-  }, [timeRange, userConfig.refreshInterval]);
+  }, [timeRange, dateFilter, userConfig.refreshInterval]);
 
   // ============================================
   // CONFIG HANDLERS
@@ -693,7 +885,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
             <Col span={24}>
               <Alert
                 message={getCongestionText(occupancyData.congestionLevel)}
-                type={occupancyData.congestionLevel === 'CRITICAL' ? 'error' : occupancyData.congestionLevel === 'HIGH' ? 'warning' : 'success'}
+                type={occupancyData.congestionLevel === 'HIGH' ? 'error' : occupancyData.congestionLevel === 'MEDIUM' ? 'warning' : 'success'}
                 showIcon
               />
             </Col>
@@ -812,14 +1004,14 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         title={
           <Space>
             {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-            Inflow vs Outflow 
+            Inflow vs Outflow (People vs Time)
           </Space>
         } 
         size={userConfig.compactMode ? 'small' : 'default'}
         bodyStyle={{ padding: '24px' }}
       >
         <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
-          <ChartComponent data={flowData}>
+          <ChartComponent data={flowData} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="timestamp" stroke="#8c8c8c" />
             <YAxis stroke="#8c8c8c" />
@@ -871,7 +1063,24 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   const renderDwellTime = () => {
     if (dwellTimeData.length === 0) return null;
     
-    const COLORS = ['#52c41a', '#73d13d', '#95de64', '#b7eb8f', '#d9f7be'];
+    const COLORS = ['#1890ff', '#40a9ff', '#69c0ff', '#91d5ff', '#bae7ff'];
+
+    // Filter data based on selected counter (in real implementation, this would come from API)
+    // For now, we'll simulate by adjusting percentages
+    let filteredData = dwellTimeData;
+    if (selectedDwellCounter !== 'all') {
+      // Simulate counter-specific data by adjusting distributions
+      filteredData = dwellTimeData.map((item, index) => ({
+        ...item,
+        count: Math.floor(item.count * (0.3 + Math.random() * 0.4)), // Simulate variation
+        percentage: 0
+      }));
+      const total = filteredData.reduce((sum, item) => sum + item.count, 0);
+      filteredData = filteredData.map(item => ({
+        ...item,
+        percentage: Math.round((item.count / total) * 100)
+      }));
+    }
 
     return (
       <Card 
@@ -879,27 +1088,40 @@ const CafeteriaAnalyticsDashboard: React.FC<{
           <Space>
             {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
             <ClockCircleOutlined />
-            <span>Counters Dwell Time Distribution</span>
+            <span>Dwell Time Distribution (Time vs Number of People)</span>
           </Space>
-        } 
+        }
+        extra={
+          <Select
+            value={selectedDwellCounter}
+            onChange={setSelectedDwellCounter}
+            style={{ width: 220 }}
+            size="small"
+          >
+            <Option value="all">All Counters</Option>
+            <Option value="Bisi Oota/ Mini meals Counter">Bisi Oota/ Mini meals</Option>
+            <Option value="Two Good Counter">Two Good</Option>
+            <Option value="Healthy Station Counter">Healthy Station</Option>
+          </Select>
+        }
         size={userConfig.compactMode ? 'small' : 'default'}
         style={{ height: '100%' }}
         bodyStyle={{ padding: '24px' }}
       >
         {userConfig.dwellTimeChartType === 'bar' ? (
           <ResponsiveContainer width="100%" height={userConfig.compactMode ? 280 : 340}>
-            <BarChart data={dwellTimeData} layout="vertical" margin={{ left: 20, right: 20 }}>
+            <BarChart data={filteredData} layout="vertical" margin={{ left: 10, right: 40, top: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis type="number" stroke="#8c8c8c" />
-              <YAxis dataKey="timeRange" type="category" stroke="#8c8c8c" width={80} />
+              <YAxis dataKey="timeRange" type="category" stroke="#8c8c8c" width={90} />
               <RechartsTooltip 
                 formatter={(value: any, name: string) => {
                   if (name === 'count') return [value + ' people', 'Count'];
                   return [value + '%', 'Percentage'];
                 }}
               />
-              <Bar dataKey="count" fill={colors.primary} radius={[0, 4, 4, 0]} name="count">
-                {dwellTimeData.map((entry, index) => (
+              <Bar dataKey="count" radius={[0, 3, 3, 0]} name="count" barSize={20}>
+                {filteredData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Bar>
@@ -911,7 +1133,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
               <ResponsiveContainer width="100%" height={userConfig.compactMode ? 200 : 260}>
                 <PieChart>
                   <Pie
-                    data={dwellTimeData}
+                    data={filteredData}
                     cx="50%"
                     cy="50%"
                     innerRadius={userConfig.compactMode ? 40 : 60}
@@ -919,7 +1141,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
                     dataKey="count"
                     paddingAngle={2}
                   >
-                    {dwellTimeData.map((_, index) => (
+                    {filteredData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -929,7 +1151,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
             </Col>
             <Col span={12}>
               <Space direction="vertical" style={{ width: '100%' }} size="small">
-                {dwellTimeData.map((item, index) => (
+                {filteredData.map((item, index) => (
                   <div key={item.timeRange}>
                     <Space style={{ marginBottom: 4 }}>
                       <div style={{ 
@@ -948,6 +1170,32 @@ const CafeteriaAnalyticsDashboard: React.FC<{
             </Col>
           </Row>
         )}
+        
+        {/* Detailed Statistics */}
+        <Divider style={{ margin: '20px 0' }} />
+        <Row gutter={16}>
+          <Col span={8}>
+            <Statistic 
+              title="Average Dwell Time" 
+              value="18m 32s" 
+              valueStyle={{ fontSize: '18px', color: '#1890ff' }}
+            />
+          </Col>
+          <Col span={8}>
+            <Statistic 
+              title="Peak Hour Dwell Time" 
+              value="25m 15s" 
+              valueStyle={{ fontSize: '18px', color: '#ff7a45' }}
+            />
+          </Col>
+          <Col span={8}>
+            <Statistic 
+              title="Off-Peak Dwell Time" 
+              value="12m 48s" 
+              valueStyle={{ fontSize: '18px', color: '#52c41a' }}
+            />
+          </Col>
+        </Row>
       </Card>
     );
   };
@@ -968,7 +1216,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         bodyStyle={{ padding: '24px' }}
       >
         <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
-          <ComposedChart data={footfallComparison}>
+          <ComposedChart data={footfallComparison} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="timestamp" stroke="#8c8c8c" />
             <YAxis stroke="#8c8c8c" />
@@ -1086,14 +1334,14 @@ const CafeteriaAnalyticsDashboard: React.FC<{
           <Space>
             {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
             <TeamOutlined />
-            <span>Cafeteria Occupancy Trend (Footfall vs Time)</span>
+            <span>Cafeteria Occupancy Trend (People vs Time)</span>
           </Space>
         } 
         size={userConfig.compactMode ? 'small' : 'default'}
         bodyStyle={{ padding: '24px' }}
       >
         <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
-          <LineChart data={occupancyTrendData}>
+          <LineChart data={occupancyTrendData} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="timestamp" stroke="#8c8c8c" />
             <YAxis stroke="#8c8c8c" />
@@ -1115,6 +1363,30 @@ const CafeteriaAnalyticsDashboard: React.FC<{
       'Healthy Station Counter': '#1890ff',
     };
 
+    const handleLegendClick = (e: any) => {
+      const counterName = e.dataKey;
+      
+      // Check if this counter is the only one visible
+      const isOnlyVisible = visibleCounters[counterName] && 
+        Object.entries(visibleCounters).filter(([_, visible]) => visible).length === 1;
+      
+      if (isOnlyVisible) {
+        // If clicking on the only visible counter, show all counters
+        setVisibleCounters({
+          'Bisi Oota/ Mini meals Counter': true,
+          'Two Good Counter': true,
+          'Healthy Station Counter': true,
+        });
+      } else {
+        // Otherwise, show only the clicked counter
+        setVisibleCounters({
+          'Bisi Oota/ Mini meals Counter': counterName === 'Bisi Oota/ Mini meals Counter',
+          'Two Good Counter': counterName === 'Two Good Counter',
+          'Healthy Station Counter': counterName === 'Healthy Station Counter',
+        });
+      }
+    };
+
     return (
       <Card 
         title={
@@ -1128,19 +1400,21 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         bodyStyle={{ padding: '24px' }}
       >
         <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
-          <LineChart data={counterCongestionData}>
+          <LineChart data={counterCongestionData} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="timestamp" stroke="#8c8c8c" />
             <YAxis stroke="#8c8c8c" />
             <RechartsTooltip />
-            <Legend />
+            <Legend onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer' }} />
             <Line 
               type="monotone" 
               dataKey="Bisi Oota/ Mini meals Counter" 
               stroke={COUNTER_COLORS['Bisi Oota/ Mini meals Counter']} 
               strokeWidth={2} 
               dot={false}
-              name="Bisi Oota/ Mini meals" 
+              name="Bisi Oota/ Mini meals"
+              hide={!visibleCounters['Bisi Oota/ Mini meals Counter']}
+              strokeOpacity={visibleCounters['Bisi Oota/ Mini meals Counter'] ? 1 : 0.3}
             />
             <Line 
               type="monotone" 
@@ -1148,7 +1422,9 @@ const CafeteriaAnalyticsDashboard: React.FC<{
               stroke={COUNTER_COLORS['Two Good Counter']} 
               strokeWidth={2} 
               dot={false}
-              name="Two Good" 
+              name="Two Good"
+              hide={!visibleCounters['Two Good Counter']}
+              strokeOpacity={visibleCounters['Two Good Counter'] ? 1 : 0.3}
             />
             <Line 
               type="monotone" 
@@ -1156,10 +1432,17 @@ const CafeteriaAnalyticsDashboard: React.FC<{
               stroke={COUNTER_COLORS['Healthy Station Counter']} 
               strokeWidth={2} 
               dot={false}
-              name="Healthy Station" 
+              name="Healthy Station"
+              hide={!visibleCounters['Healthy Station Counter']}
+              strokeOpacity={visibleCounters['Healthy Station Counter'] ? 1 : 0.3}
             />
           </LineChart>
         </ResponsiveContainer>
+        <div style={{ marginTop: 12, textAlign: 'center' }}>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            💡 Click on a counter name to filter and show only that line. Click again to show all.
+          </Text>
+        </div>
       </Card>
     );
   };
@@ -1177,7 +1460,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
           <Space>
             {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
             <FireOutlined />
-            <span>Weekly Cafeteria Occupancy Heatmap</span>
+            <span>Weekly Occupancy Heatmap</span>
           </Space>
         }
         size={userConfig.compactMode ? 'small' : 'default'}
@@ -1266,13 +1549,13 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         render: (text: string) => <Text strong>{text}</Text>,
         width: '30%',
       },
-      // { 
-      //   title: 'Avg Service Time', 
-      //   dataIndex: 'avgServiceTime', 
-      //   key: 'avgServiceTime', 
-      //   render: (value: number) => <Text>{value} min</Text>,
-      //   align: 'center' as const,
-      // },
+      { 
+        title: 'Avg Service Time', 
+        dataIndex: 'avgServiceTime', 
+        key: 'avgServiceTime', 
+        render: (value: number) => <Text>{value} min</Text>,
+        align: 'center' as const,
+      },
       { 
         title: 'Total Served', 
         dataIndex: 'totalServed', 
@@ -1573,7 +1856,25 @@ const CafeteriaAnalyticsDashboard: React.FC<{
               <DatePicker value={selectedDate} disabled size={userConfig.compactMode ? 'small' : 'middle'} />
             </Col>
             <Col>
-              <Select value={timeRange} style={{ width: 120 }} onChange={setTimeRange} size={userConfig.compactMode ? 'small' : 'middle'}>
+              <Select 
+                value={dateFilter} 
+                onChange={setDateFilter} 
+                style={{ width: 120 }}
+                size={userConfig.compactMode ? 'small' : 'middle'}
+              >
+                <Option value="daily">Daily</Option>
+                <Option value="weekly">Weekly</Option>
+                <Option value="monthly">Monthly</Option>
+              </Select>
+            </Col>
+            <Col>
+              <Select 
+                value={timeRange} 
+                style={{ width: 120 }} 
+                onChange={setTimeRange} 
+                size={userConfig.compactMode ? 'small' : 'middle'}
+                disabled={dateFilter !== 'daily'}
+              >
                 <Option value={6}>Last 6h</Option>
                 <Option value={12}>Last 12h</Option>
                 <Option value={24}>Last 24h</Option>
@@ -1684,8 +1985,17 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         ]}
       />
       
-      <div style={{ marginTop: 24, textAlign: 'right', color: '#999', fontSize: 12 }}>
-        Last updated: {lastUpdated}
+      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <Badge 
+            status="processing" 
+            text={`Showing ${dateFilter === 'daily' ? 'Daily' : dateFilter === 'weekly' ? 'Weekly' : 'Monthly'} Data`}
+            style={{ fontSize: '12px' }}
+          />
+        </div>
+        <div style={{ textAlign: 'right', color: '#999', fontSize: 12 }}>
+          Last updated: {lastUpdated}
+        </div>
       </div>
 
       {renderSettingsDrawer()}
