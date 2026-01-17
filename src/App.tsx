@@ -38,12 +38,15 @@ const AppContent: React.FC = () => {
   const { isAuthenticated, loading, logout, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect demo user to Cafeteria on successful login
+  const isDemoUser = user?.email === "iotiqedgedemo@gmail.com";
+
+  // Redirect demo user to Ticketing (Cafeteria Analytics) on successful login
   React.useEffect(() => {
-    if (isAuthenticated && user?.email === "iotiqedgedemo@gmail.com") {
-      navigate('/iot-sensors/cafeteria', { replace: true });
+    if (isAuthenticated && isDemoUser) {
+      console.log('Demo user detected, redirecting to ticketing');
+      navigate('/ticketing', { replace: true });
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, isDemoUser, navigate]);
 
   if (loading) {
     return (
@@ -92,7 +95,17 @@ const AppContent: React.FC = () => {
           </>
         ) : (
           <>
-            <Route path="*" element={<Navigate to="/inventory/analytics" replace />} />
+            {/* Default redirect based on user type */}
+            <Route 
+              path="/" 
+              element={
+                <Navigate 
+                  to={isDemoUser ? "/ticketing" : "/inventory/analytics"} 
+                  replace 
+                />
+              } 
+            />
+            
             <Route
               path="/"
               element={
@@ -101,7 +114,18 @@ const AppContent: React.FC = () => {
                 </ProtectedRoute>
               }
             >
-              {/* ✅ Main Dashboard */}
+              {/* ============================================ */}
+              {/* TICKETING - Different content based on user */}
+              {/* ============================================ */}
+              <Route 
+                path="ticketing" 
+                element={<TicketingSystem />} 
+              />
+
+              {/* ============================================ */}
+              {/* REGULAR USER ROUTES */}
+              {/* Demo user can see sidebar but can't access these */}
+              {/* ============================================ */}
               <Route path="dashboard" element={<Dashboard />} />
               
               {/* ✅ Asset Management Routes */}
@@ -113,8 +137,7 @@ const AppContent: React.FC = () => {
               <Route path="/assets/work-orders" element={<WorkOrderManagement />} />
               <Route path="/assets/documents" element={<DocumentManagement />} />
               
-              {/* ✅ Ticketing & Meals */}
-              <Route path="ticketing" element={<TicketingSystem />} />
+              {/* ✅ Meals */}
               <Route path="meal-forecast" element={<MealForecastDashboard />} />
               
               {/* 🆕 IoT Sensors Routes */}
@@ -134,7 +157,17 @@ const AppContent: React.FC = () => {
               <Route path="inventory/consumption-inventory" element={<ConsumptionInventory />} />
               <Route path="inventory/budget-analysis" element={<BudgetAnalysis />} />
             </Route>
-            <Route path="*" element={<Navigate to="/inventory/analytics" replace />} />
+            
+            {/* Fallback redirect */}
+            <Route 
+              path="*" 
+              element={
+                <Navigate 
+                  to={isDemoUser ? "/ticketing" : "/inventory/analytics"} 
+                  replace 
+                />
+              } 
+            />
           </>
         )}
       </Routes>

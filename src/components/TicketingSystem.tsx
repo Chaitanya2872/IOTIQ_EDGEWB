@@ -1,1292 +1,1696 @@
-// import React, { useState } from 'react';
+// CafeteriaAnalyticsDashboard.tsx - ENHANCED WITH DRAG & DROP
+import React, { useState, useEffect } from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Badge,
+  Space,
+  Typography,
+  Spin,
+  Alert,
+  Select,
+  DatePicker,
+  Button,
+  Progress,
+  Table,
+  Switch,
+  Drawer,
+  Divider,
+  Slider,
+  Radio,
+  Checkbox,
+  message,
+  Tabs,
+} from 'antd';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+  ComposedChart,
+} from 'recharts';
+import {
+  UserOutlined,
+  ClockCircleOutlined,
+  FireOutlined,
+  TeamOutlined,
+  WarningOutlined,
+  ReloadOutlined,
+  SettingOutlined,
+  EyeOutlined,
+  DragOutlined,
+  HolderOutlined,
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
 
-// interface Ticket {
-//   id: string;
-//   subject: string;
-//   priority: 'LOW' | 'MEDIUM' | 'HIGH';
-//   status: 'OPEN' | 'IN PROGRESS' | 'ESCALATED' | 'RESOLVED';
-//   lastUpdated: string;
-//   facility: string;
-//   category: string;
-//   description: string;
-// }
+const { Title, Text } = Typography;
+const { Option } = Select;
 
-// const TicketingSystem: React.FC = () => {
-//   const [tickets, setTickets] = useState<Ticket[]>([
-//     {
-//       id: '#3225',
-//       subject: 'Email Access Issue',
-//       priority: 'LOW',
-//       status: 'OPEN',
-//       lastUpdated: 'Today',
-//       facility: 'Office 1',
-//       category: 'IT',
-//       description: 'Unable to access email account'
-//     },
-//     {
-//       id: '#3189',
-//       subject: 'Projector Not Working',
-//       priority: 'HIGH',
-//       status: 'OPEN',
-//       lastUpdated: 'Apr 23, 2024',
-//       facility: 'Office 1',
-//       category: 'Equipment',
-//       description: 'Conference room projector not displaying'
-//     },
-//     {
-//       id: '#3152',
-//       subject: 'Software Installation Request',
-//       priority: 'LOW',
-//       status: 'IN PROGRESS',
-//       lastUpdated: 'Apr 18, 2024',
-//       facility: 'Office 1',
-//       category: 'IT',
-//       description: 'Need new software installed'
-//     },
-//     {
-//       id: '#3120',
-//       subject: 'Network Connectivity Problem',
-//       priority: 'MEDIUM',
-//       status: 'ESCALATED',
-//       lastUpdated: 'Apr 10, 2024',
-//       facility: 'Office 2',
-//       category: 'Network',
-//       description: 'Intermittent network connection issues'
-//     },
-//     {
-//       id: '#3097',
-//       subject: "Computer Won't Start",
-//       priority: 'LOW',
-//       status: 'RESOLVED',
-//       lastUpdated: 'Apr 02, 2024',
-//       facility: 'Office 1',
-//       category: 'Hardware',
-//       description: 'Desktop computer not powering on'
-//     }
-//   ]);
-
-//   const [formData, setFormData] = useState({
-//     title: '',
-//     facility: 'Office 1',
-//     category: '',
-//     description: ''
-//   });
-
-//   const [statusFilter, setStatusFilter] = useState('Open');
-//   const [priorityFilter, setPriorityFilter] = useState('');
-
-//   // Calculate status counts
-//   const statusCounts = {
-//     OPEN: tickets.filter(t => t.status === 'OPEN').length,
-//     'IN PROGRESS': tickets.filter(t => t.status === 'IN PROGRESS').length,
-//     ESCALATED: tickets.filter(t => t.status === 'ESCALATED').length,
-//     RESOLVED: tickets.filter(t => t.status === 'RESOLVED').length
-//   };
-
-//   // Filter tickets
-//   const filteredTickets = tickets.filter(ticket => {
-//     if (statusFilter !== 'All' && ticket.status !== statusFilter.toUpperCase()) return false;
-//     if (priorityFilter && ticket.priority !== priorityFilter) return false;
-//     return true;
-//   });
-
-//   const handleInputChange = (field: string, value: string) => {
-//     setFormData(prev => ({ ...prev, [field]: value }));
-//   };
-
-//   const handleCreateTicket = () => {
-//     if (!formData.title.trim()) return;
-
-//     const newTicket: Ticket = {
-//       id: `#${Math.floor(Math.random() * 10000)}`,
-//       subject: formData.title,
-//       priority: 'MEDIUM',
-//       status: 'OPEN',
-//       lastUpdated: 'Today',
-//       facility: formData.facility,
-//       category: formData.category || 'General',
-//       description: formData.description
-//     };
-
-//     setTickets(prev => [newTicket, ...prev]);
-//     setFormData({ title: '', facility: 'Office 1', category: '', description: '' });
-//   };
-
-//   const getPriorityBadgeStyle = (priority: string) => {
-//     switch (priority) {
-//       case 'HIGH':
-//         return { backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' };
-//       case 'MEDIUM':
-//         return { backgroundColor: '#fef3c7', color: '#d97706', border: '1px solid #fed7aa' };
-//       case 'LOW':
-//         return { backgroundColor: '#dbeafe', color: '#2563eb', border: '1px solid #bfdbfe' };
-//       default:
-//         return { backgroundColor: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db' };
-//     }
-//   };
-
-//   return (
-//     <div style={{ 
-//       display: 'flex', 
-//       height: '100vh', 
-//       backgroundColor: '#f8fafc',
-//       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-//     }}>
-//       {/* Left Side - Create Ticket Form */}
-//       <div style={{ 
-//         width: '400px', 
-//         backgroundColor: 'white',
-//         padding: '32px',
-//         borderRight: '1px solid #e5e7eb',
-//         boxShadow: '2px 0 8px rgba(0,0,0,0.05)'
-//       }}>
-//         <h2 style={{ 
-//           fontSize: '24px', 
-//           fontWeight: '600', 
-//           color: '#111827',
-//           marginBottom: '24px',
-//           borderBottom: '2px solid #3b82f6',
-//           paddingBottom: '8px'
-//         }}>
-//           Create New Ticket
-//         </h2>
-
-//         <div style={{ marginBottom: '20px' }}>
-//           <label style={{ 
-//             display: 'block', 
-//             fontSize: '14px', 
-//             fontWeight: '600', 
-//             color: '#374151',
-//             marginBottom: '6px'
-//           }}>
-//             Title <span style={{ color: '#ef4444' }}>*</span>
-//           </label>
-//           <input
-//             type="text"
-//             value={formData.title}
-//             onChange={(e) => handleInputChange('title', e.target.value)}
-//             style={{
-//               width: '100%',
-//               padding: '12px 16px',
-//               border: `2px solid ${formData.title.trim() ? '#10b981' : '#e5e7eb'}`,
-//               borderRadius: '8px',
-//               fontSize: '14px',
-//               outline: 'none',
-//               transition: 'all 0.2s ease',
-//             }}
-//             onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-//             onBlur={(e) => e.target.style.borderColor = formData.title.trim() ? '#10b981' : '#e5e7eb'}
-//             placeholder="Enter ticket title"
-//           />
-//           {!formData.title.trim() && (
-//             <p style={{ 
-//               fontSize: '12px', 
-//               color: '#6b7280', 
-//               margin: '4px 0 0 0',
-//               fontStyle: 'italic'
-//             }}>
-//               Please enter a title for your ticket
-//             </p>
-//           )}
-//         </div>
-
-//         <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-//           <div style={{ flex: 1 }}>
-//             <label style={{ 
-//               display: 'block', 
-//               fontSize: '14px', 
-//               fontWeight: '600', 
-//               color: '#374151',
-//               marginBottom: '6px'
-//             }}>
-//               Facility
-//             </label>
-//             <select
-//               value={formData.facility}
-//               onChange={(e) => handleInputChange('facility', e.target.value)}
-//               style={{
-//                 width: '100%',
-//                 padding: '12px 16px',
-//                 border: '2px solid #e5e7eb',
-//                 borderRadius: '8px',
-//                 fontSize: '14px',
-//                 backgroundColor: 'white',
-//                 outline: 'none'
-//               }}
-//             >
-//               <option value="Office 1">Office 1</option>
-//               <option value="Office 2">Office 2</option>
-//               <option value="Office 3">Office 3</option>
-//             </select>
-//           </div>
-
-//           <div style={{ flex: 1 }}>
-//             <label style={{ 
-//               display: 'block', 
-//               fontSize: '14px', 
-//               fontWeight: '600', 
-//               color: '#374151',
-//               marginBottom: '6px'
-//             }}>
-//               Category
-//             </label>
-//             <input
-//               type="text"
-//               value={formData.category}
-//               onChange={(e) => handleInputChange('category', e.target.value)}
-//               style={{
-//                 width: '100%',
-//                 padding: '12px 16px',
-//                 border: '2px solid #e5e7eb',
-//                 borderRadius: '8px',
-//                 fontSize: '14px',
-//                 outline: 'none'
-//               }}
-//               placeholder="e.g., IT, Equipment"
-//             />
-//           </div>
-//         </div>
-
-//         <div style={{ marginBottom: '24px' }}>
-//           <label style={{ 
-//             display: 'block', 
-//             fontSize: '14px', 
-//             fontWeight: '600', 
-//             color: '#374151',
-//             marginBottom: '6px'
-//           }}>
-//             Description
-//           </label>
-//           <textarea
-//             value={formData.description}
-//             onChange={(e) => handleInputChange('description', e.target.value)}
-//             rows={4}
-//             style={{
-//               width: '100%',
-//               padding: '12px 16px',
-//               border: '2px solid #e5e7eb',
-//               borderRadius: '8px',
-//               fontSize: '14px',
-//               outline: 'none',
-//               resize: 'vertical',
-//               minHeight: '100px'
-//             }}
-//             placeholder="Describe the issue in detail..."
-//           />
-//         </div>
-
-//         <div style={{ marginBottom: '24px' }}>
-//           <label style={{ 
-//             display: 'block', 
-//             fontSize: '14px', 
-//             fontWeight: '600', 
-//             color: '#374151',
-//             marginBottom: '8px'
-//           }}>
-//             Attachments
-//           </label>
-//           <div style={{
-//             border: '2px dashed #d1d5db',
-//             borderRadius: '8px',
-//             padding: '20px',
-//             textAlign: 'center',
-//             color: '#6b7280',
-//             fontSize: '14px'
-//           }}>
-//             Drop files here or click to upload
-//           </div>
-//         </div>
-
-//         <button
-//           onClick={handleCreateTicket}
-//           disabled={!formData.title.trim()}
-//           style={{
-//             width: '100%',
-//             padding: '16px',
-//             backgroundColor: formData.title.trim() ? '#3b82f6' : '#9ca3af',
-//             color: 'white',
-//             border: 'none',
-//             borderRadius: '8px',
-//             fontSize: '16px',
-//             fontWeight: '600',
-//             cursor: formData.title.trim() ? 'pointer' : 'not-allowed',
-//             transition: 'background-color 0.2s'
-//           }}
-//           onMouseOver={(e) => {
-//             if (formData.title.trim()) e.currentTarget.style.backgroundColor = '#2563eb';
-//           }}
-//           onMouseOut={(e) => {
-//             e.currentTarget.style.backgroundColor = formData.title.trim() ? '#3b82f6' : '#9ca3af';
-//           }}
-//         >
-//           Create Ticket
-//         </button>
-//       </div>
-
-//       {/* Right Side - Ticket Management */}
-//       <div style={{ flex: 1, padding: '32px' }}>
-//         {/* Status Summary */}
-//         <div style={{ 
-//           display: 'flex', 
-//           gap: '24px', 
-//           marginBottom: '32px',
-//           alignItems: 'center'
-//         }}>
-//           <div style={{ textAlign: 'center' }}>
-//             <div style={{ fontSize: '32px', fontWeight: '700', color: '#6b7280' }}>
-//               📊 {statusCounts.OPEN}
-//             </div>
-//             <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginTop: '4px' }}>
-//               OPEN
-//             </div>
-//           </div>
-          
-//           <div style={{ textAlign: 'center' }}>
-//             <div style={{ fontSize: '32px', fontWeight: '700', color: '#f59e0b' }}>
-//               🔄 {statusCounts['IN PROGRESS']}
-//             </div>
-//             <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginTop: '4px' }}>
-//               IN PROGRESS
-//             </div>
-//           </div>
-          
-//           <div style={{ textAlign: 'center' }}>
-//             <div style={{ fontSize: '32px', fontWeight: '700', color: '#ef4444' }}>
-//               ⚠️ {statusCounts.ESCALATED}
-//             </div>
-//             <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginTop: '4px' }}>
-//               ESCALATED
-//             </div>
-//           </div>
-          
-//           <div style={{ textAlign: 'center' }}>
-//             <div style={{ fontSize: '32px', fontWeight: '700', color: '#22c55e' }}>
-//               ✅ {statusCounts.RESOLVED}
-//             </div>
-//             <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginTop: '4px' }}>
-//               RESOLVED
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Filters */}
-//         <div style={{ 
-//           backgroundColor: 'white',
-//           padding: '20px',
-//           borderRadius: '12px',
-//           marginBottom: '24px',
-//           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-//         }}>
-//           <h3 style={{ 
-//             fontSize: '16px', 
-//             fontWeight: '600', 
-//             color: '#374151',
-//             marginBottom: '16px'
-//           }}>
-//             Filters
-//           </h3>
-//           <div style={{ display: 'flex', gap: '16px' }}>
-//             <div>
-//               <label style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', display: 'block' }}>
-//                 Status
-//               </label>
-//               <select
-//                 value={statusFilter}
-//                 onChange={(e) => setStatusFilter(e.target.value)}
-//                 style={{
-//                   padding: '8px 12px',
-//                   border: '1px solid #d1d5db',
-//                   borderRadius: '6px',
-//                   fontSize: '14px',
-//                   backgroundColor: 'white'
-//                 }}
-//               >
-//                 <option value="All">All Status</option>
-//                 <option value="Open">Open</option>
-//                 <option value="In Progress">In Progress</option>
-//                 <option value="Escalated">Escalated</option>
-//                 <option value="Resolved">Resolved</option>
-//               </select>
-//             </div>
-            
-//             <div>
-//               <label style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', display: 'block' }}>
-//                 Priority
-//               </label>
-//               <select
-//                 value={priorityFilter}
-//                 onChange={(e) => setPriorityFilter(e.target.value)}
-//                 style={{
-//                   padding: '8px 12px',
-//                   border: '1px solid #d1d5db',
-//                   borderRadius: '6px',
-//                   fontSize: '14px',
-//                   backgroundColor: 'white'
-//                 }}
-//               >
-//                 <option value="">All Priority</option>
-//                 <option value="HIGH">High</option>
-//                 <option value="MEDIUM">Medium</option>
-//                 <option value="LOW">Low</option>
-//               </select>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Tickets Table */}
-//         <div style={{
-//           backgroundColor: 'white',
-//           borderRadius: '12px',
-//           overflow: 'hidden',
-//           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-//         }}>
-//           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-//             <thead style={{ backgroundColor: '#f8fafc' }}>
-//               <tr>
-//                 <th style={{ 
-//                   padding: '16px 20px', 
-//                   textAlign: 'left', 
-//                   fontSize: '12px', 
-//                   fontWeight: '600',
-//                   color: '#6b7280',
-//                   textTransform: 'uppercase',
-//                   letterSpacing: '0.05em'
-//                 }}>
-//                   TICKET
-//                 </th>
-//                 <th style={{ 
-//                   padding: '16px 20px', 
-//                   textAlign: 'left', 
-//                   fontSize: '12px', 
-//                   fontWeight: '600',
-//                   color: '#6b7280',
-//                   textTransform: 'uppercase',
-//                   letterSpacing: '0.05em'
-//                 }}>
-//                   SUBJECT
-//                 </th>
-//                 <th style={{ 
-//                   padding: '16px 20px', 
-//                   textAlign: 'left', 
-//                   fontSize: '12px', 
-//                   fontWeight: '600',
-//                   color: '#6b7280',
-//                   textTransform: 'uppercase',
-//                   letterSpacing: '0.05em'
-//                 }}>
-//                   PRIORITY
-//                 </th>
-//                 <th style={{ 
-//                   padding: '16px 20px', 
-//                   textAlign: 'left', 
-//                   fontSize: '12px', 
-//                   fontWeight: '600',
-//                   color: '#6b7280',
-//                   textTransform: 'uppercase',
-//                   letterSpacing: '0.05em'
-//                 }}>
-//                   LAST UPDATED
-//                 </th>
-//               </tr>
-//             </thead>
-//             <tbody>
-//               {filteredTickets.map((ticket, index) => (
-//                 <tr key={ticket.id} style={{ 
-//                   borderBottom: '1px solid #f1f5f9',
-//                   transition: 'background-color 0.2s'
-//                 }}
-//                 onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-//                 onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
-//                 >
-//                   <td style={{ 
-//                     padding: '16px 20px', 
-//                     fontSize: '14px', 
-//                     fontWeight: '600',
-//                     color: '#3b82f6'
-//                   }}>
-//                     {ticket.id}
-//                   </td>
-//                   <td style={{ 
-//                     padding: '16px 20px', 
-//                     fontSize: '14px',
-//                     color: '#374151'
-//                   }}>
-//                     {ticket.subject}
-//                   </td>
-//                   <td style={{ padding: '16px 20px' }}>
-//                     <span style={{
-//                       padding: '4px 12px',
-//                       borderRadius: '20px',
-//                       fontSize: '12px',
-//                       fontWeight: '600',
-//                       textTransform: 'uppercase',
-//                       letterSpacing: '0.025em',
-//                       ...getPriorityBadgeStyle(ticket.priority)
-//                     }}>
-//                       {ticket.priority}
-//                     </span>
-//                   </td>
-//                   <td style={{ 
-//                     padding: '16px 20px', 
-//                     fontSize: '14px',
-//                     color: '#6b7280'
-//                   }}>
-//                     {ticket.lastUpdated}
-//                   </td>
-//                 </tr>
-//               ))}
-//             </tbody>
-//           </table>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default TicketingSystem;
-import React, { useState } from 'react';
-import { Plus, X } from 'lucide-react';
-
-interface Ticket {
-  id: string;
-  subject: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
-  status: 'OPEN' | 'IN PROGRESS' | 'ESCALATED' | 'RESOLVED';
-  lastUpdated: string;
-  facility: string;
-  category: string;
-  description: string;
+// ============================================
+// TYPES
+// ============================================
+interface OccupancyData {
+  currentOccupancy: number;
+  capacity: number;
+  congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  timestamp: string;
 }
 
-const TicketingDashboard: React.FC = () => {
-  const [tickets, setTickets] = useState<Ticket[]>([
-    {
-      id: '#3225',
-      subject: 'Email Access Issue',
-      priority: 'LOW',
-      status: 'OPEN',
-      lastUpdated: 'Today',
-      facility: 'Office 1',
-      category: 'IT',
-      description: 'Unable to access email account'
-    },
-    {
-      id: '#3189',
-      subject: 'Projector Not Working',
-      priority: 'HIGH',
-      status: 'OPEN',
-      lastUpdated: 'Apr 23, 2024',
-      facility: 'Office 1',
-      category: 'Equipment',
-      description: 'Conference room projector not displaying'
-    },
-    {
-      id: '#3152',
-      subject: 'Software Installation Request',
-      priority: 'LOW',
-      status: 'IN PROGRESS',
-      lastUpdated: 'Apr 18, 2024',
-      facility: 'Office 1',
-      category: 'IT',
-      description: 'Need new software installed'
-    },
-    {
-      id: '#3120',
-      subject: 'Network Connectivity Problem',
-      priority: 'MEDIUM',
-      status: 'ESCALATED',
-      lastUpdated: 'Apr 10, 2024',
-      facility: 'Office 2',
-      category: 'Network',
-      description: 'Intermittent network connection issues'
-    },
-    {
-      id: '#3097',
-      subject: "Computer Won't Start",
-      priority: 'LOW',
-      status: 'RESOLVED',
-      lastUpdated: 'Apr 02, 2024',
-      facility: 'Office 1',
-      category: 'Hardware',
-      description: 'Desktop computer not powering on'
+interface FlowData {
+  timestamp: string;
+  inflow: number;
+  outflow: number;
+  netFlow: number;
+}
+
+interface CounterStatus {
+  counterName: string;
+  queueLength: number;
+  waitingTime: number;
+  congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  lastUpdated: string;
+}
+
+interface DwellTimeData {
+  timeRange: string;
+  count: number;
+  percentage: number;
+}
+
+interface FootfallComparison {
+  timestamp: string;
+  cafeteriaFootfall: number;
+  countersFootfall: number;
+  ratio: number;
+  insight: string;
+}
+
+type WidgetSize = 'small' | 'medium' | 'large' | 'full';
+
+interface WidgetConfig {
+  id: string;
+  enabled: boolean;
+  size: WidgetSize;
+  order: number;
+}
+
+interface DashboardConfig {
+  widgets: {
+    occupancyStatus: WidgetConfig;
+    inflowOutflow: WidgetConfig;
+    counterStatus: WidgetConfig;
+    dwellTime: WidgetConfig;
+    footfallComparison: WidgetConfig;
+    occupancyTrend: WidgetConfig;
+    counterCongestionTrend: WidgetConfig;
+    weeklyHeatmap: WidgetConfig;
+    counterEfficiency: WidgetConfig;
+    todaysVisitors: WidgetConfig;
+    avgDwellTime: WidgetConfig;
+  };
+  refreshInterval: number;
+  timeRange: number;
+  chartType: 'line' | 'area' | 'bar';
+  colorScheme: 'default' | 'blue' | 'green' | 'purple';
+  compactMode: boolean;
+  dwellTimeChartType: 'bar' | 'donut';
+  occupancyTrendType: 'line' | 'heatmap';
+}
+
+const DEFAULT_CONFIG: DashboardConfig = {
+  widgets: {
+    occupancyStatus: { id: 'occupancyStatus', enabled: true, size: 'medium', order: 0 },
+    dwellTime: { id: 'dwellTime', enabled: true, size: 'medium', order: 1 },
+    todaysVisitors: { id: 'todaysVisitors', enabled: true, size: 'medium', order: 2 },
+    avgDwellTime: { id: 'avgDwellTime', enabled: true, size: 'medium', order: 3 },
+    inflowOutflow: { id: 'inflowOutflow', enabled: true, size: 'full', order: 4 },
+    occupancyTrend: { id: 'occupancyTrend', enabled: true, size: 'full', order: 5 },
+    weeklyHeatmap: { id: 'weeklyHeatmap', enabled: true, size: 'full', order: 6 },
+    counterStatus: { id: 'counterStatus', enabled: true, size: 'full', order: 7 },
+    counterEfficiency: { id: 'counterEfficiency', enabled: true, size: 'full', order: 8 },
+    counterCongestionTrend: { id: 'counterCongestionTrend', enabled: true, size: 'full', order: 9 },
+    footfallComparison: { id: 'footfallComparison', enabled: true, size: 'full', order: 10 },
+  },
+  refreshInterval: 30,
+  timeRange: 24,
+  chartType: 'line',
+  colorScheme: 'default',
+  compactMode: false,
+  dwellTimeChartType: 'bar',
+  occupancyTrendType: 'line',
+};
+
+// ============================================
+// MOCK DATA GENERATOR
+// ============================================
+const mockCafeteriaData = {
+  generateOccupancyData: (): OccupancyData => {
+    const capacity = 250;
+    const currentOccupancy = Math.floor(Math.random() * capacity);
+    const percentage = (currentOccupancy / capacity) * 100;
+    
+    let congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    if (percentage < 30) congestionLevel = 'LOW';
+    else if (percentage < 60) congestionLevel = 'MEDIUM';
+    else if (percentage < 85) congestionLevel = 'HIGH';
+    else congestionLevel = 'CRITICAL';
+
+    return {
+      currentOccupancy,
+      capacity,
+      congestionLevel,
+      timestamp: new Date().toISOString(),
+    };
+  },
+
+  generateFlowData: (hours: number): FlowData[] => {
+    const data: FlowData[] = [];
+    const now = new Date();
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      let inflow = Math.floor(Math.random() * 50) + 10;
+      let outflow = Math.floor(Math.random() * 50) + 10;
+      
+      if (hour >= 12 && hour <= 14) {
+        inflow += 30;
+        outflow += 20;
+      }
+      
+      data.push({
+        timestamp: time.getHours() + ':00',
+        inflow,
+        outflow,
+        netFlow: inflow - outflow,
+      });
     }
-  ]);
+    return data;
+  },
 
-  const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    facility: 'Office 1',
-    category: '',
-    description: ''
+  generateCounterStatus: (): CounterStatus[] => {
+    const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter', 'Salad Bar', 'Dessert Corner'];
+    return counters.map(counter => {
+      const queueLength = Math.floor(Math.random() * 25);
+      const waitingTime = Math.floor(queueLength * 1.5);
+      let congestionLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+      
+      if (queueLength < 5) congestionLevel = 'LOW';
+      else if (queueLength < 10) congestionLevel = 'MEDIUM';
+      else if (queueLength < 18) congestionLevel = 'HIGH';
+      else congestionLevel = 'CRITICAL';
+
+      return {
+        counterName: counter,
+        queueLength,
+        waitingTime,
+        congestionLevel,
+        lastUpdated: new Date().toISOString(),
+      };
+    });
+  },
+
+  generateDwellTimeData: (): DwellTimeData[] => {
+    const ranges = ['0-10 min', '10-20 min', '20-30 min', '30-45 min', '45+ min'];
+    const counts = [45, 80, 65, 35, 15];
+    const total = counts.reduce((a, b) => a + b, 0);
+    
+    return ranges.map((range, i) => ({
+      timeRange: range,
+      count: counts[i],
+      percentage: Math.round((counts[i] / total) * 100),
+    }));
+  },
+
+  generateFootfallComparison: (hours: number): FootfallComparison[] => {
+    const data: FootfallComparison[] = [];
+    const now = new Date();
+    
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      const cafeteriaFootfall = Math.floor(Math.random() * 100) + 50;
+      const countersFootfall = Math.floor(Math.random() * 80) + 30;
+      const ratio = cafeteriaFootfall / countersFootfall;
+      
+      let insight = 'Normal flow';
+      if (ratio > 1.5) {
+        insight = 'Counter hopping detected - people browsing multiple counters';
+      } else if (ratio < 0.8) {
+        insight = 'Potential congestion at counters - delays expected';
+      }
+      
+      data.push({
+        timestamp: time.getHours() + ':00',
+        cafeteriaFootfall,
+        countersFootfall,
+        ratio,
+        insight,
+      });
+    }
+    return data;
+  },
+
+  generateOccupancyTrendData: (hours: number) => {
+    const data: any[] = [];
+    const now = new Date();
+    
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      let occupancy = Math.floor(Math.random() * 100) + 50;
+      
+      // Peak hours: 12-14 (lunch) and 19-21 (dinner)
+      if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
+        occupancy += 100;
+      }
+      
+      data.push({
+        timestamp: time.getHours() + ':00',
+        occupancy: Math.min(occupancy, 250),
+        hour: time.getHours(),
+      });
+    }
+    return data;
+  },
+
+  generateCounterCongestionTrendData: (hours: number) => {
+    const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter'];
+    const data: any[] = [];
+    const now = new Date();
+    
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      const entry: any = { timestamp: time.getHours() + ':00' };
+      
+      counters.forEach(counter => {
+        let queueLength = Math.floor(Math.random() * 10) + 2;
+        
+        // Peak hours
+        if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
+          queueLength += 8;
+        }
+        
+        entry[counter] = Math.min(queueLength, 25);
+      });
+      
+      data.push(entry);
+    }
+    return data;
+  },
+
+  generateWeeklyHeatmapData: () => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const data: any[] = [];
+    
+    days.forEach((day, dayIndex) => {
+      for (let hour = 6; hour <= 22; hour++) {
+        let occupancy = Math.floor(Math.random() * 50) + 30;
+        const isWeekend = dayIndex >= 5;
+        
+        // Peak hours
+        if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 20)) {
+          occupancy += isWeekend ? 30 : 80;
+        }
+        
+        if (isWeekend) {
+          occupancy = Math.floor(occupancy * 0.6);
+        }
+        
+        data.push({
+          day,
+          hour: hour.toString().padStart(2, '0') + ':00',
+          hourNum: hour,
+          dayIndex,
+          value: Math.min(occupancy, 250),
+        });
+      }
+    });
+    
+    return data;
+  },
+
+  generateCounterEfficiencyData: () => {
+    const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter'];
+    
+    return counters.map(counter => {
+      const avgServiceTime = Math.floor(Math.random() * 3) + 2; // 2-5 min
+      const totalServed = Math.floor(Math.random() * 200) + 150;
+      const avgWaitTime = Math.floor(Math.random() * 8) + 3; // 3-11 min
+      const efficiency = Math.round((1 / avgServiceTime) * 100);
+      const peakWaitTime = avgWaitTime + Math.floor(Math.random() * 5) + 3;
+      
+      return {
+        counterName: counter,
+        avgServiceTime,
+        totalServed,
+        avgWaitTime,
+        peakWaitTime,
+        efficiency: Math.min(efficiency, 100),
+      };
+    });
+  },
+
+  generateTodaysVisitors: () => {
+    const baseVisitors = 1000;
+    const variance = Math.floor(Math.random() * 500);
+    const totalVisitors = baseVisitors + variance;
+    const lastHourVisitors = Math.floor(Math.random() * 150) + 50;
+    const percentageChange = Math.floor((Math.random() - 0.5) * 30);
+    
+    return {
+      total: totalVisitors,
+      sinceTime: '7:00 AM',
+      lastHour: lastHourVisitors,
+      percentageChange,
+      trend: percentageChange >= 0 ? 'up' : 'down',
+    };
+  },
+
+  generateAvgDwellTime: () => {
+    const minutes = Math.floor(Math.random() * 5) + 1;
+    const seconds = Math.floor(Math.random() * 60);
+    const totalSeconds = minutes * 60 + seconds;
+    const percentageChange = Math.floor((Math.random() - 0.5) * 20);
+    
+    return {
+      minutes,
+      seconds,
+      totalSeconds,
+      formatted: `${minutes}m ${seconds}s`,
+      percentageChange,
+      trend: percentageChange >= 0 ? 'up' : 'down',
+      note: 'Across all counters',
+    };
+  },
+};
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+const getCongestionColor = (level: string) => {
+  switch (level) {
+    case 'LOW': return '#52c41a';
+    case 'MEDIUM': return '#faad14';
+    case 'HIGH': return '#ff7a45';
+    case 'CRITICAL': return '#f5222d';
+    default: return '#d9d9d9';
+  }
+};
+
+const getCongestionText = (level: string) => {
+  switch (level) {
+    case 'LOW': return 'Low - Free Flow';
+    case 'MEDIUM': return 'Medium - Moderate';
+    case 'HIGH': return 'High - Congested';
+    // case 'CRITICAL': return 'Critical - Very Crowded';
+    default: return 'Unknown';
+  }
+};
+
+const getInsightIcon = (insight: string) => {
+  if (insight.includes('congestion') || insight.includes('delays')) {
+    return <WarningOutlined style={{ color: '#ff7a45' }} />;
+  }
+  if (insight.includes('Counter hopping')) {
+    return <TeamOutlined style={{ color: '#faad14' }} />;
+  }
+  return <UserOutlined style={{ color: '#52c41a' }} />;
+};
+
+const getColorScheme = (scheme: string) => {
+  switch (scheme) {
+    case 'blue':
+      return { primary: '#1890ff', secondary: '#40a9ff', tertiary: '#69c0ff' };
+    case 'green':
+      return { primary: '#52c41a', secondary: '#73d13d', tertiary: '#95de64' };
+    case 'purple':
+      return { primary: '#722ed1', secondary: '#9254de', tertiary: '#b37feb' };
+    default:
+      return { primary: '#52c41a', secondary: '#f5222d', tertiary: '#1890ff' };
+  }
+};
+
+const getColSpan = (size: WidgetSize): { xs: number; sm: number; md: number; lg: number } => {
+  switch (size) {
+    case 'small': return { xs: 24, sm: 12, md: 8, lg: 6 };
+    case 'medium': return { xs: 24, sm: 24, md: 12, lg: 12 };
+    case 'large': return { xs: 24, sm: 24, md: 16, lg: 16 };
+    case 'full': return { xs: 24, sm: 24, md: 24, lg: 24 };
+    default: return { xs: 24, sm: 24, md: 12, lg: 12 };
+  }
+};
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+const CafeteriaAnalyticsDashboard: React.FC<{ 
+  config?: Partial<DashboardConfig>; 
+  useMockData?: boolean 
+}> = ({
+  config = {},
+  useMockData = true,
+}) => {
+  // State
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [mockMode] = useState(useMockData);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [dragEnabled, setDragEnabled] = useState(false);
+  
+  // Customizable config state
+  const [userConfig, setUserConfig] = useState<DashboardConfig>({ 
+    ...DEFAULT_CONFIG, 
+    ...config,
+    widgets: { ...DEFAULT_CONFIG.widgets, ...config.widgets }
   });
+  
+  const [occupancyData, setOccupancyData] = useState<OccupancyData | null>(null);
+  const [flowData, setFlowData] = useState<FlowData[]>([]);
+  const [counterStatus, setCounterStatus] = useState<CounterStatus[]>([]);
+  const [dwellTimeData, setDwellTimeData] = useState<DwellTimeData[]>([]);
+  const [footfallComparison, setFootfallComparison] = useState<FootfallComparison[]>([]);
+  const [occupancyTrendData, setOccupancyTrendData] = useState<any[]>([]);
+  const [counterCongestionData, setCounterCongestionData] = useState<any[]>([]);
+  const [weeklyHeatmapData, setWeeklyHeatmapData] = useState<any[]>([]);
+  const [counterEfficiencyData, setCounterEfficiencyData] = useState<any[]>([]);
+  const [todaysVisitors, setTodaysVisitors] = useState<any>(null);
+  const [avgDwellTime, setAvgDwellTime] = useState<any>(null);
+  
+  const [selectedDate] = useState(dayjs());
+  const [timeRange, setTimeRange] = useState(userConfig.timeRange || 24);
+  const [selectedLocation, setSelectedLocation] = useState<string>('Intel, RMZ Ecoworld, Bangalore');
+  const [selectedCafeteria, setSelectedCafeteria] = useState<string>('SRR 4A');
+  const [activeTab, setActiveTab] = useState<string>('overview');
 
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [priorityFilter, setPriorityFilter] = useState('');
+  const colors = getColorScheme(userConfig.colorScheme || 'default');
 
-  // Calculate status counts
-  const statusCounts = {
-    OPEN: tickets.filter(t => t.status === 'OPEN').length,
-    'IN PROGRESS': tickets.filter(t => t.status === 'IN PROGRESS').length,
-    ESCALATED: tickets.filter(t => t.status === 'ESCALATED').length,
-    RESOLVED: tickets.filter(t => t.status === 'RESOLVED').length
+  // ============================================
+  // DATA FETCHING
+  // ============================================
+  const fetchMockData = () => {
+    setLoading(true);
+    setError(null);
+
+    setTimeout(() => {
+      try {
+        if (userConfig.widgets.occupancyStatus.enabled) {
+          setOccupancyData(mockCafeteriaData.generateOccupancyData());
+        }
+        if (userConfig.widgets.inflowOutflow.enabled) {
+          setFlowData(mockCafeteriaData.generateFlowData(timeRange));
+        }
+        if (userConfig.widgets.counterStatus.enabled) {
+          setCounterStatus(mockCafeteriaData.generateCounterStatus());
+        }
+        if (userConfig.widgets.dwellTime.enabled) {
+          setDwellTimeData(mockCafeteriaData.generateDwellTimeData());
+        }
+        if (userConfig.widgets.footfallComparison.enabled) {
+          setFootfallComparison(mockCafeteriaData.generateFootfallComparison(timeRange));
+        }
+        if (userConfig.widgets.occupancyTrend.enabled) {
+          setOccupancyTrendData(mockCafeteriaData.generateOccupancyTrendData(timeRange));
+        }
+        if (userConfig.widgets.counterCongestionTrend.enabled) {
+          setCounterCongestionData(mockCafeteriaData.generateCounterCongestionTrendData(timeRange));
+        }
+        if (userConfig.widgets.weeklyHeatmap.enabled) {
+          setWeeklyHeatmapData(mockCafeteriaData.generateWeeklyHeatmapData());
+        }
+        if (userConfig.widgets.counterEfficiency.enabled) {
+          setCounterEfficiencyData(mockCafeteriaData.generateCounterEfficiencyData());
+        }
+        if (userConfig.widgets.todaysVisitors.enabled) {
+          setTodaysVisitors(mockCafeteriaData.generateTodaysVisitors());
+        }
+        if (userConfig.widgets.avgDwellTime.enabled) {
+          setAvgDwellTime(mockCafeteriaData.generateAvgDwellTime());
+        }
+        setLastUpdated(new Date().toLocaleTimeString());
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message || 'Failed to generate mock data');
+        setLoading(false);
+      }
+    }, 500);
   };
 
-  // Filter tickets
-  const filteredTickets = tickets.filter(ticket => {
-    if (statusFilter !== 'All' && ticket.status !== statusFilter.toUpperCase()) return false;
-    if (priorityFilter && ticket.priority !== priorityFilter) return false;
-    return true;
-  });
+  useEffect(() => {
+    if (mockMode) {
+      fetchMockData();
+    }
+    const interval = setInterval(
+      () => mockMode && fetchMockData(),
+      (userConfig.refreshInterval || 30) * 1000
+    );
+    return () => clearInterval(interval);
+  }, [timeRange, userConfig.refreshInterval]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // ============================================
+  // CONFIG HANDLERS
+  // ============================================
+  const toggleWidget = (widgetId: keyof DashboardConfig['widgets']) => {
+    setUserConfig(prev => ({
+      ...prev,
+      widgets: {
+        ...prev.widgets,
+        [widgetId]: {
+          ...prev.widgets[widgetId],
+          enabled: !prev.widgets[widgetId].enabled,
+        }
+      }
+    }));
   };
 
-  const handleCreateTicket = () => {
-    if (!formData.title.trim()) return;
+  const updateWidgetSize = (widgetId: keyof DashboardConfig['widgets'], size: WidgetSize) => {
+    setUserConfig(prev => ({
+      ...prev,
+      widgets: {
+        ...prev.widgets,
+        [widgetId]: {
+          ...prev.widgets[widgetId],
+          size,
+        }
+      }
+    }));
+  };
 
-    const newTicket: Ticket = {
-      id: `#${Math.floor(Math.random() * 10000)}`,
-      subject: formData.title,
-      priority: 'MEDIUM',
-      status: 'OPEN',
-      lastUpdated: 'Today',
-      facility: formData.facility,
-      category: formData.category || 'General',
-      description: formData.description
+  const updateConfig = (key: keyof Omit<DashboardConfig, 'widgets'>, value: any) => {
+    setUserConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  const moveWidget = (widgetId: keyof DashboardConfig['widgets'], direction: 'up' | 'down') => {
+    const widgets = Object.values(userConfig.widgets).sort((a, b) => a.order - b.order);
+    const currentIndex = widgets.findIndex(w => w.id === widgetId);
+    
+    if (direction === 'up' && currentIndex > 0) {
+      const temp = widgets[currentIndex].order;
+      widgets[currentIndex].order = widgets[currentIndex - 1].order;
+      widgets[currentIndex - 1].order = temp;
+    } else if (direction === 'down' && currentIndex < widgets.length - 1) {
+      const temp = widgets[currentIndex].order;
+      widgets[currentIndex].order = widgets[currentIndex + 1].order;
+      widgets[currentIndex + 1].order = temp;
+    }
+
+    const updatedWidgets = { ...userConfig.widgets };
+    widgets.forEach(w => {
+      updatedWidgets[w.id as keyof DashboardConfig['widgets']].order = w.order;
+    });
+
+    setUserConfig(prev => ({ ...prev, widgets: updatedWidgets }));
+  };
+
+  const resetConfig = () => {
+    setUserConfig(DEFAULT_CONFIG);
+    setTimeRange(DEFAULT_CONFIG.timeRange || 24);
+    // Clear localStorage to prevent conflicts
+    localStorage.removeItem('cafeteriaDashboardConfig');
+    message.info('Configuration reset to defaults');
+  };
+
+  const saveConfig = () => {
+    localStorage.setItem('cafeteriaDashboardConfig', JSON.stringify(userConfig));
+    setSettingsVisible(false);
+    message.success('Settings saved!');
+  };
+
+  const loadConfig = () => {
+    const saved = localStorage.getItem('cafeteriaDashboardConfig');
+    if (saved) {
+      const loadedConfig = JSON.parse(saved);
+      // Merge loaded config with default config to ensure all widgets exist
+      setUserConfig({
+        ...DEFAULT_CONFIG,
+        ...loadedConfig,
+        widgets: {
+          ...DEFAULT_CONFIG.widgets,
+          ...loadedConfig.widgets,
+        }
+      });
+    }
+  };
+
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  // ============================================
+  // RENDER FUNCTIONS
+  // ============================================
+  const renderOccupancyStatus = () => {
+    if (!occupancyData) return null;
+    const occupancyPercentage = Math.round((occupancyData.currentOccupancy / occupancyData.capacity) * 100);
+
+    return (
+      <Card 
+        title={
+          <Space>
+            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+            <TeamOutlined />
+            <span>Cafeteria Occupancy</span>
+            <Badge status="processing" text="Live" />
+          </Space>
+        }
+        size={userConfig.compactMode ? 'small' : 'default'}
+        style={{ height: '100%' }}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Row gutter={[16, 16]} align="middle" style={{ flex: 1 }}>
+            <Col span={12}>
+              <Statistic
+                title="Current Occupancy"
+                value={occupancyData.currentOccupancy}
+                suffix={`/ ${occupancyData.capacity}`}
+                prefix={<UserOutlined />}
+              />
+            </Col>
+            <Col span={12}>
+              <Progress
+                type="dashboard"
+                percent={occupancyPercentage}
+                strokeColor={getCongestionColor(occupancyData.congestionLevel)}
+                size={userConfig.compactMode ? 120 : 160}
+                format={(percent) => <span style={{ fontSize: '28px', fontWeight: 'bold' }}>{percent}%</span>}
+              />
+            </Col>
+            <Col span={24}>
+              <Alert
+                message={getCongestionText(occupancyData.congestionLevel)}
+                type={occupancyData.congestionLevel === 'CRITICAL' ? 'error' : occupancyData.congestionLevel === 'HIGH' ? 'warning' : 'success'}
+                showIcon
+              />
+            </Col>
+          </Row>
+        </div>
+      </Card>
+    );
+  };
+
+  const renderTodaysVisitors = () => {
+    if (!todaysVisitors) return null;
+
+    return (
+      <Card
+        style={{ height: '100%' }}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text type="secondary" style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Today's Visitors
+            </Text>
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              background: '#e6f7ff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <TeamOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+            </div>
+          </div>
+          
+          <div>
+            <Space align="baseline" size="small">
+              <Text style={{ fontSize: '36px', fontWeight: 'bold', lineHeight: 1 }}>
+                {todaysVisitors.total.toLocaleString()}
+              </Text>
+              <Badge 
+                count={`${todaysVisitors.trend === 'up' ? '↑' : '↓'} ${Math.abs(todaysVisitors.percentageChange)}%`}
+                style={{ 
+                  backgroundColor: todaysVisitors.trend === 'up' ? '#52c41a' : '#ff4d4f',
+                  fontSize: '12px',
+                }}
+              />
+            </Space>
+          </div>
+          
+          <Text type="secondary" style={{ fontSize: '13px' }}>
+            Since {todaysVisitors.sinceTime}
+          </Text>
+        </Space>
+      </Card>
+    );
+  };
+
+  const renderAvgDwellTime = () => {
+    if (!avgDwellTime) return null;
+
+    return (
+      <Card
+        style={{ height: '100%' }}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text type="secondary" style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Avg Dwell Time
+            </Text>
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              background: '#f6ffed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <ClockCircleOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
+            </div>
+          </div>
+          
+          <div>
+            <Space align="baseline" size="small">
+              <Text style={{ fontSize: '36px', fontWeight: 'bold', lineHeight: 1 }}>
+                {avgDwellTime.formatted}
+              </Text>
+              <Badge 
+                count={`${avgDwellTime.trend === 'up' ? '↑' : '↓'} ${Math.abs(avgDwellTime.percentageChange)}%`}
+                style={{ 
+                  backgroundColor: avgDwellTime.trend === 'down' ? '#52c41a' : '#ff4d4f',
+                  fontSize: '12px',
+                }}
+              />
+            </Space>
+          </div>
+          
+          <Text type="secondary" style={{ fontSize: '13px' }}>
+            {avgDwellTime.note}
+          </Text>
+        </Space>
+      </Card>
+    );
+  };
+
+  const renderInflowOutflow = () => {
+    if (flowData.length === 0) return null;
+    
+    const ChartComponent = userConfig.chartType === 'area' ? AreaChart : userConfig.chartType === 'bar' ? BarChart : LineChart;
+    const DataComponent = userConfig.chartType === 'area' ? Area : userConfig.chartType === 'bar' ? Bar : Line;
+
+    return (
+      <Card 
+        title={
+          <Space>
+            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+            Inflow vs Outflow 
+          </Space>
+        } 
+        size={userConfig.compactMode ? 'small' : 'default'}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
+          <ChartComponent data={flowData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="timestamp" stroke="#8c8c8c" />
+            <YAxis stroke="#8c8c8c" />
+            <RechartsTooltip />
+            <Legend />
+            {userConfig.chartType === 'bar' ? (
+              <>
+                <Bar dataKey="inflow" fill="#1890ff" name="Inflow" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="outflow" fill="#ff4d4f" name="Outflow" radius={[4, 4, 0, 0]} />
+              </>
+            ) : (
+              <>
+                <DataComponent type="monotone" dataKey="inflow" stroke="#1890ff" fill="#1890ff" strokeWidth={2} name="Inflow" dot={false} />
+                <DataComponent type="monotone" dataKey="outflow" stroke="#ff4d4f" fill="#ff4d4f" strokeWidth={2} name="Outflow" dot={false} />
+              </>
+            )}
+          </ChartComponent>
+        </ResponsiveContainer>
+      </Card>
+    );
+  };
+
+  const renderCounterStatus = () => {
+    if (counterStatus.length === 0) return null;
+    const columns = [
+      { title: 'Counter', dataIndex: 'counterName', key: 'counterName', render: (text: string) => <Text strong>{text}</Text> },
+      { title: 'Queue', dataIndex: 'queueLength', key: 'queueLength', render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '16px' }} prefix={<TeamOutlined />} /> },
+      { title: 'Wait Time', dataIndex: 'waitingTime', key: 'waitingTime', render: (value: number) => <Space><ClockCircleOutlined /><Text>{value} min</Text></Space> },
+      { title: 'Status', dataIndex: 'congestionLevel', key: 'congestionLevel', render: (level: string) => <Badge color={getCongestionColor(level)} text={getCongestionText(level)} /> },
+    ];
+
+    return (
+      <Card 
+        title={
+          <Space>
+            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+            <FireOutlined />
+            <span>Live Food Counter Status</span>
+          </Space>
+        } 
+        size={userConfig.compactMode ? 'small' : 'default'}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <Table dataSource={counterStatus} columns={columns} pagination={false} size="small" rowKey="counterName" />
+      </Card>
+    );
+  };
+
+  const renderDwellTime = () => {
+    if (dwellTimeData.length === 0) return null;
+    
+    const COLORS = ['#52c41a', '#73d13d', '#95de64', '#b7eb8f', '#d9f7be'];
+
+    return (
+      <Card 
+        title={
+          <Space>
+            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+            <ClockCircleOutlined />
+            <span>Counters Dwell Time Distribution</span>
+          </Space>
+        } 
+        size={userConfig.compactMode ? 'small' : 'default'}
+        style={{ height: '100%' }}
+        bodyStyle={{ padding: '24px' }}
+      >
+        {userConfig.dwellTimeChartType === 'bar' ? (
+          <ResponsiveContainer width="100%" height={userConfig.compactMode ? 280 : 340}>
+            <BarChart data={dwellTimeData} layout="vertical" margin={{ left: 20, right: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis type="number" stroke="#8c8c8c" />
+              <YAxis dataKey="timeRange" type="category" stroke="#8c8c8c" width={80} />
+              <RechartsTooltip 
+                formatter={(value: any, name: string) => {
+                  if (name === 'count') return [value + ' people', 'Count'];
+                  return [value + '%', 'Percentage'];
+                }}
+              />
+              <Bar dataKey="count" fill={colors.primary} radius={[0, 4, 4, 0]} name="count">
+                {dwellTimeData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <Row gutter={16} align="middle" style={{ height: '100%' }}>
+            <Col span={12}>
+              <ResponsiveContainer width="100%" height={userConfig.compactMode ? 200 : 260}>
+                <PieChart>
+                  <Pie
+                    data={dwellTimeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={userConfig.compactMode ? 40 : 60}
+                    outerRadius={userConfig.compactMode ? 70 : 90}
+                    dataKey="count"
+                    paddingAngle={2}
+                  >
+                    {dwellTimeData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </Col>
+            <Col span={12}>
+              <Space direction="vertical" style={{ width: '100%' }} size="small">
+                {dwellTimeData.map((item, index) => (
+                  <div key={item.timeRange}>
+                    <Space style={{ marginBottom: 4 }}>
+                      <div style={{ 
+                        width: 12, 
+                        height: 12, 
+                        backgroundColor: COLORS[index % COLORS.length],
+                        borderRadius: 2 
+                      }} />
+                      <Text style={{ fontSize: 13 }}>{item.timeRange}</Text>
+                    </Space>
+                    <Text strong style={{ fontSize: 16 }}>{item.count}</Text>
+                    <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>({item.percentage}%)</Text>
+                  </div>
+                ))}
+              </Space>
+            </Col>
+          </Row>
+        )}
+      </Card>
+    );
+  };
+
+  const renderFootfallComparison = () => {
+    if (footfallComparison.length === 0) return null;
+
+    return (
+      <Card 
+        title={
+          <Space>
+            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+            <TeamOutlined />
+            <span>Cafeteria vs Counter Footfall Analysis (Footfall vs Time)</span>
+          </Space>
+        } 
+        size={userConfig.compactMode ? 'small' : 'default'}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
+          <ComposedChart data={footfallComparison}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="timestamp" stroke="#8c8c8c" />
+            <YAxis stroke="#8c8c8c" />
+            <RechartsTooltip />
+            <Legend />
+            <Bar dataKey="cafeteriaFootfall" fill="#1890ff" name="Cafeteria Footfall" radius={[4, 4, 0, 0]} />
+            <Line type="monotone" dataKey="countersFootfall" stroke="#ff4d4f" strokeWidth={2} dot={false} name="Counters Footfall" />
+          </ComposedChart>
+        </ResponsiveContainer>
+        <div style={{ marginTop: 16 }}>
+          <Title level={5}>Smart Insights</Title>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            {footfallComparison
+              .filter((item) => item.insight !== 'Normal flow')
+              .slice(0, 3)
+              .map((item, index) => (
+                <Alert
+                  key={index}
+                  message={<Space>{getInsightIcon(item.insight)}<Text strong>{item.timestamp}</Text><Text>{item.insight}</Text></Space>}
+                  type={item.insight.includes('congestion') ? 'warning' : 'info'}
+                  showIcon={false}
+                />
+              ))}
+          </Space>
+        </div>
+      </Card>
+    );
+  };
+
+  const renderOccupancyTrend = () => {
+    if (occupancyTrendData.length === 0) return null;
+
+    if (userConfig.occupancyTrendType === 'heatmap') {
+      // Heatmap visualization
+      const maxOccupancy = Math.max(...occupancyTrendData.map(d => d.occupancy));
+      
+      return (
+        <Card 
+          title={
+            <Space>
+              {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+              <TeamOutlined />
+              <span>Cafeteria Occupancy Trend (Footfall vs Time)</span>
+            </Space>
+          } 
+          size={userConfig.compactMode ? 'small' : 'default'}
+          bodyStyle={{ padding: '24px' }}
+        >
+          <div style={{ padding: '20px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
+              <Text strong style={{ width: 80 }}>Time</Text>
+              <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+                {occupancyTrendData.map((item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      flex: 1,
+                      height: 60,
+                      backgroundColor: `rgba(24, 144, 255, ${item.occupancy / maxOccupancy})`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: item.occupancy / maxOccupancy > 0.5 ? '#fff' : '#000',
+                      fontSize: 11,
+                      fontWeight: 'bold',
+                      border: '1px solid #f0f0f0',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                    }}
+                    title={`${item.timestamp}: ${item.occupancy} people`}
+                  >
+                    {item.timestamp}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <Text strong style={{ width: 80 }}>Occupancy</Text>
+              <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+                {occupancyTrendData.map((item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      flex: 1,
+                      textAlign: 'center',
+                      fontSize: 12,
+                      fontWeight: 'bold',
+                      color: '#1890ff',
+                    }}
+                  >
+                    {item.occupancy}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <Text type="secondary">Low</Text>
+              <div style={{ 
+                width: 200, 
+                height: 20, 
+                background: 'linear-gradient(to right, rgba(24, 144, 255, 0.1), rgba(24, 144, 255, 1))',
+                border: '1px solid #f0f0f0'
+              }} />
+              <Text type="secondary">High</Text>
+            </div>
+          </div>
+        </Card>
+      );
+    }
+
+    // Line chart visualization
+    return (
+      <Card 
+        title={
+          <Space>
+            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+            <TeamOutlined />
+            <span>Cafeteria Occupancy Trend (Footfall vs Time)</span>
+          </Space>
+        } 
+        size={userConfig.compactMode ? 'small' : 'default'}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
+          <LineChart data={occupancyTrendData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="timestamp" stroke="#8c8c8c" />
+            <YAxis stroke="#8c8c8c" />
+            <RechartsTooltip />
+            <Legend />
+            <Line type="monotone" dataKey="occupancy" stroke="#1890ff" strokeWidth={2} dot={false} name="Occupancy" />
+          </LineChart>
+        </ResponsiveContainer>
+      </Card>
+    );
+  };
+
+  const renderCounterCongestionTrend = () => {
+    if (counterCongestionData.length === 0) return null;
+
+    const COUNTER_COLORS = {
+      'Bisi Oota/ Mini meals Counter': '#ff4d4f',
+      'Two Good Counter': '#52c41a',
+      'Healthy Station Counter': '#1890ff',
     };
 
-    setTickets(prev => [newTicket, ...prev]);
-    setFormData({ title: '', facility: 'Office 1', category: '', description: '' });
-    setShowModal(false);
+    return (
+      <Card 
+        title={
+          <Space>
+            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+            <FireOutlined />
+            <span>Food Counter Congestion Trend (Queue Length vs Time)</span>
+          </Space>
+        } 
+        size={userConfig.compactMode ? 'small' : 'default'}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
+          <LineChart data={counterCongestionData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="timestamp" stroke="#8c8c8c" />
+            <YAxis stroke="#8c8c8c" />
+            <RechartsTooltip />
+            <Legend />
+            <Line 
+              type="monotone" 
+              dataKey="Bisi Oota/ Mini meals Counter" 
+              stroke={COUNTER_COLORS['Bisi Oota/ Mini meals Counter']} 
+              strokeWidth={2} 
+              dot={false}
+              name="Bisi Oota/ Mini meals" 
+            />
+            <Line 
+              type="monotone" 
+              dataKey="Two Good Counter" 
+              stroke={COUNTER_COLORS['Two Good Counter']} 
+              strokeWidth={2} 
+              dot={false}
+              name="Two Good" 
+            />
+            <Line 
+              type="monotone" 
+              dataKey="Healthy Station Counter" 
+              stroke={COUNTER_COLORS['Healthy Station Counter']} 
+              strokeWidth={2} 
+              dot={false}
+              name="Healthy Station" 
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </Card>
+    );
   };
 
-  const getPriorityBadgeStyle = (priority: string) => {
-    switch (priority) {
-      case 'HIGH':
-        return { backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' };
-      case 'MEDIUM':
-        return { backgroundColor: '#fef3c7', color: '#d97706', border: '1px solid #fed7aa' };
-      case 'LOW':
-        return { backgroundColor: '#dbeafe', color: '#2563eb', border: '1px solid #bfdbfe' };
-      default:
-        return { backgroundColor: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db' };
-    }
+  const renderWeeklyHeatmap = () => {
+    if (weeklyHeatmapData.length === 0) return null;
+
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const hours = Array.from(new Set(weeklyHeatmapData.map(d => d.hourNum))).sort((a, b) => a - b);
+    const maxValue = Math.max(...weeklyHeatmapData.map(d => d.value));
+
+    return (
+      <Card
+        title={
+          <Space>
+            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+            <FireOutlined />
+            <span>Weekly Cafeteria Occupancy Heatmap</span>
+          </Space>
+        }
+        size={userConfig.compactMode ? 'small' : 'default'}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: 800 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(7, 1fr)', gap: '4px' }}>
+              <div></div>
+              {days.map(day => (
+                <div key={day} style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '12px', padding: '8px 0' }}>
+                  {day}
+                </div>
+              ))}
+              {hours.map(hour => {
+                const hourData = weeklyHeatmapData.filter(d => d.hourNum === hour);
+                return (
+                  <React.Fragment key={hour}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      fontSize: '11px', 
+                      color: '#666',
+                      paddingRight: '8px',
+                      justifyContent: 'flex-end'
+                    }}>
+                      {hour.toString().padStart(2, '0')}:00
+                    </div>
+                    {days.map((day, dayIndex) => {
+                      const cellData = hourData.find(d => d.dayIndex === dayIndex);
+                      const value = cellData?.value || 0;
+                      const intensity = value / maxValue;
+                      
+                      return (
+                        <div
+                          key={`${day}-${hour}`}
+                          style={{
+                            height: '30px',
+                            backgroundColor: `rgba(24, 144, 255, ${intensity * 0.8 + 0.1})`,
+                            border: '1px solid #f0f0f0',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            color: intensity > 0.5 ? '#fff' : '#666',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          title={`${day} ${hour}:00 - ${value} people`}
+                        >
+                          {value > 0 ? value : ''}
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <Text type="secondary" style={{ fontSize: '12px' }}>Low</Text>
+              <div style={{ 
+                width: 200, 
+                height: 12, 
+                background: 'linear-gradient(to right, rgba(24, 144, 255, 0.1), rgba(24, 144, 255, 0.9))',
+                border: '1px solid #f0f0f0',
+                borderRadius: '6px'
+              }} />
+              <Text type="secondary" style={{ fontSize: '12px' }}>High</Text>
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
   };
 
-  const statusBoxes = [
-    { 
-      title: 'OPEN', 
-      count: statusCounts.OPEN, 
-      color: '#3b82f6', 
-      bgColor: '#eff6ff', 
-      icon: '📋'
-    },
-    { 
-      title: 'IN PROGRESS', 
-      count: statusCounts['IN PROGRESS'], 
-      color: '#f59e0b', 
-      bgColor: '#fffbeb', 
-      icon: '🔄'
-    },
-    { 
-      title: 'ESCALATED', 
-      count: statusCounts.ESCALATED, 
-      color: '#ef4444', 
-      bgColor: '#fef2f2', 
-      icon: '⚠️'
-    },
-    { 
-      title: 'RESOLVED', 
-      count: statusCounts.RESOLVED, 
-      color: '#10b981', 
-      bgColor: '#f0fdf4', 
-      icon: '✅'
-    }
-  ];
+  const renderCounterEfficiency = () => {
+    if (counterEfficiencyData.length === 0) return null;
+
+    const columns = [
+      { 
+        title: 'Counter', 
+        dataIndex: 'counterName', 
+        key: 'counterName', 
+        render: (text: string) => <Text strong>{text}</Text>,
+        width: '30%',
+      },
+      // { 
+      //   title: 'Avg Service Time', 
+      //   dataIndex: 'avgServiceTime', 
+      //   key: 'avgServiceTime', 
+      //   render: (value: number) => <Text>{value} min</Text>,
+      //   align: 'center' as const,
+      // },
+      { 
+        title: 'Total Served', 
+        dataIndex: 'totalServed', 
+        key: 'totalServed', 
+        render: (value: number) => <Statistic value={value} valueStyle={{ fontSize: '14px' }} />,
+        align: 'center' as const,
+      },
+      { 
+        title: 'Avg Wait Time', 
+        dataIndex: 'avgWaitTime', 
+        key: 'avgWaitTime', 
+        render: (value: number) => (
+          <Badge 
+            color={value < 5 ? '#52c41a' : value < 8 ? '#faad14' : '#ff4d4f'} 
+            text={`${value} min`} 
+          />
+        ),
+        align: 'center' as const,
+      },
+      { 
+        title: 'Peak Wait Time', 
+        dataIndex: 'peakWaitTime', 
+        key: 'peakWaitTime', 
+        render: (value: number) => <Text type="secondary">{value} min</Text>,
+        align: 'center' as const,
+      },
+      { 
+        title: 'Efficiency', 
+        dataIndex: 'efficiency', 
+        key: 'efficiency', 
+        render: (value: number) => (
+          <Progress 
+            percent={value} 
+            size="small" 
+            strokeColor={value > 70 ? '#52c41a' : value > 50 ? '#faad14' : '#ff4d4f'}
+            style={{ width: '100px' }}
+          />
+        ),
+        align: 'center' as const,
+      },
+    ];
+
+    return (
+      <Card
+        title={
+          <Space>
+            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+            <FireOutlined />
+            <span>Counter Efficiency Analysis</span>
+          </Space>
+        }
+        size={userConfig.compactMode ? 'small' : 'default'}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <Table 
+          dataSource={counterEfficiencyData} 
+          columns={columns} 
+          pagination={false} 
+          size="middle" 
+          rowKey="counterName"
+        />
+      </Card>
+    );
+  };
+
+  // ============================================
+  // SETTINGS PANEL
+  // ============================================
+  const renderSettingsDrawer = () => (
+    <Drawer
+      title={<Space><SettingOutlined />Dashboard Settings</Space>}
+      placement="right"
+      width={450}
+      onClose={() => setSettingsVisible(false)}
+      open={settingsVisible}
+      extra={
+        <Space>
+          <Button onClick={resetConfig} size="small">Reset</Button>
+          <Button onClick={saveConfig} type="primary" size="small">Save</Button>
+        </Space>
+      }
+    >
+      <Space direction="vertical" style={{ width: '100%' }} size="large">
+        {/* Drag Mode Toggle */}
+        <div>
+          <Space>
+            <DragOutlined />
+            <Text strong>Drag Mode</Text>
+            <Switch checked={dragEnabled} onChange={setDragEnabled} />
+          </Space>
+          <div style={{ marginTop: 8 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Enable to reorder widgets using arrows in settings
+            </Text>
+          </div>
+        </div>
+
+        <Divider />
+
+        {/* Widget Configuration */}
+        <div>
+          <Title level={5}>Widget Configuration</Title>
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            {Object.entries(userConfig.widgets)
+              .sort(([, a], [, b]) => a.order - b.order)
+              .map(([key, widget]) => (
+                <Card key={key} size="small" style={{ background: '#fafafa' }}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <Checkbox 
+                        checked={widget.enabled} 
+                        onChange={() => toggleWidget(key as keyof DashboardConfig['widgets'])}
+                      >
+                        <Text strong>
+                          {key === 'occupancyStatus' && 'Current Occupancy'}
+                          {key === 'inflowOutflow' && 'Inflow vs Outflow'}
+                          {key === 'counterStatus' && 'Live Counter Status'}
+                          {key === 'dwellTime' && 'Dwell Time Distribution'}
+                          {key === 'footfallComparison' && 'Footfall Comparison'}
+                          {key === 'occupancyTrend' && 'Occupancy Trend'}
+                          {key === 'counterCongestionTrend' && 'Counter Congestion Trend'}
+                          {key === 'weeklyHeatmap' && 'Weekly Heatmap'}
+                          {key === 'counterEfficiency' && 'Counter Efficiency'}
+                          {key === 'todaysVisitors' && "Today's Visitors KPI"}
+                          {key === 'avgDwellTime' && 'Avg Dwell Time KPI'}
+                        </Text>
+                      </Checkbox>
+                      <Space>
+                        <Button 
+                          size="small" 
+                          icon={<span>↑</span>}
+                          onClick={() => moveWidget(key as keyof DashboardConfig['widgets'], 'up')}
+                          disabled={widget.order === 0}
+                        />
+                        <Button 
+                          size="small" 
+                          icon={<span>↓</span>}
+                          onClick={() => moveWidget(key as keyof DashboardConfig['widgets'], 'down')}
+                          disabled={widget.order === Object.keys(userConfig.widgets).length - 1}
+                        />
+                      </Space>
+                    </Space>
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 12 }}>Size: </Text>
+                      <Radio.Group 
+                        value={widget.size} 
+                        onChange={(e) => updateWidgetSize(key as keyof DashboardConfig['widgets'], e.target.value)}
+                        size="small"
+                        disabled={!widget.enabled}
+                      >
+                        <Radio.Button value="small">S</Radio.Button>
+                        <Radio.Button value="medium">M</Radio.Button>
+                        <Radio.Button value="large">L</Radio.Button>
+                        <Radio.Button value="full">Full</Radio.Button>
+                      </Radio.Group>
+                    </div>
+                  </Space>
+                </Card>
+              ))}
+          </Space>
+        </div>
+
+        <Divider />
+
+        {/* Dwell Time Chart Type */}
+        <div>
+          <Title level={5}>Dwell Time Chart</Title>
+          <Radio.Group 
+            value={userConfig.dwellTimeChartType} 
+            onChange={(e) => updateConfig('dwellTimeChartType', e.target.value)}
+          >
+            <Radio.Button value="bar">Horizontal Bar</Radio.Button>
+            <Radio.Button value="donut">Donut</Radio.Button>
+          </Radio.Group>
+        </div>
+
+        <Divider />
+
+        {/* Occupancy Trend Type */}
+        <div>
+          <Title level={5}>Occupancy Trend Chart</Title>
+          <Radio.Group 
+            value={userConfig.occupancyTrendType} 
+            onChange={(e) => updateConfig('occupancyTrendType', e.target.value)}
+          >
+            <Radio.Button value="line">Line Chart</Radio.Button>
+            <Radio.Button value="heatmap">Heatmap</Radio.Button>
+          </Radio.Group>
+        </div>
+
+        <Divider />
+
+        {/* Chart Type */}
+        <div>
+          <Title level={5}>Flow Chart Type</Title>
+          <Radio.Group value={userConfig.chartType} onChange={(e) => updateConfig('chartType', e.target.value)}>
+            <Radio.Button value="line">Line</Radio.Button>
+            <Radio.Button value="area">Area</Radio.Button>
+            <Radio.Button value="bar">Bar</Radio.Button>
+          </Radio.Group>
+        </div>
+
+        <Divider />
+
+        {/* Color Scheme */}
+        <div>
+          <Title level={5}>Color Scheme</Title>
+          <Radio.Group value={userConfig.colorScheme} onChange={(e) => updateConfig('colorScheme', e.target.value)}>
+            <Radio.Button value="default">Default</Radio.Button>
+            <Radio.Button value="blue">Blue</Radio.Button>
+            <Radio.Button value="green">Green</Radio.Button>
+            <Radio.Button value="purple">Purple</Radio.Button>
+          </Radio.Group>
+        </div>
+
+        <Divider />
+
+        {/* Refresh Interval */}
+        <div>
+          <Title level={5}>Refresh Interval: {userConfig.refreshInterval}s</Title>
+          <Slider
+            min={10}
+            max={300}
+            step={10}
+            value={userConfig.refreshInterval}
+            onChange={(value) => updateConfig('refreshInterval', value)}
+            marks={{ 10: '10s', 60: '1m', 120: '2m', 300: '5m' }}
+          />
+        </div>
+
+        <Divider />
+
+        {/* Compact Mode */}
+        <div>
+          <Space>
+            <Text>Compact Mode</Text>
+            <Switch checked={userConfig.compactMode} onChange={(checked) => updateConfig('compactMode', checked)} />
+          </Space>
+        </div>
+      </Space>
+    </Drawer>
+  );
+
+  // ============================================
+  // MAIN RENDER
+  // ============================================
+  if (loading && !occupancyData) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" tip="Loading cafeteria analytics..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <Alert message="Error Loading Data" description={error} type="error" showIcon action={<Button onClick={fetchMockData} type="primary">Retry</Button>} />;
+  }
+
+  // Sort widgets by order
+  const sortedWidgets = Object.entries(userConfig.widgets)
+    .sort(([, a], [, b]) => a.order - b.order)
+    .filter(([, widget]) => widget.enabled);
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#f8fafc',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
-      {/* Header */}
-      <div style={{
-        backgroundColor: 'white',
-        borderBottom: '1px solid #e5e7eb',
-        padding: '16px 32px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-      }}>
-        <div>
-          <h1 style={{ 
-            fontSize: '28px', 
-            fontWeight: '700', 
-            color: '#111827',
-            margin: 0
-          }}>
-            Support Tickets
-          </h1>
-          <p style={{ 
-            fontSize: '14px', 
-            color: '#6b7280',
-            margin: '4px 0 0 0'
-          }}>
-            Manage and track support requests
-          </p>
-        </div>
-        
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '10px',
-            padding: '12px 24px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.2s',
-            boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.backgroundColor = '#2563eb';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 4px 8px rgba(59, 130, 246, 0.4)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.backgroundColor = '#3b82f6';
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.3)';
-          }}
-        >
-          <Plus size={20} />
-          Create Ticket
-        </button>
+    <div style={{ padding: userConfig.compactMode ? '20px' : '32px', background: '#f5f5f5', minHeight: '100vh' }}>
+      {/* Header Section */}
+      <Row justify="space-between" align="middle" style={{ marginBottom: 32 }} gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Space size="middle">
+            <Title level={2} style={{ margin: 0 }}>Cafeteria Analytics Dashboard</Title>
+            {mockMode && <Badge count="DEMO" style={{ backgroundColor: '#52c41a' }} />}
+          </Space>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Row gutter={[12, 12]} justify="end">
+            <Col>
+              <Select 
+                value={selectedLocation} 
+                onChange={setSelectedLocation} 
+                style={{ width: 280 }}
+                size={userConfig.compactMode ? 'small' : 'middle'}
+              >
+                <Option value="Intel, RMZ Ecoworld, Bangalore">Intel, RMZ Ecoworld, Bangalore</Option>
+              </Select>
+            </Col>
+            <Col>
+              <Select 
+                value={selectedCafeteria} 
+                onChange={setSelectedCafeteria} 
+                style={{ width: 140 }}
+                size={userConfig.compactMode ? 'small' : 'middle'}
+              >
+                <Option value="SRR 4A">SRR 4A</Option>
+                <Option value="SRR 4B">SRR 4B</Option>
+              </Select>
+            </Col>
+            <Col>
+              <DatePicker value={selectedDate} disabled size={userConfig.compactMode ? 'small' : 'middle'} />
+            </Col>
+            <Col>
+              <Select value={timeRange} style={{ width: 120 }} onChange={setTimeRange} size={userConfig.compactMode ? 'small' : 'middle'}>
+                <Option value={6}>Last 6h</Option>
+                <Option value={12}>Last 12h</Option>
+                <Option value={24}>Last 24h</Option>
+                <Option value={48}>Last 48h</Option>
+              </Select>
+            </Col>
+            <Col>
+              <Button onClick={fetchMockData} loading={loading} icon={<ReloadOutlined />} size={userConfig.compactMode ? 'small' : 'middle'}>
+                Refresh
+              </Button>
+            </Col>
+            <Col>
+              <Button onClick={() => setSettingsVisible(true)} icon={<SettingOutlined />} type="primary" size={userConfig.compactMode ? 'small' : 'middle'}>
+                Settings
+              </Button>
+            </Col>
+          </Row>
+        </Col>
+      </Row>
+
+      {/* Tabs Section */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        size="large"
+        items={[
+          {
+            key: 'overview',
+            label: <span style={{ fontSize: '16px', fontWeight: 500 }}>Overview</span>,
+            children: (
+              <Row gutter={[20, 20]} style={{ marginTop: 8 }}>
+                {/* Overview Widgets */}
+                {sortedWidgets
+                  .filter(([key]) => ['occupancyStatus', 'todaysVisitors', 'avgDwellTime', 'counterStatus', 'inflowOutflow'].includes(key))
+                  .map(([key, widget]) => {
+                    const colSpan = getColSpan(widget.size);
+                    let content = null;
+
+                    switch (key) {
+                      case 'occupancyStatus':
+                        content = renderOccupancyStatus();
+                        break;
+                      case 'inflowOutflow':
+                        content = renderInflowOutflow();
+                        break;
+                      case 'counterStatus':
+                        content = renderCounterStatus();
+                        break;
+                      case 'todaysVisitors':
+                        content = renderTodaysVisitors();
+                        break;
+                      case 'avgDwellTime':
+                        content = renderAvgDwellTime();
+                        break;
+                    }
+
+                    return content ? (
+                      <Col key={key} {...colSpan}>
+                        {content}
+                      </Col>
+                    ) : null;
+                  })}
+              </Row>
+            ),
+          },
+          {
+            key: 'analytics',
+            label: <span style={{ fontSize: '16px', fontWeight: 500 }}>Analytics</span>,
+            children: (
+              <Row gutter={[20, 20]} style={{ marginTop: 8 }}>
+                {/* Analytics Widgets */}
+                {sortedWidgets
+                  .filter(([key]) => ['dwellTime', 'occupancyTrend', 'weeklyHeatmap', 'counterCongestionTrend', 'counterEfficiency', 'footfallComparison'].includes(key))
+                  .map(([key, widget]) => {
+                    const colSpan = getColSpan(widget.size);
+                    let content = null;
+
+                    switch (key) {
+                      case 'dwellTime':
+                        content = renderDwellTime();
+                        break;
+                      case 'footfallComparison':
+                        content = renderFootfallComparison();
+                        break;
+                      case 'occupancyTrend':
+                        content = renderOccupancyTrend();
+                        break;
+                      case 'counterCongestionTrend':
+                        content = renderCounterCongestionTrend();
+                        break;
+                      case 'weeklyHeatmap':
+                        content = renderWeeklyHeatmap();
+                        break;
+                      case 'counterEfficiency':
+                        content = renderCounterEfficiency();
+                        break;
+                    }
+
+                    return content ? (
+                      <Col key={key} {...colSpan}>
+                        {content}
+                      </Col>
+                    ) : null;
+                  })}
+              </Row>
+            ),
+          },
+        ]}
+      />
+      
+      <div style={{ marginTop: 24, textAlign: 'right', color: '#999', fontSize: 12 }}>
+        Last updated: {lastUpdated}
       </div>
 
-      {/* Main Content */}
-      <div style={{ padding: '32px' }}>
-        {/* Status Boxes */}
-        <div style={{ 
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '24px',
-          marginBottom: '32px'
-        }}>
-          {statusBoxes.map((box) => (
-            <div key={box.title} style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
-              padding: '24px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              border: `2px solid ${box.color}15`,
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-            }}
-            >
-              <div style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginBottom: '12px',
-                justifyContent: 'center'
-              }}>
-                <div style={{ 
-                  fontSize: '48px',
-                  fontWeight: '800',
-                  color: box.color
-                }}>
-                  {box.count}
-                </div>
-                <div style={{ fontSize: '24px' }}>
-                  {box.icon}
-                </div>
-              </div>
-              <div style={{ 
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#6b7280',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}>
-                {box.title}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Filters */}
-        <div style={{ 
-          backgroundColor: 'white',
-          padding: '24px',
-          borderRadius: '16px',
-          marginBottom: '24px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-          border: '1px solid #f3f4f6'
-        }}>
-          <h3 style={{ 
-            fontSize: '18px', 
-            fontWeight: '600', 
-            color: '#374151',
-            marginBottom: '16px',
-            margin: '0 0 16px 0'
-          }}>
-            Filters
-          </h3>
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-            <div>
-              <label style={{ 
-                fontSize: '14px', 
-                color: '#6b7280', 
-                marginBottom: '8px', 
-                display: 'block',
-                fontWeight: '500'
-              }}>
-                Status
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{
-                  padding: '10px 16px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  backgroundColor: 'white',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  transition: 'border-color 0.2s'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-              >
-                <option value="All">All Status</option>
-                <option value="Open">Open</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Escalated">Escalated</option>
-                <option value="Resolved">Resolved</option>
-              </select>
-            </div>
-            
-            <div>
-              <label style={{ 
-                fontSize: '14px', 
-                color: '#6b7280', 
-                marginBottom: '8px', 
-                display: 'block',
-                fontWeight: '500'
-              }}>
-                Priority
-              </label>
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                style={{
-                  padding: '10px 16px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  backgroundColor: 'white',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  transition: 'border-color 0.2s'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-              >
-                <option value="">All Priority</option>
-                <option value="HIGH">High</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="LOW">Low</option>
-              </select>
-            </div>
-
-            <div style={{ marginLeft: 'auto' }}>
-              <div style={{ 
-                fontSize: '14px', 
-                color: '#6b7280',
-                fontWeight: '500'
-              }}>
-                Showing {filteredTickets.length} of {tickets.length} tickets
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tickets Table */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-          border: '1px solid #f3f4f6'
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ backgroundColor: '#f8fafc' }}>
-              <tr>
-                <th style={{ 
-                  padding: '20px 24px', 
-                  textAlign: 'left', 
-                  fontSize: '14px', 
-                  fontWeight: '600',
-                  color: '#374151',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Ticket ID
-                </th>
-                <th style={{ 
-                  padding: '20px 24px', 
-                  textAlign: 'left', 
-                  fontSize: '14px', 
-                  fontWeight: '600',
-                  color: '#374151',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Subject
-                </th>
-                <th style={{ 
-                  padding: '20px 24px', 
-                  textAlign: 'left', 
-                  fontSize: '14px', 
-                  fontWeight: '600',
-                  color: '#374151',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Priority
-                </th>
-                <th style={{ 
-                  padding: '20px 24px', 
-                  textAlign: 'left', 
-                  fontSize: '14px', 
-                  fontWeight: '600',
-                  color: '#374151',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Status
-                </th>
-                <th style={{ 
-                  padding: '20px 24px', 
-                  textAlign: 'left', 
-                  fontSize: '14px', 
-                  fontWeight: '600',
-                  color: '#374151',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Last Updated
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTickets.map((ticket) => (
-                <tr key={ticket.id} style={{ 
-                  borderBottom: '1px solid #f1f5f9',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                >
-                  <td style={{ 
-                    padding: '20px 24px', 
-                    fontSize: '16px', 
-                    fontWeight: '600',
-                    color: '#3b82f6'
-                  }}>
-                    {ticket.id}
-                  </td>
-                  <td style={{ 
-                    padding: '20px 24px', 
-                    fontSize: '16px',
-                    color: '#111827',
-                    fontWeight: '500'
-                  }}>
-                    {ticket.subject}
-                  </td>
-                  <td style={{ padding: '20px 24px' }}>
-                    <span style={{
-                      padding: '6px 16px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.025em',
-                      ...getPriorityBadgeStyle(ticket.priority)
-                    }}>
-                      {ticket.priority}
-                    </span>
-                  </td>
-                  <td style={{ padding: '20px 24px' }}>
-                    <span style={{ 
-                      fontSize: '14px',
-                      color: '#6b7280',
-                      fontWeight: '500'
-                    }}>
-                      {ticket.status}
-                    </span>
-                  </td>
-                  <td style={{ 
-                    padding: '20px 24px', 
-                    fontSize: '14px',
-                    color: '#6b7280'
-                  }}>
-                    {ticket.lastUpdated}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Modal */}
-      {showModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '20px',
-            padding: '32px',
-            width: '100%',
-            maxWidth: '500px',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '24px'
-            }}>
-              <h2 style={{ 
-                fontSize: '24px', 
-                fontWeight: '700', 
-                color: '#111827',
-                margin: 0
-              }}>
-                Create New Ticket
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '8px',
-                  borderRadius: '8px',
-                  color: '#6b7280',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6';
-                  e.currentTarget.style.color = '#374151';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#6b7280';
-                }}
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '14px', 
-                fontWeight: '600', 
-                color: '#374151',
-                marginBottom: '6px'
-              }}>
-                Title <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  outline: 'none',
-                  transition: 'border-color 0.2s',
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-                placeholder="Enter ticket title"
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '14px', 
-                  fontWeight: '600', 
-                  color: '#374151',
-                  marginBottom: '6px'
-                }}>
-                  Facility
-                </label>
-                <select
-                  value={formData.facility}
-                  onChange={(e) => handleInputChange('facility', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '10px',
-                    fontSize: '16px',
-                    backgroundColor: 'white',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="Office 1">Office 1</option>
-                  <option value="Office 2">Office 2</option>
-                  <option value="Office 3">Office 3</option>
-                </select>
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '14px', 
-                  fontWeight: '600', 
-                  color: '#374151',
-                  marginBottom: '6px'
-                }}>
-                  Category
-                </label>
-                <input
-                  type="text"
-                  value={formData.category}
-                  onChange={(e) => handleInputChange('category', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '10px',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                  placeholder="e.g., IT, Equipment"
-                />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '14px', 
-                fontWeight: '600', 
-                color: '#374151',
-                marginBottom: '6px'
-              }}>
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                rows={4}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  outline: 'none',
-                  resize: 'vertical',
-                  minHeight: '100px'
-                }}
-                placeholder="Describe the issue in detail..."
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#f3f4f6',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateTicket}
-                disabled={!formData.title.trim()}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: formData.title.trim() ? '#3b82f6' : '#9ca3af',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: formData.title.trim() ? 'pointer' : 'not-allowed',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseOver={(e) => {
-                  if (formData.title.trim()) e.currentTarget.style.backgroundColor = '#2563eb';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = formData.title.trim() ? '#3b82f6' : '#9ca3af';
-                }}
-              >
-                Create Ticket
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderSettingsDrawer()}
     </div>
   );
 };
 
-export default TicketingDashboard;
+export default CafeteriaAnalyticsDashboard;
