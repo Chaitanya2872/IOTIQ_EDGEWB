@@ -78,7 +78,7 @@ const MENU_ITEMS: MenuConfig[] = [
     key: "ticketing",
     label: "Cafeteria",
     icon: <Coffee size={18} strokeWidth={2} />,
-    path: "/ticketing",
+    path: "/Cafeteria",
   },
   {
     key: "iot",
@@ -185,7 +185,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ setSidebarWidth, onLogout }) 
 
   // Check if item is allowed for demo user
   const isAllowedForDemo = (itemKey: string, itemPath?: string) => {
-    return itemKey === "ticketing" || itemPath === "/ticketing";
+    return itemKey === "ticketing" || itemPath === "/Cafeteria";
   };
 
   // Show toast notification for demo user

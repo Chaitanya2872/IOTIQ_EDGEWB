@@ -43,8 +43,8 @@ const AppContent: React.FC = () => {
   // Redirect demo user to Ticketing (Cafeteria Analytics) on successful login
   React.useEffect(() => {
     if (isAuthenticated && isDemoUser) {
-      console.log('Demo user detected, redirecting to ticketing');
-      navigate('/ticketing', { replace: true });
+      console.log('Demo user detected, redirecting to cafeteria-demo');
+      navigate('/Cafeteria', { replace: true });
     }
   }, [isAuthenticated, isDemoUser, navigate]);
 
@@ -100,7 +100,7 @@ const AppContent: React.FC = () => {
               path="/" 
               element={
                 <Navigate 
-                  to={isDemoUser ? "/ticketing" : "/inventory/analytics"} 
+                  to={isDemoUser ? "/Cafeteria" : "/inventory/analytics"} 
                   replace 
                 />
               } 
@@ -118,7 +118,7 @@ const AppContent: React.FC = () => {
               {/* TICKETING - Different content based on user */}
               {/* ============================================ */}
               <Route 
-                path="ticketing" 
+                path="Cafeteria" 
                 element={<TicketingSystem />} 
               />
 
@@ -163,7 +163,7 @@ const AppContent: React.FC = () => {
               path="*" 
               element={
                 <Navigate 
-                  to={isDemoUser ? "/ticketing" : "/inventory/analytics"} 
+                  to={isDemoUser ? "/Cafeteria" : "/inventory/analytics"} 
                   replace 
                 />
               } 

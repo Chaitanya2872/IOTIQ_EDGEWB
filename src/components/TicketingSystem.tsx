@@ -24,6 +24,7 @@ import {
   message,
   Tabs,
   Tooltip,
+  Popover,
 } from 'antd';
 import {
   LineChart,
@@ -54,6 +55,7 @@ import {
   EyeOutlined,
   DragOutlined,
   HolderOutlined,
+  FilterOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -121,6 +123,7 @@ interface DashboardConfig {
     counterEfficiency: WidgetConfig;
     todaysVisitors: WidgetConfig;
     avgDwellTime: WidgetConfig;
+    peakHours: WidgetConfig;
   };
   refreshInterval: number;
   timeRange: number;
@@ -137,13 +140,14 @@ const DEFAULT_CONFIG: DashboardConfig = {
     dwellTime: { id: 'dwellTime', enabled: true, size: 'medium', order: 1 },
     todaysVisitors: { id: 'todaysVisitors', enabled: true, size: 'medium', order: 2 },
     avgDwellTime: { id: 'avgDwellTime', enabled: true, size: 'medium', order: 3 },
-    inflowOutflow: { id: 'inflowOutflow', enabled: true, size: 'full', order: 4 },
-    occupancyTrend: { id: 'occupancyTrend', enabled: true, size: 'full', order: 5 },
-    weeklyHeatmap: { id: 'weeklyHeatmap', enabled: true, size: 'full', order: 6 },
-    counterStatus: { id: 'counterStatus', enabled: true, size: 'full', order: 7 },
-    counterEfficiency: { id: 'counterEfficiency', enabled: true, size: 'full', order: 8 },
-    counterCongestionTrend: { id: 'counterCongestionTrend', enabled: true, size: 'full', order: 9 },
-    footfallComparison: { id: 'footfallComparison', enabled: true, size: 'full', order: 10 },
+    peakHours: { id: 'peakHours', enabled: true, size: 'medium', order: 4 },
+    inflowOutflow: { id: 'inflowOutflow', enabled: true, size: 'full', order: 5 },
+    occupancyTrend: { id: 'occupancyTrend', enabled: true, size: 'full', order: 6 },
+    weeklyHeatmap: { id: 'weeklyHeatmap', enabled: true, size: 'full', order: 7 },
+    counterStatus: { id: 'counterStatus', enabled: true, size: 'full', order: 8 },
+    counterEfficiency: { id: 'counterEfficiency', enabled: true, size: 'full', order: 9 },
+    counterCongestionTrend: { id: 'counterCongestionTrend', enabled: true, size: 'full', order: 10 },
+    footfallComparison: { id: 'footfallComparison', enabled: true, size: 'full', order: 11 },
   },
   refreshInterval: 30,
   timeRange: 24,
@@ -311,83 +315,83 @@ const mockCafeteriaData = {
     }));
   },
 
-  // generateFootfallComparison: (hours: number): FootfallComparison[] => {
-  //   const data: FootfallComparison[] = [];
-  //   const now = new Date();
+  generateFootfallComparison: (hours: number): FootfallComparison[] => {
+    const data: FootfallComparison[] = [];
+    const now = new Date();
     
-  //   for (let i = hours; i >= 0; i--) {
-  //     const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-  //     const hour = time.getHours();
-  //     const cafeteriaFootfall = Math.floor(Math.random() * 100) + 50;
-  //     const countersFootfall = Math.floor(Math.random() * 80) + 30;
-  //     const ratio = cafeteriaFootfall / countersFootfall;
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      const cafeteriaFootfall = Math.floor(Math.random() * 100) + 50;
+      const countersFootfall = Math.floor(Math.random() * 80) + 30;
+      const ratio = cafeteriaFootfall / countersFootfall;
       
-  //     let insight = 'Normal flow';
-  //     if (ratio > 1.5) {
-  //       insight = 'Counter hopping detected - people browsing multiple counters';
-  //     } else if (ratio < 0.8) {
-  //       insight = 'Potential congestion at counters - delays expected';
-  //     }
+      let insight = 'Normal flow';
+      if (ratio > 1.5) {
+        insight = 'Counter hopping detected - people browsing multiple counters';
+      } else if (ratio < 0.8) {
+        insight = 'Potential congestion at counters - delays expected';
+      }
       
-  //     data.push({
-  //       timestamp: time.getHours() + ':00',
-  //       cafeteriaFootfall,
-  //       countersFootfall,
-  //       ratio,
-  //       insight,
-  //     });
-  //   }
-  //   return data;
-  // },
+      data.push({
+        timestamp: time.getHours() + ':00',
+        cafeteriaFootfall,
+        countersFootfall,
+        ratio,
+        insight,
+      });
+    }
+    return data;
+  },
 
-  // generateOccupancyTrendData: (hours: number) => {
-  //   const data: any[] = [];
-  //   const now = new Date();
+  generateOccupancyTrendData: (hours: number) => {
+    const data: any[] = [];
+    const now = new Date();
     
-  //   for (let i = hours; i >= 0; i--) {
-  //     const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-  //     const hour = time.getHours();
-  //     let occupancy = Math.floor(Math.random() * 100) + 50;
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      let occupancy = Math.floor(Math.random() * 100) + 50;
       
-  //     // Peak hours: 12-14 (lunch) and 19-21 (dinner)
-  //     if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
-  //       occupancy += 100;
-  //     }
+      // Peak hours: 12-14 (lunch) and 19-21 (dinner)
+      if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
+        occupancy += 100;
+      }
       
-  //     data.push({
-  //       timestamp: time.getHours() + ':00',
-  //       occupancy: Math.min(occupancy, 250),
-  //       hour: time.getHours(),
-  //     });
-  //   }
-  //   return data;
-  // },
+      data.push({
+        timestamp: time.getHours() + ':00',
+        occupancy: Math.min(occupancy, 250),
+        hour: time.getHours(),
+      });
+    }
+    return data;
+  },
 
-  // generateCounterCongestionTrendData: (hours: number) => {
-  //   const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter'];
-  //   const data: any[] = [];
-  //   const now = new Date();
+  generateCounterCongestionTrendData: (hours: number) => {
+    const counters = ['Bisi Oota/ Mini meals Counter', 'Two Good Counter', 'Healthy Station Counter'];
+    const data: any[] = [];
+    const now = new Date();
     
-  //   for (let i = hours; i >= 0; i--) {
-  //     const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-  //     const hour = time.getHours();
-  //     const entry: any = { timestamp: time.getHours() + ':00' };
+    for (let i = hours; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      const entry: any = { timestamp: time.getHours() + ':00' };
       
-  //     counters.forEach(counter => {
-  //       let queueLength = Math.floor(Math.random() * 10) + 2;
+      counters.forEach(counter => {
+        let queueLength = Math.floor(Math.random() * 10) + 2;
         
-  //       // Peak hours
-  //       if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
-  //         queueLength += 8;
-  //       }
+        // Peak hours
+        if ((hour >= 12 && hour <= 14) || (hour >= 19 && hour <= 21)) {
+          queueLength += 8;
+        }
         
-  //       entry[counter] = Math.min(queueLength, 25);
-  //     });
+        entry[counter] = Math.min(queueLength, 25);
+      });
       
-  //     data.push(entry);
-  //   }
-  //   return data;
-  // },
+      data.push(entry);
+    }
+    return data;
+  },
 
   generateWeeklyHeatmapData: () => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -473,6 +477,44 @@ const mockCafeteriaData = {
       note: 'Across all counters',
     };
   },
+
+  generatePeakHours: () => {
+    const currentHour = new Date().getHours();
+    
+    // Generate 3 peak hour slots
+    const peakSlots = [
+      { time: '12:00 PM - 2:00 PM', type: 'Lunch Rush', occupancy: 85 + Math.floor(Math.random() * 10) },
+      { time: '7:00 PM - 9:00 PM', type: 'Dinner Peak', occupancy: 75 + Math.floor(Math.random() * 15) },
+      { time: '8:00 AM - 9:00 AM', type: 'Breakfast', occupancy: 55 + Math.floor(Math.random() * 15) },
+    ];
+
+    // Determine current status
+    let currentStatus = 'Off-Peak';
+    let nextPeak = '12:00 PM';
+    
+    if (currentHour >= 12 && currentHour < 14) {
+      currentStatus = 'Peak Hours';
+      nextPeak = '7:00 PM';
+    } else if (currentHour >= 19 && currentHour < 21) {
+      currentStatus = 'Peak Hours';
+      nextPeak = 'Tomorrow 8:00 AM';
+    } else if (currentHour >= 8 && currentHour < 9) {
+      currentStatus = 'Peak Hours';
+      nextPeak = '12:00 PM';
+    } else if (currentHour < 8) {
+      nextPeak = '8:00 AM';
+    } else if (currentHour >= 14 && currentHour < 19) {
+      nextPeak = '7:00 PM';
+    }
+
+    return {
+      currentStatus,
+      nextPeak,
+      peakSlots: peakSlots.sort((a, b) => b.occupancy - a.occupancy),
+      highestPeak: peakSlots[0].time,
+      averagePeakOccupancy: Math.round(peakSlots.reduce((sum, slot) => sum + slot.occupancy, 0) / peakSlots.length),
+    };
+  },
 };
 
 // ============================================
@@ -491,7 +533,7 @@ const getCongestionText = (level: string) => {
   switch (level) {
     case 'LOW': return 'Low - Free Flow';
     case 'MEDIUM': return 'Medium - Moderate';
-    case 'HIGH': return 'High - Crowded';
+    case 'HIGH': return 'High - Congested';
     default: return 'Unknown';
   }
 };
@@ -565,6 +607,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   const [counterEfficiencyData, setCounterEfficiencyData] = useState<any[]>([]);
   const [todaysVisitors, setTodaysVisitors] = useState<any>(null);
   const [avgDwellTime, setAvgDwellTime] = useState<any>(null);
+  const [peakHours, setPeakHours] = useState<any>(null);
   
   const [selectedDate] = useState(dayjs());
   const [timeRange, setTimeRange] = useState(userConfig.timeRange || 24);
@@ -573,6 +616,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [dateFilter, setDateFilter] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [selectedDwellCounter, setSelectedDwellCounter] = useState<string>('all');
+  const [filterPanelVisible, setFilterPanelVisible] = useState(false);
   const [visibleCounters, setVisibleCounters] = useState<{[key: string]: boolean}>({
     'Bisi Oota/ Mini meals Counter': true,
     'Two Good Counter': true,
@@ -732,6 +776,10 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         
         if (userConfig.widgets.avgDwellTime.enabled) {
           setAvgDwellTime(mockCafeteriaData.generateAvgDwellTime());
+        }
+        
+        if (userConfig.widgets.peakHours.enabled) {
+          setPeakHours(mockCafeteriaData.generatePeakHours());
         }
         
         setLastUpdated(new Date().toLocaleTimeString());
@@ -952,7 +1000,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text type="secondary" style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Today's Visitors
+              Today's Footfall
             </Text>
             <div style={{
               width: 48,
@@ -1042,6 +1090,57 @@ const CafeteriaAnalyticsDashboard: React.FC<{
     );
   };
 
+  const renderPeakHours = () => {
+    if (!peakHours) return null;
+
+    const isPeakTime = peakHours.currentStatus === 'Peak Hours';
+
+    return (
+      <Card
+        style={{ height: '100%' }}
+        bodyStyle={{ padding: '24px' }}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text type="secondary" style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Peak Hours
+            </Text>
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              background: isPeakTime ? '#fff7e6' : '#f0f5ff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <FireOutlined style={{ fontSize: '24px', color: isPeakTime ? '#fa8c16' : '#1890ff' }} />
+            </div>
+          </div>
+          
+          <div>
+            <Space align="baseline" size="small">
+              <Text style={{ fontSize: '36px', fontWeight: 'bold', lineHeight: 1 }}>
+                {peakHours.highestPeak.split(' - ')[0]}
+              </Text>
+              <Badge 
+                count={isPeakTime ? 'ACTIVE' : 'UPCOMING'}
+                style={{ 
+                  backgroundColor: isPeakTime ? '#fa8c16' : '#1890ff',
+                  fontSize: '12px',
+                }}
+              />
+            </Space>
+          </div>
+          
+          <Text type="secondary" style={{ fontSize: '13px' }}>
+            {isPeakTime ? 'Currently in peak hours' : `Next peak at ${peakHours.nextPeak}`}
+          </Text>
+        </Space>
+      </Card>
+    );
+  };
+
   const renderInflowOutflow = () => {
     if (flowData.length === 0) return null;
     
@@ -1053,7 +1152,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         title={
           <Space>
             {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-            Inflow vs Outflow (People vs Time)
+            Inflow vs Outflow (Footfall vs Time)
           </Space>
         } 
         size={userConfig.compactMode ? 'small' : 'default'}
@@ -1749,6 +1848,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
                           {key === 'counterEfficiency' && 'Counter Efficiency'}
                           {key === 'todaysVisitors' && "Today's Visitors KPI"}
                           {key === 'avgDwellTime' && 'Avg Dwell Time KPI'}
+                          {key === 'peakHours' && 'Peak Hours KPI'}
                         </Text>
                       </Checkbox>
                       <Space>
@@ -1890,78 +1990,206 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   return (
     <div style={{ padding: userConfig.compactMode ? '20px' : '32px', background: '#f5f5f5', minHeight: '100vh' }}>
       {/* Header Section */}
-      <Row justify="space-between" align="middle" style={{ marginBottom: 32 }} gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Space size="middle">
-            <Title level={2} style={{ margin: 0 }}>Cafeteria Congestion Analytics Dashboard</Title>
-            {mockMode && <Badge count="DEMO" style={{ backgroundColor: '#52c41a' }} />}
-          </Space>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Row gutter={[12, 12]} justify="end">
-            <Col>
-              <Select 
-                value={selectedLocation} 
-                onChange={setSelectedLocation} 
-                style={{ width: 280 }}
-                size={userConfig.compactMode ? 'small' : 'middle'}
-              >
-                <Option value="Intel, RMZ Ecoworld, Bangalore">Intel, RMZ Ecoworld, Bangalore</Option>
-              </Select>
-            </Col>
-            <Col>
-              <Select 
-                value={selectedCafeteria} 
-                onChange={setSelectedCafeteria} 
-                style={{ width: 140 }}
-                size={userConfig.compactMode ? 'small' : 'middle'}
-              >
-                <Option value="SRR 4A">SRR 4A</Option>
-                <Option value="SRR 4B">SRR 4B</Option>
-              </Select>
-            </Col>
-            <Col>
-              <DatePicker value={selectedDate} disabled size={userConfig.compactMode ? 'small' : 'middle'} />
-            </Col>
-            <Col>
-              <Select 
-                value={dateFilter} 
-                onChange={setDateFilter} 
-                style={{ width: 120 }}
-                size={userConfig.compactMode ? 'small' : 'middle'}
-              >
-                <Option value="daily">Daily</Option>
-                <Option value="weekly">Weekly</Option>
-                <Option value="monthly">Monthly</Option>
-              </Select>
-            </Col>
-            <Col>
-              <Select 
-                value={timeRange} 
-                style={{ width: 120 }} 
-                onChange={setTimeRange} 
-                size={userConfig.compactMode ? 'small' : 'middle'}
-                disabled={dateFilter !== 'daily'}
-              >
-                <Option value={6}>Last 6h</Option>
-                <Option value={12}>Last 12h</Option>
-                <Option value={24}>Last 24h</Option>
-                <Option value={48}>Last 48h</Option>
-              </Select>
-            </Col>
-            <Col>
-              <Button onClick={fetchMockData} loading={loading} icon={<ReloadOutlined />} size={userConfig.compactMode ? 'small' : 'middle'}>
-                Refresh
-              </Button>
-            </Col>
-            <Col>
-              <Button onClick={() => setSettingsVisible(true)} icon={<SettingOutlined />} type="primary" size={userConfig.compactMode ? 'small' : 'middle'}>
-                Settings
-              </Button>
-            </Col>
-          </Row>
-        </Col>
-      </Row>
+      <div style={{ marginBottom: 32 }}>
+        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+          <Col>
+            <Space size="middle">
+              <Title level={2} style={{ margin: 0 }}>Cafeteria Congestion Analytics Dashboard</Title>
+              {mockMode && <Badge count="DEMO" style={{ backgroundColor: '#52c41a' }} />}
+            </Space>
+          </Col>
+          <Col>
+            <Row gutter={[12, 12]} justify="end">
+              <Col>
+                <Popover
+                  content={
+                    <div style={{ width: '400px', padding: '20px' }}>
+                      <div style={{ marginBottom: 20 }}>
+                        <Text strong style={{ fontSize: '15px', color: '#262626' }}>Time Filters</Text>
+                      </div>
+                      
+                      <Space direction="vertical" style={{ width: '100%' }} size="large">
+                        {/* Data View Filter */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <Text style={{ fontSize: '13px', color: '#595959', fontWeight: 500, minWidth: '80px' }}>
+                            Data View
+                          </Text>
+                          <Select 
+                            value={dateFilter}
+                            onChange={setDateFilter}
+                            style={{ width: 220 }}
+                            size="middle"
+                          >
+                            <Option value="daily">Daily View</Option>
+                            <Option value="weekly">Weekly View</Option>
+                            <Option value="monthly">Monthly View</Option>
+                          </Select>
+                        </div>
+
+                        {/* Time Range (only for daily) */}
+                        {dateFilter === 'daily' && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <Text style={{ fontSize: '13px', color: '#595959', fontWeight: 500, minWidth: '80px' }}>
+                              Time Range
+                            </Text>
+                            <Select 
+                              value={timeRange}
+                              onChange={setTimeRange}
+                              style={{ width: 220 }}
+                              size="middle"
+                            >
+                              <Option value={6}>Last 6 hours</Option>
+                              <Option value={12}>Last 12 hours</Option>
+                              <Option value={24}>Last 24 hours</Option>
+                              <Option value={48}>Last 48 hours</Option>
+                            </Select>
+                          </div>
+                        )}
+
+                        {/* Action Button */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+                          <Button 
+                            type="link" 
+                            style={{ padding: 0, fontSize: '13px', color: '#8c8c8c' }}
+                            onClick={() => {
+                              setDateFilter('daily');
+                              setTimeRange(24);
+                              message.success('Time filters reset');
+                            }}
+                          >
+                            Reset time filters
+                          </Button>
+                        </div>
+                      </Space>
+                    </div>
+                  }
+                  title={null}
+                  trigger="click"
+                  open={filterPanelVisible}
+                  onOpenChange={setFilterPanelVisible}
+                  placement="bottomLeft"
+                  overlayStyle={{ width: 'auto' }}
+                  overlayInnerStyle={{ padding: '0', borderRadius: '8px', boxShadow: '0 3px 12px rgba(0,0,0,0.15)' }}
+                >
+                  <Button 
+                    icon={<FilterOutlined />}
+                    size="large"
+                    style={{
+                      height: '40px',
+                      borderRadius: '8px',
+                      border: '1px solid #d9d9d9',
+                    }}
+                  >
+                    Filter
+                    {(dateFilter !== 'daily' || timeRange !== 24) && (
+                      <Badge 
+                        count={
+                          (dateFilter !== 'daily' ? 1 : 0) + 
+                          (timeRange !== 24 ? 1 : 0)
+                        } 
+                        style={{ 
+                          backgroundColor: '#1890ff',
+                          marginLeft: '8px',
+                        }} 
+                      />
+                    )}
+                  </Button>
+                </Popover>
+              </Col>
+              <Col>
+                <Button 
+                  icon={<span>↕️</span>}
+                  size="large"
+                  style={{
+                    height: '40px',
+                    borderRadius: '8px',
+                    border: '1px solid #d9d9d9',
+                  }}
+                >
+                  Sort
+                </Button>
+              </Col>
+              <Col>
+                <Button 
+                  onClick={fetchMockData} 
+                  loading={loading} 
+                  icon={<ReloadOutlined />} 
+                  size="large"
+                  style={{ height: '40px', borderRadius: '8px' }}
+                >
+                  Refresh
+                </Button>
+              </Col>
+              <Col>
+                <Button 
+                  onClick={() => setSettingsVisible(true)} 
+                  icon={<SettingOutlined />} 
+                  type="primary" 
+                  size="large"
+                  style={{ height: '40px', borderRadius: '8px' }}
+                >
+                  Settings
+                </Button>
+              </Col>
+            </Row>
+          </Col>
+        </Row>
+
+        {/* Location and Cafeteria Selection - BookMyShow Style */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Select
+            value={selectedLocation}
+            onChange={setSelectedLocation}
+            bordered={false}
+            style={{ 
+              fontSize: '14px',
+              fontWeight: 500,
+            }}
+            suffixIcon={<span style={{ fontSize: '12px' }}>▼</span>}
+            dropdownStyle={{ minWidth: '300px' }}
+          >
+            <Option value="Intel, RMZ Ecoworld, Bangalore">Intel, RMZ Ecoworld, Bangalore</Option>
+            <Option value="Intel, RMZ Millenia, Bangalore">Intel, RMZ Millenia, Bangalore</Option>
+            <Option value="Intel, Embassy Tech Village, Bangalore">Intel, Embassy Tech Village, Bangalore</Option>
+          </Select>
+
+          <Divider type="vertical" style={{ height: '20px', borderColor: '#d9d9d9' }} />
+
+          <Select
+            value={selectedCafeteria}
+            onChange={setSelectedCafeteria}
+            bordered={false}
+            style={{ 
+              fontSize: '14px',
+              fontWeight: 500,
+              minWidth: '150px',
+            }}
+            suffixIcon={<span style={{ fontSize: '12px' }}>▼</span>}
+          >
+            <Option value="SRR 4A">SRR 4A</Option>
+            <Option value="SRR 4B">SRR 4B</Option>
+            <Option value="Main Cafeteria">Main Cafeteria</Option>
+            <Option value="Express Cafe">Express Cafe</Option>
+          </Select>
+
+          <Badge 
+            count={
+              dateFilter === 'daily' 
+                ? `Last ${timeRange}h` 
+                : dateFilter === 'weekly' 
+                ? 'Weekly' 
+                : 'Monthly'
+            }
+            style={{ 
+              backgroundColor: '#f0f0f0',
+              color: '#595959',
+              fontSize: '12px',
+              fontWeight: 500,
+              border: '1px solid #d9d9d9',
+            }}
+          />
+        </div>
+      </div>
 
       {/* Tabs Section */}
       <Tabs
@@ -1976,7 +2204,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
               <Row gutter={[20, 20]} style={{ marginTop: 8 }}>
                 {/* Overview Widgets */}
                 {sortedWidgets
-                  .filter(([key]) => ['occupancyStatus', 'todaysVisitors', 'avgDwellTime', 'counterStatus', 'inflowOutflow'].includes(key))
+                  .filter(([key]) => ['occupancyStatus', 'todaysVisitors', 'avgDwellTime', 'peakHours', 'counterStatus', 'inflowOutflow'].includes(key))
                   .map(([key, widget]) => {
                     const colSpan = getColSpan(widget.size);
                     let content = null;
@@ -1996,6 +2224,9 @@ const CafeteriaAnalyticsDashboard: React.FC<{
                         break;
                       case 'avgDwellTime':
                         content = renderAvgDwellTime();
+                        break;
+                      case 'peakHours':
+                        content = renderPeakHours();
                         break;
                     }
 
@@ -2053,17 +2284,8 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         ]}
       />
       
-      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Badge 
-            status="processing" 
-            text={`Showing ${dateFilter === 'daily' ? 'Daily' : dateFilter === 'weekly' ? 'Weekly' : 'Monthly'} Data`}
-            style={{ fontSize: '12px' }}
-          />
-        </div>
-        <div style={{ textAlign: 'right', color: '#999', fontSize: 12 }}>
-          Last updated: {lastUpdated}
-        </div>
+      <div style={{ marginTop: 24, textAlign: 'right', color: '#999', fontSize: 12 }}>
+        Last updated: {lastUpdated}
       </div>
 
       {renderSettingsDrawer()}
