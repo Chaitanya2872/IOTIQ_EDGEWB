@@ -64,9 +64,14 @@ import {
   DragOutlined,
   HolderOutlined,
   FilterOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { CafeteriaApiService, useDashboardData } from '../api/CafeteriaApiService';
+import { useWebSocket } from '../hooks/useWebSocket';
+import websocketService from '../services/WebSocketService';
+import { useCallback as useReactCallback } from 'react';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -158,7 +163,7 @@ const DEFAULT_CONFIG: DashboardConfig = {
     counterCongestionTrend: { id: 'counterCongestionTrend', enabled: true, size: 'full', order: 10 },
     footfallComparison: { id: 'footfallComparison', enabled: true, size: 'full', order: 11 },
   },
-  refreshInterval: 30,
+  refreshInterval: 1,
   timeRange: 24,
   chartType: 'line',
   colorScheme: 'default',
@@ -237,6 +242,10 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   // State
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [dragEnabled, setDragEnabled] = useState(false);
+ 
+  // ✅ ADD: WebSocket connection state
+  const [wsConnected, setWsConnected] = useState(false);
+  const [wsError, setWsError] = useState<any>(null);
   
   
   // Customizable config state
@@ -270,13 +279,77 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   // ============================================
   // API DATA FETCHING WITH CUSTOM HOOK
   // ============================================
-  const { data: dashboardData, loading, error, refetch } = useDashboardData(
-    tenantCode,
+  // ============================================
+  // API DATA FETCHING WITH CUSTOM HOOK
+  // ============================================
+  const { data: apiData, loading, error, refetch } = useDashboardData(
+  tenantCode,
+  cafeteriaCode,
+  dateFilter,
+  timeRange,
+  wsConnected ? 999999999 : (userConfig.refreshInterval || 30) * 1000  // ✅ Disable auto-refresh when WebSocket active
+);
+
+  // ✅ ADD: Local state for dashboard data that can be updated by WebSocket
+  const [dashboardData, setDashboardData] = useState(apiData);
+
+  // ✅ ADD: Sync API data with local state
+  useEffect(() => {
+    if (apiData) {
+      setDashboardData(apiData);
+    }
+  }, [apiData]);
+
+  // ✅ ADD: WebSocket update handler
+  const handleWebSocketUpdate = useReactCallback((update: any): void => {
+    console.log('🔄 Updating UI with WebSocket data:', update);
+    
+    // Update counter status immediately
+    if (update.counters && update.counters.length > 0) {
+      setDashboardData((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          counterStatus: update.counters,
+          lastUpdated: update.timestamp,
+        };
+      });
+    }
+    
+    // Update occupancy status immediately
+    if (update.occupancyStatus) {
+      setDashboardData((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          occupancyStatus: update.occupancyStatus,
+          lastUpdated: update.timestamp,
+        };
+      });
+    }
+
+    // Show notification based on update type
+    if (update.updateType === 'counter_update') {
+      console.log('📊 Counter data updated via WebSocket');
+    } else if (update.updateType === 'occupancy_update') {
+      console.log('👥 Occupancy data updated via WebSocket');
+    }
+  }, []);
+
+  // ✅ ADD: Connect WebSocket
+  const { isConnected: wsIsConnected, error: wsConnectionError } = useWebSocket(
     cafeteriaCode,
-    dateFilter,
-    timeRange,
-    (userConfig.refreshInterval || 30) * 1000
+    handleWebSocketUpdate
   );
+
+  // ✅ ADD: Update connection state
+  useEffect(() => {
+    setWsConnected(wsIsConnected);
+    setWsError(wsConnectionError);
+  }, [wsIsConnected, wsConnectionError]);
+
+  // Extract data from API response
+
 
   // Extract data from API response
   const occupancyData = dashboardData?.occupancyStatus || null;
@@ -302,6 +375,36 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   // Enhanced congestion data
   const [enhancedCongestionData, setEnhancedCongestionData] = useState<any>(null);
   const [loadingEnhancedCongestion, setLoadingEnhancedCongestion] = useState(false);
+
+  // ✅ Sliding window state for counter congestion trend
+  const [windowStart, setWindowStart] = useState(0);
+  const WINDOW_SIZE = 20; // Show 20 timestamps at once
+
+  // ✅ Initialize visibility for all counters dynamically (moved from renderCounterCongestionTrend)
+  useEffect(() => {
+    if (
+      enhancedCongestionData &&
+      enhancedCongestionData.congestionTrend &&
+      enhancedCongestionData.congestionTrend.length > 0
+    ) {
+      const allCounterNames = Array.from(
+        new Set(
+          enhancedCongestionData.congestionTrend.flatMap((item: any) =>
+            Object.keys(item.counterStats || {})
+          )
+        )
+      );
+      const newVisibility: Record<string, boolean> = {};
+      allCounterNames.forEach((counter: string) => {
+        if (!(counter in visibleCounters)) {
+          newVisibility[counter] = true;
+        }
+      });
+      if (Object.keys(newVisibility).length > 0) {
+        setVisibleCounters((prev) => ({ ...prev, ...newVisibility }));
+      }
+    }
+  }, [enhancedCongestionData, visibleCounters]);
 
 
 
@@ -540,55 +643,31 @@ const CafeteriaAnalyticsDashboard: React.FC<{
   // ============================================
   // RENDER FUNCTIONS
   // ============================================
-  const renderOccupancyStatus = () => {
-    if (!occupancyData) return null;
-    const occupancyPercentage = Math.round((occupancyData.currentOccupancy / occupancyData.capacity) * 100);
+  // 1. ✅ FIXED: Occupancy Status - Always show "No data"
+const renderOccupancyStatus = () => {
+  return (
+    <Card 
+      title={
+        <Space>
+          {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+          <TeamOutlined />
+          <span>Cafeteria Occupancy</span>
+          <Badge status="default" text="No Data" />
+        </Space>
+      }
+      size={userConfig.compactMode ? 'small' : 'default'}
+      style={{ height: '100%' }}
+      bodyStyle={{ padding: '24px' }}
+    >
+      <Alert 
+        message="System is Not yet Live" 
+        type="info" 
+        showIcon 
+      />
+    </Card>
+  );
+};
 
-    return (
-      <Card 
-        title={
-          <Space>
-            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-            <TeamOutlined />
-            <span>Cafeteria Occupancy</span>
-            <Badge status="processing" text="Live" />
-          </Space>
-        }
-        size={userConfig.compactMode ? 'small' : 'default'}
-        style={{ height: '100%' }}
-        bodyStyle={{ padding: '24px' }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <Row gutter={[16, 16]} align="middle" style={{ flex: 1 }}>
-            <Col span={12}>
-              <Statistic
-                title="Current Occupancy"
-                value={occupancyData.currentOccupancy}
-                suffix={`/ ${occupancyData.capacity}`}
-                prefix={<UserOutlined />}
-              />
-            </Col>
-            <Col span={12}>
-              <Progress
-                type="dashboard"
-                percent={occupancyPercentage}
-                strokeColor={getCongestionColor(occupancyData.congestionLevel)}
-                size={userConfig.compactMode ? 120 : 160}
-                format={(percent) => <span style={{ fontSize: '28px', fontWeight: 'bold' }}>{percent}%</span>}
-              />
-            </Col>
-            <Col span={24}>
-              <Alert
-                message={getCongestionText(occupancyData.congestionLevel)}
-                type={occupancyData.congestionLevel === 'HIGH' ? 'error' : occupancyData.congestionLevel === 'MEDIUM' ? 'warning' : 'success'}
-                showIcon
-              />
-            </Col>
-          </Row>
-        </div>
-      </Card>
-    );
-  };
 
   const renderTodaysVisitors = () => {
     if (!todaysVisitors) return null;
@@ -777,63 +856,28 @@ const CafeteriaAnalyticsDashboard: React.FC<{
     );
   };
 
-  const renderInflowOutflow = () => {
-    // ✅ VERIFIED: Uses real API data from flowData
-    if (flowData.length === 0) {
-      return (
-        <Card 
-          title={
-            <Space>
-              {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-              Inflow vs Outflow (Footfall vs Time)
-            </Space>
-          } 
-          size={userConfig.compactMode ? 'small' : 'default'}
-          bodyStyle={{ padding: '24px' }}
-        >
-          <Alert message="No flow data available" type="info" showIcon />
-        </Card>
-      );
-    }
-    
-    const ChartComponent = userConfig.chartType === 'area' ? AreaChart : userConfig.chartType === 'bar' ? BarChart : LineChart;
-    const DataComponent = userConfig.chartType === 'area' ? Area : userConfig.chartType === 'bar' ? Bar : Line;
-
-    return (
-      <Card 
-        title={
-          <Space>
-            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-            Inflow vs Outflow (Footfall vs Time)
-            <Text type="secondary" style={{ fontSize: '12px' }}>({flowData.length} data points)</Text>
-          </Space>
-        } 
-        size={userConfig.compactMode ? 'small' : 'default'}
-        bodyStyle={{ padding: '24px' }}
-      >
-        <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
-          <ChartComponent data={flowData} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="timestamp" stroke="#8c8c8c" />
-            <YAxis stroke="#8c8c8c" />
-            <RechartsTooltip />
-            <Legend />
-            {userConfig.chartType === 'bar' ? (
-              <>
-                <Bar dataKey="inflow" fill="#1890ff" name="Inflow" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="outflow" fill="#ff4d4f" name="Outflow" radius={[4, 4, 0, 0]} />
-              </>
-            ) : (
-              <>
-                <DataComponent type="monotone" dataKey="inflow" stroke="#1890ff" fill="#1890ff" strokeWidth={2} name="Inflow" dot={false} />
-                <DataComponent type="monotone" dataKey="outflow" stroke="#ff4d4f" fill="#ff4d4f" strokeWidth={2} name="Outflow" dot={false} />
-              </>
-            )}
-          </ChartComponent>
-        </ResponsiveContainer>
-      </Card>
-    );
-  };
+  // 2. ✅ FIXED: Inflow vs Outflow - Always show "No data"
+const renderInflowOutflow = () => {
+  return (
+    <Card 
+      title={
+        <Space>
+          {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+          Inflow vs Outflow (Footfall vs Time)
+        </Space>
+      } 
+      size={userConfig.compactMode ? 'small' : 'default'}
+      bodyStyle={{ padding: '24px' }}
+    >
+      <Alert 
+        message="System is not yet Live" 
+        
+        type="info" 
+        showIcon 
+      />
+    </Card>
+  );
+};
 
   const renderCounterStatus = () => {
     if (counterStatus.length === 0) {
@@ -944,476 +988,278 @@ const CafeteriaAnalyticsDashboard: React.FC<{
     );
   };
 
-  const renderDwellTime = () => {
-    // ✅ VERIFIED: Uses real API data from dwellTimeData
-    if (dwellTimeData.length === 0 && !loadingCounterDwell) {
-      return (
-        <Card 
-          title={
-            <Space>
-              {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-              <ClockCircleOutlined />
-              <span>Wait Time Distribution (Time vs Counters FootFall)</span>
-            </Space>
-          }
-          size={userConfig.compactMode ? 'small' : 'default'}
-          style={{ height: '100%' }}
-          bodyStyle={{ padding: '24px' }}
-        >
-          <Alert message="No dwell time data available" type="info" showIcon />
-        </Card>
-      );
-    }
-    
-    const COLORS = ['#1890ff', '#40a9ff', '#69c0ff', '#91d5ff', '#bae7ff'];
-
-    // ✅ NEW: Extract minute value from backend format
-    // Backend returns: "2 min", "5 min", "10 min", etc.
-    // We extract just the number for Y-axis display
-    const transformedData = dwellTimeData.map(item => {
-      // Extract minute number from format like "2 min", "5 min", "10 min"
-      const minuteMatch = item.timeRange.match(/^(\d+)/);
-      const minutes = minuteMatch ? minuteMatch[1] : '0';
-      
-      return {
-        ...item,
-        displayLabel: minutes, // Just the number for Y-axis
-        minuteValue: parseInt(minutes), // For sorting
-        originalRange: item.timeRange, // Keep original for tooltip
-      };
-    }).sort((a, b) => a.minuteValue - b.minuteValue); // Sort by minute value
-
+ const renderDwellTime = () => {
+  // =========================
+  // EMPTY STATE
+  // =========================
+  if (dwellTimeData.length === 0 && !loadingCounterDwell) {
     return (
-      <Card 
+      <Card
         title={
           <Space>
             {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
             <ClockCircleOutlined />
             <span>Wait Time Distribution (Time vs Counters FootFall)</span>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              ({dwellTimeData.length} time points)
-              {selectedDwellCounter !== 'all' && ` - ${selectedDwellCounter}`}
-            </Text>
-          </Space>
-        }
-        extra={
-          <Space>
-            <Select
-              value={selectedDwellCounter}
-              onChange={setSelectedDwellCounter}
-              style={{ width: 220 }}
-              size="small"
-              loading={loadingCounterDwell}
-            >
-              <Option value="all">All Counters</Option>
-              {availableCounters.map(counter => (
-                <Option key={counter} value={counter}>
-                  {counter}
-                </Option>
-              ))}
-            </Select>
-            {selectedDwellCounter !== 'all' && (
-              <Tooltip title="Reset to all counters">
-                <Button 
-                  size="small" 
-                  icon={<ReloadOutlined />}
-                  onClick={() => setSelectedDwellCounter('all')}
-                  loading={loadingCounterDwell}
-                />
-              </Tooltip>
-            )}
           </Space>
         }
         size={userConfig.compactMode ? 'small' : 'default'}
-        style={{ height: '100%' }}
-        bodyStyle={{ padding: '24px' }}
+        bodyStyle={{ padding: 24 }}
       >
-        {loadingCounterDwell ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <Spin tip={`Loading dwell time for ${selectedDwellCounter}...`} />
-          </div>
-        ) : (
-          <>
-            {selectedDwellCounter !== 'all' && counterDwellTimeData?.stats && (
-              <div style={{ marginBottom: 16 }}>
-                <Row gutter={[16, 16]}>
-                  <Col span={6}>
-                    <Statistic 
-                      title="Total Visitors" 
-                      value={counterDwellTimeData.stats.totalVisitors}
-                      prefix={<TeamOutlined />}
-                      valueStyle={{ fontSize: '18px' }}
-                    />
-                  </Col>
-                  <Col span={6}>
-                    <Statistic 
-                      title="Avg Wait" 
-                      value={counterDwellTimeData.stats.avgWaitTime.toFixed(1)}
-                      suffix="min"
-                      valueStyle={{ fontSize: '18px', color: '#1890ff' }}
-                    />
-                  </Col>
-                  <Col span={6}>
-                    <Statistic 
-                      title="Min-Max Wait" 
-                      value={`${counterDwellTimeData.stats.minWaitTime}-${counterDwellTimeData.stats.maxWaitTime}`}
-                      suffix="min"
-                      valueStyle={{ fontSize: '18px', color: '#52c41a' }}
-                    />
-                  </Col>
-                  <Col span={6}>
-                    <div>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>Most Common</Text>
-                      <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#fa8c16' }}>
-                        {counterDwellTimeData.stats.mostCommonWaitTime}
-                      </div>
-                    </div>
-                  </Col>
-                </Row>
-                <Divider style={{ margin: '16px 0' }} />
-              </div>
-            )}
-            
-            {userConfig.dwellTimeChartType === 'bar' ? (
-              <ResponsiveContainer width="100%" height={userConfig.compactMode ? 280 : 340}>
-                <BarChart data={transformedData} layout="vertical" margin={{ left: 5, right: 40, top: 10, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis type="number" stroke="#8c8c8c" label={{ value: 'Number of People', position: 'insideBottom', offset: -5 }} />
-                  <YAxis 
-                    dataKey="displayLabel" 
-                    type="category" 
-                    stroke="#8c8c8c" 
-                    width={40}
-                    label={{ value: 'Minutes', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                  />
-                  <RechartsTooltip 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div style={{
-                            backgroundColor: 'white',
-                            padding: '10px 14px',
-                            border: '1px solid #d9d9d9',
-                            borderRadius: '6px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                          }}>
-                            <div style={{ fontWeight: 'bold', marginBottom: '6px', fontSize: '14px' }}>
-                              Wait Time: {data.originalRange}
-                            </div>
-                            <div style={{ color: '#1890ff', marginBottom: '2px' }}>
-                              👥 {data.count} people
-                            </div>
-                            <div style={{ color: '#52c41a', fontSize: '12px' }}>
-                              📊 {data.percentage.toFixed(1)}% of total
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]} name="count" barSize={20}>
-                    {transformedData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <Row gutter={16} align="middle" style={{ height: '100%' }}>
-                <Col span={12}>
-                  <ResponsiveContainer width="100%" height={userConfig.compactMode ? 200 : 260}>
-                    <PieChart>
-                      <Pie
-                        data={transformedData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={userConfig.compactMode ? 40 : 60}
-                        outerRadius={userConfig.compactMode ? 70 : 90}
-                        dataKey="count"
-                        paddingAngle={2}
-                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                      >
-                        {transformedData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip 
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            return (
-                              <div style={{
-                                backgroundColor: 'white',
-                                padding: '10px 14px',
-                                border: '1px solid #d9d9d9',
-                                borderRadius: '6px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                              }}>
-                                <div style={{ fontWeight: 'bold', marginBottom: '6px', fontSize: '14px' }}>
-                                  Wait Time: {data.originalRange}
-                                </div>
-                                <div style={{ color: '#1890ff', marginBottom: '2px' }}>
-                                  👥 {data.count} people
-                                </div>
-                                <div style={{ color: '#52c41a', fontSize: '12px' }}>
-                                  📊 {data.percentage.toFixed(1)}% of total
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Col>
-                <Col span={12}>
-                  <Space direction="vertical" style={{ width: '100%' }} size="small">
-                    {transformedData.slice(0, 10).map((item, index) => (
-                      <div key={item.timeRange}>
-                        <Space style={{ marginBottom: 4 }}>
-                          <div style={{ 
-                            width: 12, 
-                            height: 12, 
-                            backgroundColor: COLORS[index % COLORS.length],
-                            borderRadius: 2 
-                          }} />
-                          <Text style={{ fontSize: 13, fontWeight: 500 }}>{item.originalRange}</Text>
-                        </Space>
-                        <div>
-                          <Text strong style={{ fontSize: 16 }}>{item.count}</Text>
-                          <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                            ({item.percentage.toFixed(1)}%)
-                          </Text>
-                        </div>
-                      </div>
-                    ))}
-                    {transformedData.length > 10 && (
-                      <Text type="secondary" style={{ fontSize: 12, fontStyle: 'italic' }}>
-                        ... and {transformedData.length - 10} more time points
-                      </Text>
-                    )}
-                  </Space>
-                </Col>
-              </Row>
-            )}
-          </>
-        )}
+        <Alert message="No wait time data available" type="info" showIcon />
       </Card>
     );
+  }
+
+  // =========================
+  // WAIT TIME BUCKET LOGIC
+  // =========================
+  const getWaitBucket = (queueLength) => {
+    if (queueLength === 0) return '0';
+    if (queueLength <= 5) return '0-5';
+    if (queueLength <= 10) return '5-10';
+    return '10-15';
   };
 
-  const renderFootfallComparison = () => {
-    // ✅ VERIFIED: Uses real API data from footfallComparison
-    if (footfallComparison.length === 0) {
-      return (
-        <Card 
-          title={
-            <Space>
-              {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-              <TeamOutlined />
-              <span>Cafeteria vs Counter Footfall Analysis (Footfall vs Time)</span>
-            </Space>
-          } 
-          size={userConfig.compactMode ? 'small' : 'default'}
-          bodyStyle={{ padding: '24px' }}
-        >
-          <Alert message="No footfall comparison data available" type="info" showIcon />
-        </Card>
-      );
-    }
+  const BUCKET_ORDER = ['0', '0-5', '5-10', '10-15'];
 
-    return (
-      <Card 
-        title={
-          <Space>
-            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-            <TeamOutlined />
-            <span>Cafeteria vs Counter Footfall Analysis (Footfall vs Time)</span>
-            <Text type="secondary" style={{ fontSize: '12px' }}>({footfallComparison.length} time slots)</Text>
-          </Space>
-        } 
-        size={userConfig.compactMode ? 'small' : 'default'}
-        bodyStyle={{ padding: '24px' }}
-      >
-        <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
-          <ComposedChart data={footfallComparison} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="timestamp" stroke="#8c8c8c" />
-            <YAxis stroke="#8c8c8c" />
-            <RechartsTooltip />
-            <Legend />
-            <Bar dataKey="cafeteriaFootfall" fill="#1890ff" name="Cafeteria Footfall" radius={[4, 4, 0, 0]} />
-            <Line type="monotone" dataKey="countersFootfall" stroke="#ff4d4f" strokeWidth={2} dot={false} name="Counters Footfall" />
-          </ComposedChart>
-        </ResponsiveContainer>
-        <div style={{ marginTop: 16 }}>
-          <Title level={5}>Smart Insights</Title>
-          <Space direction="vertical" style={{ width: '100%' }}>
-            {footfallComparison
-              .filter((item) => item.insight !== 'Normal flow')
-              .slice(0, 3)
-              .map((item, index) => (
-                <Alert
-                  key={index}
-                  message={<Space>{getInsightIcon(item.insight)}<Text strong>{item.timestamp}</Text><Text>{item.insight}</Text></Space>}
-                  type={item.insight.includes('congestion') ? 'warning' : 'info'}
-                  showIcon={false}
-                />
-              ))}
-          </Space>
-        </div>
-      </Card>
-    );
+  const bucketMap = {
+    '0': 0,
+    '0-5': 0,
+    '5-10': 0,
+    '10-15': 0,
   };
 
-  const renderOccupancyTrend = () => {
-    // ✅ VERIFIED: Uses real API data from occupancyTrendData
-    if (occupancyTrendData.length === 0) {
-      return (
-        <Card 
-          title={
-            <Space>
-              {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-              <TeamOutlined />
-              <span>Cafeteria Occupancy Trend (Footfall vs Time)</span>
-            </Space>
-          } 
-          size={userConfig.compactMode ? 'small' : 'default'}
-          bodyStyle={{ padding: '24px' }}
-        >
-          <Alert message="No occupancy trend data available" type="info" showIcon />
-        </Card>
-      );
-    }
+  // =========================
+  // AGGREGATE DATA
+  // =========================
+  dwellTimeData.forEach(item => {
+    const queueLength = item.queueLength ?? 0; // from API
+    const bucket = getWaitBucket(queueLength);
 
-    if (userConfig.occupancyTrendType === 'heatmap') {
-      const maxOccupancy = Math.max(...occupancyTrendData.map(d => d.occupancy));
-      
-      return (
-        <Card 
-          title={
-            <Space>
-              {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-              <TeamOutlined />
-              <span>Cafeteria Occupancy Trend (Footfall vs Time)</span>
-              <Text type="secondary" style={{ fontSize: '12px' }}>({occupancyTrendData.length} time slots)</Text>
-            </Space>
-          } 
-          size={userConfig.compactMode ? 'small' : 'default'}
-          bodyStyle={{ padding: '24px' }}
-        >
-          <div style={{ padding: '20px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-              <Text strong style={{ width: 80 }}>Time</Text>
-              <div style={{ flex: 1, display: 'flex', gap: 4 }}>
-                {occupancyTrendData.map((item, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      flex: 1,
-                      height: 60,
-                      backgroundColor: `rgba(24, 144, 255, ${item.occupancy / maxOccupancy})`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: item.occupancy / maxOccupancy > 0.5 ? '#fff' : '#000',
-                      fontSize: 11,
-                      fontWeight: 'bold',
-                      border: '1px solid #f0f0f0',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s',
-                    }}
-                    title={`${item.timestamp}: ${item.occupancy} people`}
-                  >
-                    {item.timestamp}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <Text strong style={{ width: 80 }}>Occupancy</Text>
-              <div style={{ flex: 1, display: 'flex', gap: 4 }}>
-                {occupancyTrendData.map((item, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      flex: 1,
-                      textAlign: 'center',
-                      fontSize: 12,
-                      fontWeight: 'bold',
-                      color: '#1890ff',
-                    }}
-                  >
-                    {item.occupancy}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-              <Text type="secondary">Low</Text>
-              <div style={{ 
-                width: 200, 
-                height: 20, 
-                background: 'linear-gradient(to right, rgba(24, 144, 255, 0.1), rgba(24, 144, 255, 1))',
-                border: '1px solid #f0f0f0'
-              }} />
-              <Text type="secondary">High</Text>
-            </div>
-          </div>
-        </Card>
-      );
-    }
+    bucketMap[bucket] += item.count ?? 1;
+  });
 
-    const useBarChart = dateFilter === 'monthly';
+  const total = Object.values(bucketMap).reduce((a, b) => a + b, 0);
 
-    return (
-      <Card 
-        title={
-          <Space>
-            {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
-            <TeamOutlined />
-            <span>Cafeteria Occupancy Trend (Footfall vs Time)</span>
-            <Text type="secondary" style={{ fontSize: '12px' }}>({occupancyTrendData.length} data points)</Text>
-          </Space>
-        } 
-        size={userConfig.compactMode ? 'small' : 'default'}
-        bodyStyle={{ padding: '24px' }}
-      >
-        <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
-          {useBarChart ? (
-            <BarChart data={occupancyTrendData} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
-              <defs>
-                <linearGradient id="colorOccupancy" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1890ff" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#1890ff" stopOpacity={0.3}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="timestamp" stroke="#8c8c8c" />
-              <YAxis stroke="#8c8c8c" />
-              <RechartsTooltip />
-              <Legend />
-              <Bar dataKey="occupancy" fill="url(#colorOccupancy)" name="Occupancy" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          ) : (
-            <LineChart data={occupancyTrendData} margin={{ left: -20, right: 20, top: 5, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="timestamp" stroke="#8c8c8c" />
-              <YAxis stroke="#8c8c8c" />
-              <RechartsTooltip />
-              <Legend />
-              <Line type="monotone" dataKey="occupancy" stroke="#1890ff" strokeWidth={2} dot={false} name="Occupancy" />
-            </LineChart>
+  const transformedData = BUCKET_ORDER.map(label => ({
+    timeRange: label,
+    originalRange: label,
+    displayLabel: label,
+    count: bucketMap[label],
+    percentage: total ? (bucketMap[label] / total) * 100 : 0,
+  }));
+
+  const COLORS = ['#1890ff', '#40a9ff', '#69c0ff', '#91d5ff'];
+
+  // =========================
+  // RENDER
+  // =========================
+  return (
+    <Card
+      title={
+        <Space>
+          {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+          <ClockCircleOutlined />
+          <span>Wait Time Distribution (Time vs Counters FootFall)</span>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            ({dwellTimeData.length} records)
+            {selectedDwellCounter !== 'all' && ` - ${selectedDwellCounter}`}
+          </Text>
+        </Space>
+      }
+      extra={
+        <Space>
+          <Select
+            value={selectedDwellCounter}
+            onChange={setSelectedDwellCounter}
+            style={{ width: 220 }}
+            size="small"
+            loading={loadingCounterDwell}
+          >
+            <Option value="all">All Counters</Option>
+            {availableCounters.map(counter => (
+              <Option key={counter} value={counter}>
+                {counter}
+              </Option>
+            ))}
+          </Select>
+
+          {selectedDwellCounter !== 'all' && (
+            <Tooltip title="Reset to all counters">
+              <Button
+                size="small"
+                icon={<ReloadOutlined />}
+                onClick={() => setSelectedDwellCounter('all')}
+                loading={loadingCounterDwell}
+              />
+            </Tooltip>
           )}
-        </ResponsiveContainer>
-      </Card>
-    );
-  };
+        </Space>
+      }
+      size={userConfig.compactMode ? 'small' : 'default'}
+      bodyStyle={{ padding: 24 }}
+    >
+      {/* =========================
+          KPIs (ONLY WHEN FILTERED)
+         ========================= */}
+      {selectedDwellCounter !== 'all' && counterDwellTimeData?.stats && (
+        <>
+          <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+            <Col span={6}>
+              <Statistic
+                title="Total Entries"
+                value={counterDwellTimeData.stats.totalVisitors}
+                prefix={<TeamOutlined />}
+                valueStyle={{ fontSize: 18 }}
+              />
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                Sum of inCount deltas
+              </Text>
+            </Col>
 
-  const renderCounterCongestionTrend = () => {
+            <Col span={6}>
+              <Statistic
+                title="Avg Wait"
+                value={counterDwellTimeData.stats.avgWaitTime.toFixed(1)}
+                suffix="min"
+                valueStyle={{ fontSize: 18, color: '#1890ff' }}
+              />
+            </Col>
+
+            <Col span={6}>
+              <Statistic
+                title="Min–Max Wait"
+                value={`${counterDwellTimeData.stats.minWaitTime}-${counterDwellTimeData.stats.maxWaitTime}`}
+                suffix="min"
+                valueStyle={{ fontSize: 18, color: '#52c41a' }}
+              />
+            </Col>
+
+            <Col span={6}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Peak Queue Length
+                </Text>
+                <div style={{ fontSize: 18, fontWeight: 'bold', color: '#fa8c16' }}>
+                  {counterDwellTimeData.stats.peakQueueLength || 0} people
+                </div>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  Max Queue Length
+                </Text>
+              </div>
+            </Col>
+          </Row>
+          <Divider style={{ margin: '16px 0' }} />
+        </>
+      )}
+
+      {/* =========================
+          CHART
+         ========================= */}
+      <ResponsiveContainer width="100%" height={userConfig.compactMode ? 280 : 340}>
+        <BarChart
+          data={transformedData}
+          layout="vertical"
+          margin={{ left: 10, right: 40, top: 10, bottom: 10 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis
+            type="number"
+            label={{ value: 'Number of People', position: 'insideBottom', offset: -5 }}
+          />
+          <YAxis
+            dataKey="displayLabel"
+            type="category"
+            width={70}
+            label={{
+              value: 'Wait Time (min)',
+              angle: -90,
+              position: 'insideLeft',
+            }}
+          />
+          <RechartsTooltip
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const d = payload[0].payload;
+                return (
+                  <div
+                    style={{
+                      background: '#fff',
+                      padding: '10px 14px',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 6,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>
+                      Wait Time: {d.originalRange}
+                    </div>
+                    <div>👥 {d.count} people</div>
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
+          <Bar dataKey="count" barSize={24} radius={[0, 4, 4, 0]}>
+            {transformedData.map((_, i) => (
+              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </Card>
+  );
+};
+
+
+
+
+ const renderFootfallComparison = () => {
+  return (
+    <Card 
+      title={
+        <Space>
+          {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+          <TeamOutlined />
+          <span>Cafeteria vs Counter Footfall Analysis (Footfall vs Time)</span>
+        </Space>
+      } 
+      size={userConfig.compactMode ? 'small' : 'default'}
+      bodyStyle={{ padding: '24px' }}
+    >
+      <Alert 
+        message="System is Not yet Live" 
+        type="info" 
+        showIcon 
+      />
+    </Card>
+  );
+};
+
+  // 3. ✅ FIXED: Occupancy Trend - Always show "No data"
+const renderOccupancyTrend = () => {
+  return (
+    <Card 
+      title={
+        <Space>
+          {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
+          <TeamOutlined />
+          <span>Cafeteria Occupancy Trend (Footfall vs Time)</span>
+        </Space>
+      } 
+      size={userConfig.compactMode ? 'small' : 'default'}
+      bodyStyle={{ padding: '24px' }}
+    >
+      <Alert 
+        message="System is Not yet Live" 
+        type="info" 
+        showIcon 
+      />
+    </Card>
+  );
+};
+
+const renderCounterCongestionTrend = () => {
   if (loadingEnhancedCongestion) {
     return (
       <Card
@@ -1428,7 +1274,7 @@ const CafeteriaAnalyticsDashboard: React.FC<{
         styles={{ body: { padding: '24px' } }}
       >
         <div style={{ textAlign: 'center', padding: '40px' }}>
-          <Spin fullscreen={false} />
+          <Spin tip="Loading enhanced congestion data..." />
         </div>
       </Card>
     );
@@ -1452,66 +1298,87 @@ const CafeteriaAnalyticsDashboard: React.FC<{
     );
   }
 
-  const transformedData = enhancedCongestionData.congestionTrend.map((item: any) => {
-    const result: any = { timestamp: item.timestamp };
+  // ✅ STEP 1: Transform ALL data (no filtering by minutes)
+  const allTransformedData = enhancedCongestionData.congestionTrend.map((item) => {
+    const result = { timestamp: item.timestamp };
 
-    Object.entries(item.counterStats || {}).forEach(([counter, stats]: [string, any]) => {
-      result[counter] = stats.maxQueue;
-      result[`${counter}_status`] = stats.status;
-      result[`${counter}_avg`] = stats.avgQueue;
-      result[`${counter}_min`] = stats.minQueue;
-      result[`${counter}_dataPoints`] = stats.dataPoints;
+    Object.entries(item.counterStats || {}).forEach(([counter, stats]) => {
+      const typedStats = stats as { maxQueue: number; status: string; avgQueue: number; minQueue: number; dataPoints: number };
+      result[counter] = typedStats.maxQueue;
+      result[`${counter}_status`] = typedStats.status;
+      result[`${counter}_avg`] = typedStats.avgQueue;
+      result[`${counter}_min`] = typedStats.minQueue;
+      result[`${counter}_dataPoints`] = typedStats.dataPoints;
     });
 
     return result;
   });
 
+  // ✅ STEP 2: Collect ALL unique counter names across ALL timestamps
+  const allCounterNames: string[] = Array.from(
+    new Set(
+      enhancedCongestionData.congestionTrend.flatMap(item => 
+        Object.keys(item.counterStats || {})
+      )
+    )
+  );
 
-  const chartData = [...transformedData];
+  // ✅ Modern vibrant gradient colors
+  const COUNTER_GRADIENTS = {
+    'Healthy Station': 'url(#healthyStationGradient)',
+    'Mini Meals': 'url(#miniMealsGradient)',
+    'Two Good': 'url(#twoGoodGradient)',
+    'Beverages': 'url(#beveragesGradient)',
+    'Snacks': 'url(#snacksGradient)',
+  };
 
-// Force X-axis to start from 12:00 PM
-if (chartData.length > 0 && chartData[0].timestamp !== '12:00') {
-  chartData.unshift({ timestamp: '12:00' });
-}
+  const COUNTER_COLORS = {
+    'Healthy Station': '#52c41a',
+    'Mini Meals': '#1890ff',
+    'Two Good': '#fa8c16',
+    'Beverages': '#722ed1',
+    'Snacks': '#eb2f96',
+  };
 
-
-  const xAxisTicks = transformedData
-  .map(d => d.timestamp)
-  .filter(time => {
-    const [hour, minute] = time.split(':').map(Number);
-
-    // start from 12:00 PM
-    if (hour < 12) return false;
-
-    // show every 15 minutes
-    return minute % 15 === 0;
+  // Assign colors to any counters not in predefined list
+  const FALLBACK_COLORS = ['#13c2c2', '#f759ab', '#fadb14', '#95de64'];
+  allCounterNames.forEach((counter, index) => {
+    const counterName = counter as string;
+    if (!COUNTER_COLORS[counterName]) {
+      const color = FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+      COUNTER_COLORS[counterName] = color;
+      COUNTER_GRADIENTS[counterName] = color;
+    }
   });
 
+  // (Removed useEffect from here. See below for new location in the main component body.)
 
-  const firstMinute = transformedData.length
-  ? parseInt(transformedData[0].timestamp.split(':')[1], 10)
-  : 0;
+  // ✅ STEP 3: Sliding window - show WINDOW_SIZE timestamps at a time
+  const totalDataPoints = allTransformedData.length;
+  const maxWindowStart = Math.max(0, totalDataPoints - WINDOW_SIZE);
+  const chartData = allTransformedData.slice(windowStart, windowStart + WINDOW_SIZE);
 
+  // Calculate X-axis ticks (show every 5th label to avoid crowding)
+  const xAxisTicks = chartData
+    .filter((_, index) => index % 5 === 0)
+    .map(item => item.timestamp);
 
-  const chartData15Min = transformedData.filter((item: any) => {
-  if (!item.timestamp) return false;
+  // ✅ Navigation handlers
+  const handlePrevious = () => {
+    setWindowStart(Math.max(0, windowStart - WINDOW_SIZE));
+  };
 
-  // timestamp format: "HH:mm"
-  const minutes = Number(item.timestamp.split(':')[1]);
+  const handleNext = () => {
+    setWindowStart(Math.min(maxWindowStart, windowStart + WINDOW_SIZE));
+  };
 
-  return minutes % 2 === 0;
-});
+  const canGoPrevious = windowStart > 0;
+  const canGoNext = windowStart < maxWindowStart;
 
-  const firstDataPoint = enhancedCongestionData.congestionTrend[0];
-  const enhancedCounterNames = firstDataPoint
-    ? Object.keys(firstDataPoint.counterStats || {})
-    : [];
-
-  const COUNTER_COLORS_PALETTE = ['#ff4d4f', '#52c41a', '#1890ff', '#faad14', '#722ed1', '#13c2c2'];
-  const COUNTER_COLORS: Record<string, string> = {};
-  enhancedCounterNames.forEach((counter, index) => {
-    COUNTER_COLORS[counter] = COUNTER_COLORS_PALETTE[index % COUNTER_COLORS_PALETTE.length];
-  });
+  console.log('📊 Total Data Points:', totalDataPoints);
+  console.log('📌 Current Window:', windowStart + 1, 'to', Math.min(windowStart + WINDOW_SIZE, totalDataPoints));
+  console.log('👥 All Counter Names:', allCounterNames);
+  console.log('👁️ Visible Counters:', visibleCounters);
 
   return (
     <Card
@@ -1520,47 +1387,296 @@ if (chartData.length > 0 && chartData[0].timestamp !== '12:00') {
           {dragEnabled && <HolderOutlined style={{ cursor: 'move', color: '#999' }} />}
           <FireOutlined />
           <span>Food Counter Congestion Trend (Peak Occupancy vs Time)</span>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            (Showing {windowStart + 1}-{Math.min(windowStart + WINDOW_SIZE, totalDataPoints)} of {totalDataPoints} timestamps)
+          </Text>
+        </Space>
+      }
+      extra={
+        <Space direction="vertical" size="small" style={{ textAlign: 'right' }}>
+          <Text strong style={{ fontSize: '12px', color: '#595959' }}>Show/Hide Counters:</Text>
+          <Space wrap>
+            {allCounterNames.map((counter: string) => (
+              <Checkbox
+                key={counter}
+                checked={visibleCounters[counter]}
+                onChange={(e) => {
+                  setVisibleCounters(prev => ({
+                    ...prev,
+                    [counter]: e.target.checked
+                  }));
+                }}
+                style={{ fontSize: '12px' }}
+              >
+                <span style={{ 
+                  color: COUNTER_COLORS[counter], 
+                  fontWeight: 'bold',
+                  marginRight: 4
+                }}>
+                  ■
+                </span>
+                {counter}
+              </Checkbox>
+            ))}
+          </Space>
         </Space>
       }
       size={userConfig.compactMode ? 'small' : 'default'}
       styles={{ body: { padding: '24px' } }}
     >
-      <ResponsiveContainer width="100%" height={userConfig.compactMode ? 250 : 300}>
-        
-        <LineChart data={chartData15Min}>
-         <CartesianGrid vertical={false} horizontal={false} />
-        <XAxis
-  dataKey="timestamp"
-  ticks={xAxisTicks}
-  interval={0}
-  tickLine={false}
-  axisLine={false}
-/>
+      {/* ✅ Sliding Window Controls */}
+      <div style={{ 
+        marginBottom: 16, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 12,
+        padding: '12px',
+        background: '#fafafa',
+        borderRadius: '6px',
+        border: '1px solid #f0f0f0'
+      }}>
+        <Button 
+          icon={<LeftOutlined />} 
+          onClick={handlePrevious}
+          disabled={!canGoPrevious}
+          size="small"
+        >
+          Previous
+        </Button>
+        <Slider
+          min={0}
+          max={maxWindowStart}
+          value={windowStart}
+          onChange={setWindowStart}
+          step={WINDOW_SIZE}
+          style={{ flex: 1 }}
+          tooltip={{ 
+            formatter: (value) => `${value + 1}-${Math.min(value + WINDOW_SIZE, totalDataPoints)}`
+          }}
+        />
+        <Button 
+          icon={<RightOutlined />} 
+          onClick={handleNext}
+          disabled={!canGoNext}
+          size="small"
+        >
+          Next
+        </Button>
+      </div>
 
+      <ResponsiveContainer width="100%" height={userConfig.compactMode ? 300 : 400}>
+        <BarChart data={chartData} margin={{ left: 10, right: 30, top: 5, bottom: 60 }}>
+          {/* ✅ Modern vibrant gradients */}
+          <defs>
+            <linearGradient id="healthyStationGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#73d13d" stopOpacity={0.9} />
+              <stop offset="100%" stopColor="#95de64" stopOpacity={0.7} />
+            </linearGradient>
+            <linearGradient id="miniMealsGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#40a9ff" stopOpacity={0.9} />
+              <stop offset="100%" stopColor="#69c0ff" stopOpacity={0.7} />
+            </linearGradient>
+            <linearGradient id="twoGoodGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ffa940" stopOpacity={0.9} />
+              <stop offset="100%" stopColor="#ffc069" stopOpacity={0.7} />
+            </linearGradient>
+            <linearGradient id="beveragesGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#9254de" stopOpacity={0.9} />
+              <stop offset="100%" stopColor="#b37feb" stopOpacity={0.7} />
+            </linearGradient>
+            <linearGradient id="snacksGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ff4d4f" stopOpacity={0.9} />
+              <stop offset="100%" stopColor="#ff7875" stopOpacity={0.7} />
+            </linearGradient>
+          </defs>
+          
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          
+          <XAxis
+            dataKey="timestamp"
+            ticks={xAxisTicks}
+            interval={0}
+            stroke="#8c8c8c"
+            tick={{ fontSize: 10, fontWeight: 300 }}
+            tickLine={{ stroke: '#d9d9d9' }}
+            axisLine={{ stroke: '#d9d9d9' }}
+            angle={-45}
+            textAnchor="end"
+            height={60}
+          />
 
-
-
-          <YAxis />
-          <RechartsTooltip />
-          <Legend />
-          {enhancedCounterNames.map(counter => (
-            <Line
+          <YAxis 
+            stroke="#8c8c8c"
+            tick={{ fontSize: 11, fontWeight: 300 }}
+            label={{ 
+              value: 'Peak Occupancy (people)', 
+              angle: -90, 
+              position: 'insideLeft',
+              style: { fontSize: 12, fill: '#595959', fontWeight: 400 }
+            }}
+          />
+          
+          {/* ✅ Clean white tooltip with light font */}
+          <RechartsTooltip
+            cursor={{ fill: 'rgba(0, 0, 0, 0.02)' }}
+            contentStyle={{
+              backgroundColor: '#ffffff',
+              border: '1px solid #e8e8e8',
+              borderRadius: '8px',
+              padding: '12px',
+              boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            }}
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const data = payload[0].payload;
+                return (
+                  <div>
+                    <div style={{ 
+                      fontWeight: '500', 
+                      marginBottom: '8px', 
+                      fontSize: '13px',
+                      color: '#262626',
+                      borderBottom: '1px solid #f0f0f0',
+                      paddingBottom: '6px',
+                    }}>
+                      🕐 {data.timestamp}
+                    </div>
+                    {allCounterNames.map((counter: string) => {
+                      if (!visibleCounters[counter]) return null;
+                      
+                      const maxQueue = data[counter];
+                      if (maxQueue === undefined || maxQueue === null) return null;
+                      
+                      const avgQueue = data[`${counter}_avg`];
+                      const status = data[`${counter}_status`];
+                      
+                      return (
+                        <div key={counter} style={{ 
+                          marginTop: '6px',
+                          fontSize: '12px',
+                          color: '#595959',
+                          fontWeight: '300',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '10px',
+                            height: '10px',
+                            backgroundColor: COUNTER_COLORS[counter],
+                            borderRadius: '2px',
+                          }}></span>
+                          <span style={{ fontWeight: '400', color: '#262626', flex: 1 }}>{counter}</span>
+                          <span style={{ fontWeight: '600', color: COUNTER_COLORS[counter] }}>{maxQueue}</span>
+                          <span style={{ color: '#8c8c8c', fontSize: '11px', fontWeight: '300' }}>
+                            avg: {avgQueue?.toFixed(1)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
+          
+          <Legend 
+            wrapperStyle={{ fontSize: '12px', paddingTop: '10px', fontWeight: 300 }}
+            iconType="rect"
+          />
+          
+          {/* ✅ Bars with vibrant gradients */}
+          {allCounterNames.map((counter) => (
+            <Bar
               key={counter}
-              type="monotone"
               dataKey={counter}
-              stroke={COUNTER_COLORS[counter]}
+              fill={COUNTER_GRADIENTS[counter] || COUNTER_COLORS[counter]}
+              name={counter}
               hide={!visibleCounters[counter]}
-              dot={false}
+              radius={[8, 8, 0, 0]}
+              maxBarSize={45}
             />
           ))}
-
-          
-        </LineChart>
+        </BarChart>
       </ResponsiveContainer>
+
+      {/* ✅ Summary Statistics Panel */}
+      <div style={{ 
+        marginTop: 20, 
+        padding: '16px', 
+        background: '#fafafa', 
+        borderRadius: '8px',
+        border: '1px solid #f0f0f0'
+      }}>
+        <Title level={5} style={{ marginBottom: 12, fontWeight: 500 }}>
+          Counter Statistics (Current View)
+        </Title>
+        <Row gutter={[16, 16]}>
+          {allCounterNames.map(counter => {
+            if (!visibleCounters[counter]) return null;
+            
+            const counterData = chartData
+              .map(item => item[counter])
+              .filter(val => val !== undefined && val !== null && val > 0);
+            
+            if (counterData.length === 0) return null;
+            
+            const maxOccupancy = Math.max(...counterData);
+            const avgOccupancy = counterData.reduce((a, b) => a + b, 0) / counterData.length;
+            const minOccupancy = Math.min(...counterData);
+            
+            return (
+              <Col key={counter} xs={24} sm={12} md={8} lg={6}>
+                <Card size="small" style={{ 
+                  borderLeft: `4px solid ${COUNTER_COLORS[counter]}`,
+                  background: 'white'
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <Text strong style={{ 
+                      color: COUNTER_COLORS[counter],
+                      fontSize: '14px',
+                      display: 'block',
+                      marginBottom: 8,
+                      fontWeight: 500
+                    }}>
+                      {counter}
+                    </Text>
+                    <Row gutter={8}>
+                      <Col span={8}>
+                        <Statistic 
+                          title={<Text style={{ fontSize: '11px', fontWeight: 300 }}>Peak</Text>}
+                          value={maxOccupancy} 
+                          valueStyle={{ fontSize: '18px', color: '#ff4d4f', fontWeight: 600 }}
+                        />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic 
+                          title={<Text style={{ fontSize: '11px', fontWeight: 300 }}>Avg</Text>}
+                          value={avgOccupancy.toFixed(1)} 
+                          valueStyle={{ fontSize: '18px', color: '#1890ff', fontWeight: 600 }}
+                        />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic 
+                          title={<Text style={{ fontSize: '11px', fontWeight: 300 }}>Min</Text>}
+                          value={minOccupancy} 
+                          valueStyle={{ fontSize: '18px', color: '#52c41a', fontWeight: 600 }}
+                        />
+                      </Col>
+                    </Row>
+                  </div>
+                </Card>
+              </Col>
+            );
+          })}
+        </Row>
+      </div>
     </Card>
   );
 };
-
 
   const renderWeeklyHeatmap = () => {
     if (weeklyHeatmapData.length === 0) return (
@@ -1958,6 +2074,28 @@ if (chartData.length > 0 && chartData[0].timestamp !== '12:00') {
           <Col>
             <Space size="middle">
               <Title level={2} style={{ margin: 0 }}>Cafeteria Congestion Analytics Dashboard</Title>
+              {/* ✅ ADD: WebSocket Connection Indicator */}
+              {wsConnected ? (
+                <Badge 
+                  status="processing" 
+                  text="Live Updates Active" 
+                  style={{ 
+                    fontSize: '12px', 
+                    color: '#52c41a',
+                    fontWeight: 500 
+                  }} 
+                />
+              ) : (
+                <Badge 
+                  status="default" 
+                  text="Offline" 
+                  style={{ 
+                    fontSize: '12px', 
+                    color: '#999',
+                    fontWeight: 500 
+                  }} 
+                />
+              )}
             </Space>
           </Col>
           <Col>
@@ -2245,3 +2383,12 @@ if (chartData.length > 0 && chartData[0].timestamp !== '12:00') {
 };
 
 export default CafeteriaAnalyticsDashboard;
+// Replace the stub function at the bottom with the proper React import
+// The useCallback is already being used correctly in the component above.
+// The stub function at the end should be removed since React's useCallback is imported at the top.
+
+// Simply remove these lines:
+// function useCallback(arg0: (update: any) => void, arg1: undefined[]) {
+//   throw new Error('Function not implemented.');
+// }
+

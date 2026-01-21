@@ -436,50 +436,64 @@ export class CafeteriaApiService {
     }
   }
 
-  static async getDwellTimeByCounter(
-    tenantCode: string,
-    cafeteriaCode: string,
-    counterName: string,
-    timeFilter: 'daily' | 'weekly' | 'monthly' = 'daily',
-    timeRange?: number
-  ): Promise<{
-    counterName: string;
-    dwellTimeData: DwellTimeData[];
-    stats: {
-      totalVisitors: number;
-      avgWaitTime: number;
-      minWaitTime: number;
-      maxWaitTime: number;
-      mostCommonWaitTime: string;
+  // In CafeteriaApiService.ts - Update the interface around line 110
+
+static async getDwellTimeByCounter(
+  tenantCode: string,
+  cafeteriaCode: string,
+  counterName: string,
+  timeFilter: 'daily' | 'weekly' | 'monthly' = 'daily',
+  timeRange?: number
+): Promise<{
+  counterName: string;
+  dwellTimeData: DwellTimeData[];
+  stats: {
+    totalVisitors: number;
+    avgWaitTime: number;
+    minWaitTime: number;
+    maxWaitTime: number;
+    mostCommonWaitTime: string;
+    peakQueueLength: number;  // ✅ Made required, not optional
+  };
+  timestamp: string;
+}> {
+  try {
+    const params: any = { timeFilter };
+    if (timeRange) params.timeRange = timeRange;
+
+    console.log('📡 Fetching counter-specific dwell time:', { tenantCode, cafeteriaCode, counterName, params });
+
+    const response = await apiClient.get(
+      `/cafeteria/dashboard/${tenantCode}/${cafeteriaCode}/dwell-time/${encodeURIComponent(counterName)}`,
+      { params }
+    );
+
+    console.log('📥 Raw counter dwell time response:', response.data);
+    console.log('🔍 Peak queue length from API:', response.data.stats?.peakQueueLength);
+
+    const transformed = {
+      counterName: response.data.counterName,
+      dwellTimeData: transformDwellTimeData(response.data.dwellTimeData || []),
+      stats: {
+        totalVisitors: response.data.stats?.totalVisitors || 0,
+        avgWaitTime: response.data.stats?.avgWaitTime || 0,
+        minWaitTime: response.data.stats?.minWaitTime || 0,
+        maxWaitTime: response.data.stats?.maxWaitTime || 0,
+        mostCommonWaitTime: response.data.stats?.mostCommonWaitTime || 'No data',
+        peakQueueLength: response.data.stats?.peakQueueLength || 0,
+      },
+      timestamp: response.data.timestamp
     };
-    timestamp: string;
-  }> {
-    try {
-      const params: any = { timeFilter };
-      if (timeRange) params.timeRange = timeRange;
 
-      console.log('📡 Fetching counter-specific dwell time:', { tenantCode, cafeteriaCode, counterName, params });
+    console.log('✅ Transformed counter dwell time data:', transformed);
+    console.log('✅ Peak queue length after transform:', transformed.stats.peakQueueLength);
 
-      const response = await apiClient.get(
-        `/cafeteria/dashboard/${tenantCode}/${cafeteriaCode}/dwell-time/${encodeURIComponent(counterName)}`,
-        { params }
-      );
-
-      console.log('📥 Raw counter dwell time response:', response.data);
-
-      const transformed = {
-        ...response.data,
-        dwellTimeData: transformDwellTimeData(response.data.dwellTimeData || []),
-      };
-
-      console.log('✅ Transformed counter dwell time data:', transformed);
-
-      return transformed;
-    } catch (error: any) {
-      console.error('❌ Counter Dwell Time API Error:', error);
-      throw new Error(error.response?.data?.message || 'Failed to fetch counter dwell time');
-    }
+    return transformed;
+  } catch (error: any) {
+    console.error('❌ Counter Dwell Time API Error:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch counter dwell time');
   }
+}
 
   static async getEnhancedCongestion(
     tenantCode: string,
