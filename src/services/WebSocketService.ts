@@ -26,7 +26,7 @@ class WebSocketService {
 
     // ✅ Use native WebSocket (no SockJS)
     this.stompClient = new Client({
-      brokerURL: 'ws://localhost:8080/ws-cafeteria/websocket',
+      brokerURL: 'ws://45.79.121.181:8085/ws-cafeteria/websocket',
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
