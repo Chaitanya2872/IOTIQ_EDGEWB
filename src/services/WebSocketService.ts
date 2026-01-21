@@ -9,6 +9,7 @@ interface LiveUpdateMessage {
   updateType: 'counter_update' | 'occupancy_update' | 'full_update';
 }
 
+
 class WebSocketService {
   private stompClient: Client | null = null;
   private isConnected: boolean = false;
@@ -34,6 +35,10 @@ class WebSocketService {
         console.log('🔍 STOMP Debug:', str);
       },
     });
+
+    //test
+
+
 
     this.stompClient.onConnect = () => {
       console.log('✅ WebSocket Connected to cafeteria:', cafeteriaCode);
@@ -85,6 +90,7 @@ class WebSocketService {
       }
     }
   }
+
 
   disconnect(): void {
     if (this.stompClient && this.isConnected) {
