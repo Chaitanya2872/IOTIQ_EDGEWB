@@ -16,7 +16,7 @@ const COUNTERS = [
   'Healthy Station Counter',
 ];
 
-const CAFETERIA_CAPACITY = 500;
+const CAFETERIA_CAPACITY = 590;
 
 // ============================================
 // HELPER FUNCTIONS
