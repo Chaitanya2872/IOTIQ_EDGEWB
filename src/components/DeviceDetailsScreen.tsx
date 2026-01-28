@@ -29,7 +29,7 @@ import {
   Card,
   LoadingSpinner,
   ErrorState,
-} from "./UIComponents";
+} from "./UIcomponents";
 import {
   LineChart,
   Line,
