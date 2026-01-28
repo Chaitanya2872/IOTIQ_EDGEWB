@@ -61,7 +61,7 @@ const DeviceDetailsScreen = lazy(
   () => import("./components/DeviceDetailsScreen"),
 );
 const LocationManagementScreen = lazy(
-  () => import("./components/Locationmanagementscreen"),
+  () => import("./components/LocationManagementScreen"),
 );
 const SegmentManagementScreen = lazy(
   () => import("./components/SegmentManagementScreen"),
