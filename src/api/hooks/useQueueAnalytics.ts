@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 
-const API_BASE_URL =
-  import.meta.env.REACT_APP_API_BASE_URL || "http://localhost:8091";
+const API_BASE_URL = import.meta.env.VITE_DEVICE_API_BASE_URL;
 
 // Queue Analytics Types
 export interface QueueTrendDTO {
