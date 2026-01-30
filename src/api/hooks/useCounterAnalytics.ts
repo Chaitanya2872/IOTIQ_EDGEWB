@@ -243,7 +243,7 @@ export function useCounterQueueTrends() {
       if (options?.interval) params.append("interval", options.interval);
 
       const queryString = params.toString();
-      const url = `/api/counter-analytics/counter/${counterCode}/trends${queryString ? `?${queryString}` : ""}`;
+      const url = `/counter-analytics/counter/${counterCode}/trends${queryString ? `?${queryString}` : ""}`;
 
       return await api.execute(url);
     },
@@ -291,7 +291,7 @@ export function useHistoricalQueueTrends() {
         params.append("granularity", options.granularity);
 
       const queryString = params.toString();
-      const url = `/api/counter-analytics/counter/${counterCode}/historical-trends${queryString ? `?${queryString}` : ""}`;
+      const url = `/counter-analytics/counter/${counterCode}/historical-trends${queryString ? `?${queryString}` : ""}`;
 
       return await api.execute(url);
     },
@@ -309,7 +309,7 @@ export function useCurrentDayKPIs() {
 
   const fetchCurrentDayKPIs = useCallback(
     async (counterCode: string) => {
-      const url = `/api/counter-analytics/counter/${counterCode}/current-day-kpis`;
+      const url = `/counter-analytics/counter/${counterCode}/current-day-kpis`;
       return await api.execute(url);
     },
     [api],
@@ -338,7 +338,7 @@ export function useWeeklyPeakQueue() {
       if (options?.endDate) params.append("endDate", options.endDate);
 
       const queryString = params.toString();
-      const url = `/api/counter-analytics/${counterCode}/weekly-peak-queue${queryString ? `?${queryString}` : ""}`;
+      const url = `/counter-analytics/${counterCode}/weekly-peak-queue${queryString ? `?${queryString}` : ""}`;
 
       return await api.execute(url);
     },
@@ -389,7 +389,7 @@ export function useCounterComparison() {
       if (options?.filterType) params.append("filterType", options.filterType);
 
       return await api.execute(
-        `/api/counter-analytics/compare?${params.toString()}`,
+        `/counter-analytics/compare?${params.toString()}`,
       );
     },
     [api],
@@ -428,7 +428,7 @@ export function useHistoricCounterTrends() {
       if (options?.groupBy) params.append("groupBy", options.groupBy);
 
       return await api.execute(
-        `/api/counter-analytics/historic-trends?${params.toString()}`,
+        `/counter-analytics/historic-trends?${params.toString()}`,
       );
     },
     [api],
@@ -454,7 +454,7 @@ export function useCounterPerformance() {
       if (options?.endTime) params.append("endTime", options.endTime);
 
       const queryString = params.toString();
-      const url = `/api/counter-analytics/counter/${counterCode}/performance${queryString ? `?${queryString}` : ""}`;
+      const url = `/counter-analytics/counter/${counterCode}/performance${queryString ? `?${queryString}` : ""}`;
 
       return await api.execute(url);
     },
@@ -480,7 +480,7 @@ export function useCountersSummary() {
       if (options?.endTime) params.append("endTime", options.endTime);
 
       const queryString = params.toString();
-      const url = `/api/counter-analytics/summary${queryString ? `?${queryString}` : ""}`;
+      const url = `/counter-analytics/summary${queryString ? `?${queryString}` : ""}`;
 
       return await api.execute(url);
     },
@@ -506,7 +506,7 @@ export function useLiveCounterStatus() {
       }
 
       const queryString = params.toString();
-      const url = `/api/counter-analytics/live-status${queryString ? `?${queryString}` : ""}`;
+      const url = `/counter-analytics/live-status${queryString ? `?${queryString}` : ""}`;
 
       return await api.execute(url);
     },
@@ -558,7 +558,7 @@ export function useOccupancyTrends() {
       if (options?.interval) params.append("interval", options.interval);
 
       const queryString = params.toString();
-      const url = `/api/counter-analytics/counter/${counterCode}/occupancy-trends${queryString ? `?${queryString}` : ""}`;
+      const url = `/counter-analytics/counter/${counterCode}/occupancy-trends${queryString ? `?${queryString}` : ""}`;
 
       return await api.execute(url);
     },
@@ -590,7 +590,7 @@ export function useFootfallSummary() {
       }
 
       const queryString = params.toString();
-      const url = `/api/counter-analytics/footfall-summary${queryString ? `?${queryString}` : ""}`;
+      const url = `/counter-analytics/footfall-summary${queryString ? `?${queryString}` : ""}`;
 
       return await api.execute(url);
     },
