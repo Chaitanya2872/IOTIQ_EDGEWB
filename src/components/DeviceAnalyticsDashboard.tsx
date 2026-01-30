@@ -719,11 +719,20 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
     periodFilter, // UPDATED: Important dependency
   ]);
 
+  // FIXED: Footfall summary now loads automatically for selected counter
+  useEffect(() => {
+    if (activeTab === "individual" && selectedCounter) {
+      // Automatically fetch footfall for the currently selected counter
+      footfallSummary.fetchFootfallSummary(selectedCounter);
+    }
+  }, [activeTab, selectedCounter]);
+
+  // Separate effect for multi-counter footfall selection
   useEffect(() => {
     if (activeTab === "individual" && footfallCounters.length > 0) {
       footfallSummary.fetchFootfallSummary(footfallCounters);
     }
-  }, [activeTab, footfallCounters]);
+  }, [footfallCounters]);
 
   // FIXED: Replace the aggregateDataByPeriod useMemo with this version
 
@@ -1019,6 +1028,9 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
         startDate,
         endDate,
       });
+
+      // FIXED: Also refresh footfall summary on refresh
+      footfallSummary.fetchFootfallSummary(selectedCounter);
     }
   };
 
@@ -1928,9 +1940,9 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                   >
                     Footfall Summary
                   </h3>
-                  {footfallCounters.length === 0 && (
+                  {footfallCounters.length > 0 && (
                     <div style={{ fontSize: 11, color: "#94A3B8" }}>
-                      Select counters above
+                      {footfallCounters.length} counter(s)
                     </div>
                   )}
                 </div>
@@ -1949,7 +1961,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                       }}
                     />
                   </div>
-                ) : footfallCounters.length > 0 && footfallSummary.data ? (
+                ) : footfallSummary.data ? (
                   <div style={{ overflowX: "auto" }}>
                     <table
                       style={{ width: "100%", borderCollapse: "collapse" }}
@@ -2113,9 +2125,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                       fontSize: 13,
                     }}
                   >
-                    {footfallCounters.length === 0
-                      ? "Select counters from the dropdown to view footfall data"
-                      : "No footfall data available for selected counters"}
+                    No footfall data available
                   </div>
                 )}
               </EnterpriseCard>
