@@ -40,7 +40,7 @@ import {
   useLiveCounterStatus,
   useOccupancyTrends,
   useFootfallSummary,
-  useHistoricalQueueTrends,
+  useWeeklyPeakQueue, // UPDATED: Using new hook
 } from "../api/hooks/useCounterAnalytics";
 import { DateRangeFilter } from "./DateFilterComponent";
 import { ChartTypeSelector, DynamicChart } from "./ChartComponents";
@@ -327,33 +327,6 @@ const ChartContainer: React.FC<{
   </EnterpriseCard>
 );
 
-const GranularitySelector: React.FC<{
-  selectedGranularity: "hour" | "day" | "week" | "month";
-  onGranularityChange: (granularity: "hour" | "day" | "week" | "month") => void;
-}> = ({ selectedGranularity, onGranularityChange }) => (
-  <div style={{ display: "flex", gap: 8 }}>
-    {["hour", "day", "week", "month"].map((gran) => (
-      <button
-        key={gran}
-        onClick={() => onGranularityChange(gran as any)}
-        style={{
-          padding: "6px 12px",
-          borderRadius: 6,
-          border: "none",
-          fontSize: 11,
-          fontWeight: selectedGranularity === gran ? 600 : 500,
-          color: selectedGranularity === gran ? "#FFFFFF" : "#64748B",
-          background: selectedGranularity === gran ? "#3B82F6" : "#F1F5F9",
-          cursor: "pointer",
-          textTransform: "capitalize",
-        }}
-      >
-        {gran}
-      </button>
-    ))}
-  </div>
-);
-
 const CounterMultiSelect: React.FC<{
   counters: any[];
   selectedCounters: string[];
@@ -433,7 +406,7 @@ const CounterMultiSelect: React.FC<{
                 onChange={() => toggleCounter(counter.counterCode)}
                 style={{ cursor: "pointer" }}
               />
-              <span>{counter.counterName}</span>
+              <span>{counter.counterCode}</span>
             </label>
           ))}
         </div>
@@ -617,12 +590,15 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
   const [selectedCounter, setSelectedCounter] = useState<string>("");
   const [selectedCounters, setSelectedCounters] = useState<string[]>([]);
   const [footfallCounters, setFootfallCounters] = useState<string[]>([]);
-  const [historicalGranularity, setHistoricalGranularity] = useState<
-    "hour" | "day" | "week" | "month"
-  >("day");
-  const [historicalChartType, setHistoricalChartType] = useState<
-    "line" | "area" | "bar"
-  >("area");
+
+  // UPDATED: New state for period filter and metric selection
+  const [periodFilter, setPeriodFilter] = useState<
+    "daily" | "weekly" | "monthly"
+  >("daily");
+  const [selectedMetric, setSelectedMetric] = useState<
+    "footfall" | "congestion" | "peakQueue" | "peakWaitTime"
+  >("peakQueue");
+
   const [dateRange, setDateRange] = useState("last30");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -639,7 +615,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
   const liveCounterStatus = useLiveCounterStatus();
   const occupancyTrends = useOccupancyTrends();
   const footfallSummary = useFootfallSummary();
-  const historicalTrends = useHistoricalQueueTrends();
+  const weeklyPeakQueue = useWeeklyPeakQueue(); // UPDATED: New hook
 
   useEffect(() => {
     const fetchLiveData = () => {
@@ -676,6 +652,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
     }
   }, [liveCounterStatus.data]);
 
+  // UPDATED: Enhanced useEffect for data fetching based on period filter
   useEffect(() => {
     if (selectedCounter && activeTab === "individual") {
       const { startTime, endTime } = calculateDateRange(
@@ -683,20 +660,54 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
         customStartDate,
         customEndDate,
       );
-      historicalTrends.fetchHistoricalTrends(selectedCounter, {
-        startTime,
-        endTime,
-        granularity: historicalGranularity,
-      });
+
+      // Fetch queue trends
       counterTrends.fetchTrends(selectedCounter, {
         interval: "1hour",
         startTime,
         endTime,
       });
+
+      // Fetch occupancy trends
       occupancyTrends.fetchOccupancyTrends(selectedCounter, {
         interval: "1hour",
         startTime,
         endTime,
+      });
+
+      // UPDATED: Fetch peak queue data based on period filter
+      const today = new Date();
+      let startDate: string;
+      let endDate: string = today.toISOString().split("T")[0];
+
+      switch (periodFilter) {
+        case "daily":
+          // Get last 7 days for daily view
+          const weekAgo = new Date(today);
+          weekAgo.setDate(today.getDate() - 6);
+          startDate = weekAgo.toISOString().split("T")[0];
+          break;
+        case "weekly":
+          // Get last 4 weeks (28 days) for weekly view
+          const fourWeeksAgo = new Date(today);
+          fourWeeksAgo.setDate(today.getDate() - 27);
+          startDate = fourWeeksAgo.toISOString().split("T")[0];
+          break;
+        case "monthly":
+          // Get last 6 months for monthly view
+          const sixMonthsAgo = new Date(today);
+          sixMonthsAgo.setMonth(today.getMonth() - 5);
+          startDate = sixMonthsAgo.toISOString().split("T")[0];
+          break;
+        default:
+          const defaultWeekAgo = new Date(today);
+          defaultWeekAgo.setDate(today.getDate() - 6);
+          startDate = defaultWeekAgo.toISOString().split("T")[0];
+      }
+
+      weeklyPeakQueue.fetchWeeklyPeakQueue(selectedCounter, {
+        startDate,
+        endDate,
       });
     }
   }, [
@@ -705,7 +716,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
     dateRange,
     customStartDate,
     customEndDate,
-    historicalGranularity,
+    periodFilter, // UPDATED: Important dependency
   ]);
 
   useEffect(() => {
@@ -713,6 +724,134 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
       footfallSummary.fetchFootfallSummary(footfallCounters);
     }
   }, [activeTab, footfallCounters]);
+
+  // FIXED: Replace the aggregateDataByPeriod useMemo with this version
+
+  const aggregateDataByPeriod = useMemo(() => {
+    if (!weeklyPeakQueue.data?.data) return [];
+
+    const rawData = weeklyPeakQueue.data.data;
+
+    if (periodFilter === "daily") {
+      // Daily view: Show individual days
+      return rawData.map((item) => {
+        const dayName =
+          item.dayName.charAt(0) + item.dayName.slice(1).toLowerCase();
+        return {
+          period: dayName.substring(0, 3), // Mon, Tue, Wed
+          fullPeriod: dayName,
+          date: item.date,
+          footfall: item.totalCount,
+          congestion: item.peakCongestion?.weight || 0,
+          peakQueue: item.peakQueue,
+          peakWaitTime: item.peakWaitTime,
+          congestionLevel: item.peakCongestion?.level || "Normal",
+        };
+      });
+    } else if (periodFilter === "weekly") {
+      // Weekly view: Aggregate by ISO week number
+      const weeks = new Map<string, any>();
+
+      rawData.forEach((item) => {
+        const date = new Date(item.date);
+        // Get ISO week number
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear =
+          (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+        const weekNumber = Math.ceil(
+          (pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7,
+        );
+        const weekKey = `Week ${weekNumber}`;
+
+        if (!weeks.has(weekKey)) {
+          weeks.set(weekKey, {
+            period: weekKey,
+            fullPeriod: weekKey,
+            footfall: 0,
+            congestion: 0,
+            peakQueue: 0,
+            peakWaitTime: 0,
+            count: 0,
+            maxCongestionLevel: "Normal",
+            dates: [],
+          });
+        }
+
+        const week = weeks.get(weekKey)!;
+        week.footfall += item.totalCount;
+        week.congestion += item.peakCongestion?.weight || 0;
+        week.peakQueue = Math.max(week.peakQueue, item.peakQueue);
+        week.peakWaitTime = Math.max(week.peakWaitTime, item.peakWaitTime);
+        week.count++;
+        week.dates.push(item.date);
+
+        // Track highest congestion level
+        if (item.peakCongestion?.level === "Severe")
+          week.maxCongestionLevel = "Severe";
+        else if (
+          item.peakCongestion?.level === "Critical" &&
+          week.maxCongestionLevel !== "Severe"
+        )
+          week.maxCongestionLevel = "Critical";
+      });
+
+      return Array.from(weeks.values()).map((week) => ({
+        ...week,
+        congestion: week.congestion / week.count, // Average congestion
+        congestionLevel: week.maxCongestionLevel,
+        date: week.dates[0], // First date in week for reference
+      }));
+    } else {
+      // Monthly view: Show each day in the month with date labels
+      return rawData.map((item) => {
+        const date = new Date(item.date);
+        const dayOfMonth = date.getDate();
+        const monthName = date.toLocaleString("default", { month: "short" });
+
+        return {
+          period: `${monthName} ${dayOfMonth}`, // Jan 24, Jan 25, etc.
+          fullPeriod: `${monthName} ${dayOfMonth}, ${date.getFullYear()}`,
+          date: item.date,
+          footfall: item.totalCount,
+          congestion: item.peakCongestion?.weight || 0,
+          peakQueue: item.peakQueue,
+          peakWaitTime: item.peakWaitTime,
+          congestionLevel: item.peakCongestion?.level || "Normal",
+        };
+      });
+    }
+  }, [weeklyPeakQueue.data, periodFilter]);
+
+  // UPDATED: Helper functions for metric selection
+  const getMetricKey = () => {
+    switch (selectedMetric) {
+      case "footfall":
+        return "footfall";
+      case "congestion":
+        return "congestion";
+      case "peakQueue":
+        return "peakQueue";
+      case "peakWaitTime":
+        return "peakWaitTime";
+      default:
+        return "peakQueue";
+    }
+  };
+
+  const getMetricLabel = () => {
+    switch (selectedMetric) {
+      case "footfall":
+        return "Footfall Count";
+      case "congestion":
+        return "Congestion Rate";
+      case "peakQueue":
+        return "Peak Queue";
+      case "peakWaitTime":
+        return "Peak Wait Time (min)";
+      default:
+        return "Peak Queue";
+    }
+  };
 
   const comparisonKPIs = useMemo(() => {
     if (
@@ -793,17 +932,6 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
     });
   }, [counterTrends.data]);
 
-  const historicalTrendsData = useMemo(() => {
-    if (!historicalTrends.data?.trends) return [];
-    const rounded = roundTrendData(historicalTrends.data.trends);
-    return rounded.map((item) => ({
-      period: item.timePeriod,
-      "Average Queue": item.average_queue_length,
-      "Peak Queue": item.peak_queue,
-      "Total Queue": item.total_queue_length,
-    }));
-  }, [historicalTrends.data]);
-
   const occupancyChartData = useMemo(() => {
     if (!occupancyTrends.data?.trends) return [];
     return occupancyTrends.data.trends.map((item) => {
@@ -850,10 +978,46 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
         startTime,
         endTime,
       });
-      historicalTrends.fetchHistoricalTrends(selectedCounter, {
-        startTime,
-        endTime,
-        granularity: historicalGranularity,
+
+      // UPDATED: Refresh peak queue data based on period
+      const today = new Date();
+      let startDate: string;
+      let endDate: string = today.toISOString().split("T")[0];
+
+      switch (periodFilter) {
+        case "daily":
+          // Get last 7 days for daily view
+          const sevenDaysAgo = new Date(today);
+          sevenDaysAgo.setDate(today.getDate() - 6);
+          startDate = sevenDaysAgo.toISOString().split("T")[0];
+          break;
+
+        case "weekly":
+          // Get last 28 days for weekly view (4 weeks)
+          const fourWeeksAgo = new Date(today);
+          fourWeeksAgo.setDate(today.getDate() - 27);
+          startDate = fourWeeksAgo.toISOString().split("T")[0];
+          break;
+
+        case "monthly":
+          // Get current month data for monthly view
+          const firstDayOfMonth = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            1,
+          );
+          startDate = firstDayOfMonth.toISOString().split("T")[0];
+          break;
+
+        default:
+          const defaultWeekAgo = new Date(today);
+          defaultWeekAgo.setDate(today.getDate() - 6);
+          startDate = defaultWeekAgo.toISOString().split("T")[0];
+      }
+
+      weeklyPeakQueue.fetchWeeklyPeakQueue(selectedCounter, {
+        startDate,
+        endDate,
       });
     }
   };
@@ -980,11 +1144,6 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                       interval: "1hour",
                       startTime,
                       endTime,
-                    });
-                    historicalTrends.fetchHistoricalTrends(selectedCounter, {
-                      startTime,
-                      endTime,
-                      granularity: historicalGranularity,
                     });
                   }
                 }}
@@ -1962,30 +2121,350 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
               </EnterpriseCard>
             </div>
 
+            {/* UPDATED: Historical Data Analysis Chart with Period Filter and Metric Toggles */}
             <div style={{ marginBottom: 16 }}>
               <ChartContainer
-                title="Historical Queue Trends"
-                subtitle="time_series_analysis"
-                icon={Activity}
+                title="Historical Data Analysis"
+                subtitle={`${periodFilter.charAt(0).toUpperCase() + periodFilter.slice(1)} view - ${getMetricLabel()}`}
+                icon={BarChart3}
                 delay={400}
                 actions={
-                  <GranularitySelector
-                    selectedGranularity={historicalGranularity}
-                    onGranularityChange={setHistoricalGranularity}
-                  />
+                  <div
+                    style={{ display: "flex", gap: 12, alignItems: "center" }}
+                  >
+                    {/* Period Dropdown */}
+                    <select
+                      value={periodFilter}
+                      onChange={(e) => setPeriodFilter(e.target.value as any)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        border: "1px solid #E2E8F0",
+                        background: "#FFFFFF",
+                        fontSize: 11,
+                        fontWeight: 500,
+                        color: "#0F172A",
+                        cursor: "pointer",
+                        outline: "none",
+                      }}
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+
+                    {/* Metric Toggle Buttons */}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 6,
+                        borderLeft: "1px solid #E2E8F0",
+                        paddingLeft: 12,
+                      }}
+                    >
+                      <button
+                        onClick={() => setSelectedMetric("footfall")}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          border: "none",
+                          fontSize: 10,
+                          fontWeight: selectedMetric === "footfall" ? 600 : 500,
+                          color:
+                            selectedMetric === "footfall"
+                              ? "#FFFFFF"
+                              : "#64748B",
+                          background:
+                            selectedMetric === "footfall"
+                              ? "#3B82F6"
+                              : "#F1F5F9",
+                          cursor: "pointer",
+                        }}
+                      >
+                        By Footfall
+                      </button>
+                      <button
+                        onClick={() => setSelectedMetric("congestion")}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          border: "none",
+                          fontSize: 10,
+                          fontWeight:
+                            selectedMetric === "congestion" ? 600 : 500,
+                          color:
+                            selectedMetric === "congestion"
+                              ? "#FFFFFF"
+                              : "#64748B",
+                          background:
+                            selectedMetric === "congestion"
+                              ? "#EF4444"
+                              : "#F1F5F9",
+                          cursor: "pointer",
+                        }}
+                      >
+                        By Congestion Rate
+                      </button>
+                      <button
+                        onClick={() => setSelectedMetric("peakQueue")}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          border: "none",
+                          fontSize: 10,
+                          fontWeight:
+                            selectedMetric === "peakQueue" ? 600 : 500,
+                          color:
+                            selectedMetric === "peakQueue"
+                              ? "#FFFFFF"
+                              : "#64748B",
+                          background:
+                            selectedMetric === "peakQueue"
+                              ? "#10B981"
+                              : "#F1F5F9",
+                          cursor: "pointer",
+                        }}
+                      >
+                        By Peak Queue
+                      </button>
+                      <button
+                        onClick={() => setSelectedMetric("peakWaitTime")}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          border: "none",
+                          fontSize: 10,
+                          fontWeight:
+                            selectedMetric === "peakWaitTime" ? 600 : 500,
+                          color:
+                            selectedMetric === "peakWaitTime"
+                              ? "#FFFFFF"
+                              : "#64748B",
+                          background:
+                            selectedMetric === "peakWaitTime"
+                              ? "#F59E0B"
+                              : "#F1F5F9",
+                          cursor: "pointer",
+                        }}
+                      >
+                        By Peak Wait Time
+                      </button>
+                    </div>
+                  </div>
                 }
               >
-                {historicalTrends.loading ? (
+                {weeklyPeakQueue.loading ? (
                   <SkeletonLoader />
                 ) : (
                   <ResponsiveContainer width="100%" height={320}>
-                    <DynamicChart
-                      data={historicalTrendsData}
-                      chartType={historicalChartType}
-                      dataKeys={["Average Queue", "Peak Queue", "Total Queue"]}
-                      colors={["#3B82F6", "#10B981", "#F59E0B"]}
-                      xAxisKey="period"
-                    />
+                    <BarChart
+                      data={aggregateDataByPeriod}
+                      margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="metricGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#1e4620"
+                            stopOpacity={0.9}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#0f3818"
+                            stopOpacity={0.7}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#E2E8F0"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="period"
+                        stroke="#94A3B8"
+                        style={{ fontSize: 11, fontWeight: 500 }}
+                        tickLine={false}
+                        label={{
+                          value:
+                            periodFilter === "daily"
+                              ? "Day"
+                              : periodFilter === "weekly"
+                                ? "Week"
+                                : "Month",
+                          position: "insideBottom",
+                          offset: -5,
+                          style: {
+                            fontSize: 12,
+                            fill: "#64748B",
+                            fontWeight: 500,
+                          },
+                        }}
+                      />
+                      <YAxis
+                        stroke="#94A3B8"
+                        style={{ fontSize: 11, fontWeight: 500 }}
+                        tickLine={false}
+                        label={{
+                          value: getMetricLabel(),
+                          angle: -90,
+                          position: "insideLeft",
+                          style: {
+                            fontSize: 12,
+                            fill: "#64748B",
+                            fontWeight: 500,
+                          },
+                        }}
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload || !payload.length)
+                            return null;
+
+                          const data = payload[0].payload;
+                          const congestionColor =
+                            data.congestionLevel === "Severe"
+                              ? "#EF4444"
+                              : data.congestionLevel === "Critical"
+                                ? "#F59E0B"
+                                : "#10B981";
+
+                          return (
+                            <div
+                              style={{
+                                background: "#FFFFFF",
+                                border: "1px solid #E2E8F0",
+                                borderRadius: 10,
+                                padding: "10px 14px",
+                                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+                              }}
+                            >
+                              <p
+                                style={{
+                                  margin: 0,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: "#64748B",
+                                  marginBottom: 6,
+                                }}
+                              >
+                                {data.fullPeriod}
+                              </p>
+                              <p
+                                style={{
+                                  margin: 0,
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  color: "#1e4620",
+                                  marginBottom: 3,
+                                }}
+                              >
+                                {getMetricLabel()}:{" "}
+                                {typeof data[getMetricKey()] === "number"
+                                  ? data[getMetricKey()].toFixed(1)
+                                  : data[getMetricKey()]}
+                              </p>
+                              {data.date && (
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 10,
+                                    color: "#94A3B8",
+                                    marginBottom: 6,
+                                  }}
+                                >
+                                  {data.date}
+                                </p>
+                              )}
+                              <div
+                                style={{
+                                  marginTop: 6,
+                                  paddingTop: 6,
+                                  borderTop: "1px solid #E2E8F0",
+                                }}
+                              >
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 10,
+                                    color: "#64748B",
+                                    marginBottom: 2,
+                                  }}
+                                >
+                                  Footfall: {data.footfall}
+                                </p>
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 10,
+                                    color: "#64748B",
+                                    marginBottom: 2,
+                                  }}
+                                >
+                                  Peak Queue: {data.peakQueue}
+                                </p>
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 10,
+                                    color: "#64748B",
+                                    marginBottom: 6,
+                                  }}
+                                >
+                                  Wait Time: {data.peakWaitTime.toFixed(1)} min
+                                </p>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: "50%",
+                                      background: congestionColor,
+                                    }}
+                                  />
+                                  <span
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      color: congestionColor,
+                                    }}
+                                  >
+                                    {data.congestionLevel}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }}
+                        cursor={{ fill: "rgba(30, 70, 32, 0.1)" }}
+                      />
+                      <Legend
+                        wrapperStyle={{
+                          fontSize: 12,
+                          fontWeight: 500,
+                          paddingTop: 16,
+                        }}
+                      />
+                      <Bar
+                        dataKey={getMetricKey()}
+                        name={getMetricLabel()}
+                        fill="url(#metricGradient)"
+                        radius={[8, 8, 0, 0]}
+                        maxBarSize={60}
+                      />
+                    </BarChart>
                   </ResponsiveContainer>
                 )}
               </ChartContainer>

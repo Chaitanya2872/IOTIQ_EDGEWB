@@ -127,6 +127,34 @@ export interface FootfallSummaryDTO {
   lastYearSameDay: FootfallPeriodData;
 }
 
+// Weekly Peak Queue Types
+export interface PeakCongestionDTO {
+  level: string;
+  weight: number;
+  peakWaitTimeInBlock: number;
+  start: string;
+  end: string;
+  durationMinutes: number;
+}
+
+export interface WeeklyPeakQueueDataDTO {
+  date: string;
+  dayName: string;
+  peakQueue: number;
+  totalCount: number;
+  peakWaitTime: number;
+  congestionIndex: number | null;
+  peakCongestion: PeakCongestionDTO;
+  periodStart: string;
+}
+
+export interface WeeklyPeakQueueDTO {
+  counterCode: string;
+  startDate: string;
+  endDate: string;
+  data: WeeklyPeakQueueDataDTO[];
+}
+
 // Generic API hook for counter analytics
 function useCounterApi<T>() {
   const [data, setData] = useState<T | null>(null);
@@ -288,6 +316,36 @@ export function useCurrentDayKPIs() {
   );
 
   return { ...api, fetchCurrentDayKPIs };
+}
+
+/**
+ * Weekly Peak Queue Hook
+ * Fetches peak queue data for daily/weekly/monthly views from MQTT aggregation
+ */
+export function useWeeklyPeakQueue() {
+  const api = useCounterApi<WeeklyPeakQueueDTO>();
+
+  const fetchWeeklyPeakQueue = useCallback(
+    async (
+      counterCode: string,
+      options?: {
+        startDate?: string; // Format: YYYY-MM-DD
+        endDate?: string; // Format: YYYY-MM-DD
+      },
+    ) => {
+      const params = new URLSearchParams();
+      if (options?.startDate) params.append("startDate", options.startDate);
+      if (options?.endDate) params.append("endDate", options.endDate);
+
+      const queryString = params.toString();
+      const url = `/api/counter-analytics/${counterCode}/weekly-peak-queue${queryString ? `?${queryString}` : ""}`;
+
+      return await api.execute(url);
+    },
+    [api],
+  );
+
+  return { ...api, fetchWeeklyPeakQueue };
 }
 
 // Counter Comparison Hook
