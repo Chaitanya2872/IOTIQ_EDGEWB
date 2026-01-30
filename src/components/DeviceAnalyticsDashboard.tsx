@@ -1487,7 +1487,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                                   letterSpacing: "-0.5px",
                                 }}
                               >
-                                {counter.occuopancy || 0}
+                                {counter.occupancy || 0}
                               </div>
                               <div
                                 style={{
