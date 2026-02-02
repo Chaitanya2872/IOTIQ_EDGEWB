@@ -40,7 +40,8 @@ import {
   useLiveCounterStatus,
   useOccupancyTrends,
   useFootfallSummary,
-  useWeeklyPeakQueue, // UPDATED: Using new hook
+  useWeeklyPeakQueue,
+  useDailyFootfallVsWaitTime,
 } from "../api/hooks/useCounterAnalytics";
 import { DateRangeFilter } from "./DateFilterComponent";
 import { ChartTypeSelector, DynamicChart } from "./ChartComponents";
@@ -251,7 +252,7 @@ const MetricCard: React.FC<{
               fontWeight: 500,
             }}
           >
-            <span>avg:</span>
+            <span>People</span>
             <span style={{ color: "#94A3B8", fontWeight: 400, fontSize: 14 }}>
               {bottomValue}
             </span>
@@ -338,81 +339,7 @@ const CounterMultiSelect: React.FC<{
       onSelectionChange(selectedCounters.filter((c) => c !== counterCode));
     else onSelectionChange([...selectedCounters, counterCode]);
   };
-  return (
-    <div style={{ position: "relative" }}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          padding: "10px 16px",
-          borderRadius: 8,
-          border: "1px solid #E2E8F0",
-          background: "#FFFFFF",
-          fontSize: 13,
-          fontWeight: 500,
-          color: "#0F172A",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          minWidth: 250,
-        }}
-      >
-        <span>
-          {selectedCounters.length === 0
-            ? "Select Counters for Footfall"
-            : `${selectedCounters.length} counter(s) selected`}
-        </span>
-        <ChevronDown size={16} />
-      </button>
-      {isOpen && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            background: "#FFFFFF",
-            border: "1px solid #E2E8F0",
-            borderRadius: 8,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-            zIndex: 1000,
-            minWidth: 250,
-            maxHeight: 300,
-            overflowY: "auto",
-          }}
-        >
-          {counters.map((counter) => (
-            <label
-              key={counter.counterCode}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 12px",
-                cursor: "pointer",
-                fontSize: 13,
-                color: "#0F172A",
-                borderBottom: "1px solid #F1F5F9",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#F8FAFC";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#FFFFFF";
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={selectedCounters.includes(counter.counterCode)}
-                onChange={() => toggleCounter(counter.counterCode)}
-                style={{ cursor: "pointer" }}
-              />
-              <span>{counter.counterCode}</span>
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return null; // Commented out in original, keeping it disabled
 };
 
 const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
@@ -583,6 +510,25 @@ const CustomLegend: React.FC<{ data: any[] }> = ({ data }) => (
   </div>
 );
 
+// FIXED: Helper function to calculate percentage change
+const calculatePercentageChange = (
+  current: number,
+  previous: number,
+): number | null => {
+  if (previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+};
+
+// FIXED: Helper function to format date from ISO string
+const formatDate = (isoDateString: string): string => {
+  const date = new Date(isoDateString);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
 export const AllCountersAnalyticsDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     "live_monitoring" | "comparison" | "individual"
@@ -591,7 +537,6 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
   const [selectedCounters, setSelectedCounters] = useState<string[]>([]);
   const [footfallCounters, setFootfallCounters] = useState<string[]>([]);
 
-  // UPDATED: New state for period filter and metric selection
   const [periodFilter, setPeriodFilter] = useState<
     "daily" | "weekly" | "monthly"
   >("daily");
@@ -615,7 +560,8 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
   const liveCounterStatus = useLiveCounterStatus();
   const occupancyTrends = useOccupancyTrends();
   const footfallSummary = useFootfallSummary();
-  const weeklyPeakQueue = useWeeklyPeakQueue(); // UPDATED: New hook
+  const weeklyPeakQueue = useWeeklyPeakQueue();
+  const footfallVsWaitTime = useDailyFootfallVsWaitTime();
 
   useEffect(() => {
     const fetchLiveData = () => {
@@ -652,7 +598,6 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
     }
   }, [liveCounterStatus.data]);
 
-  // UPDATED: Enhanced useEffect for data fetching based on period filter
   useEffect(() => {
     if (selectedCounter && activeTab === "individual") {
       const { startTime, endTime } = calculateDateRange(
@@ -661,40 +606,39 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
         customEndDate,
       );
 
-      // Fetch queue trends
       counterTrends.fetchTrends(selectedCounter, {
         interval: "1hour",
         startTime,
         endTime,
       });
 
-      // Fetch occupancy trends
       occupancyTrends.fetchOccupancyTrends(selectedCounter, {
         interval: "1hour",
         startTime,
         endTime,
       });
 
-      // UPDATED: Fetch peak queue data based on period filter
+      // Fetch today's footfall vs wait time data
       const today = new Date();
+      footfallVsWaitTime.fetchFootfallVsWaitTime(selectedCounter, {
+        date: today.toISOString().split("T")[0],
+      });
+
       let startDate: string;
       let endDate: string = today.toISOString().split("T")[0];
 
       switch (periodFilter) {
         case "daily":
-          // Get last 7 days for daily view
           const weekAgo = new Date(today);
           weekAgo.setDate(today.getDate() - 6);
           startDate = weekAgo.toISOString().split("T")[0];
           break;
         case "weekly":
-          // Get last 4 weeks (28 days) for weekly view
           const fourWeeksAgo = new Date(today);
           fourWeeksAgo.setDate(today.getDate() - 27);
           startDate = fourWeeksAgo.toISOString().split("T")[0];
           break;
         case "monthly":
-          // Get last 6 months for monthly view
           const sixMonthsAgo = new Date(today);
           sixMonthsAgo.setMonth(today.getMonth() - 5);
           startDate = sixMonthsAgo.toISOString().split("T")[0];
@@ -716,25 +660,21 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
     dateRange,
     customStartDate,
     customEndDate,
-    periodFilter, // UPDATED: Important dependency
+    periodFilter,
   ]);
 
   // FIXED: Footfall summary now loads automatically for selected counter
   useEffect(() => {
     if (activeTab === "individual" && selectedCounter) {
-      // Automatically fetch footfall for the currently selected counter
       footfallSummary.fetchFootfallSummary(selectedCounter);
     }
   }, [activeTab, selectedCounter]);
 
-  // Separate effect for multi-counter footfall selection
   useEffect(() => {
     if (activeTab === "individual" && footfallCounters.length > 0) {
       footfallSummary.fetchFootfallSummary(footfallCounters);
     }
   }, [footfallCounters]);
-
-  // FIXED: Replace the aggregateDataByPeriod useMemo with this version
 
   const aggregateDataByPeriod = useMemo(() => {
     if (!weeklyPeakQueue.data?.data) return [];
@@ -742,12 +682,11 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
     const rawData = weeklyPeakQueue.data.data;
 
     if (periodFilter === "daily") {
-      // Daily view: Show individual days
       return rawData.map((item) => {
         const dayName =
           item.dayName.charAt(0) + item.dayName.slice(1).toLowerCase();
         return {
-          period: dayName.substring(0, 3), // Mon, Tue, Wed
+          period: dayName.substring(0, 3),
           fullPeriod: dayName,
           date: item.date,
           footfall: item.totalCount,
@@ -758,12 +697,10 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
         };
       });
     } else if (periodFilter === "weekly") {
-      // Weekly view: Aggregate by ISO week number
       const weeks = new Map<string, any>();
 
       rawData.forEach((item) => {
         const date = new Date(item.date);
-        // Get ISO week number
         const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
         const pastDaysOfYear =
           (date.getTime() - firstDayOfYear.getTime()) / 86400000;
@@ -794,7 +731,6 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
         week.count++;
         week.dates.push(item.date);
 
-        // Track highest congestion level
         if (item.peakCongestion?.level === "Severe")
           week.maxCongestionLevel = "Severe";
         else if (
@@ -806,19 +742,18 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
 
       return Array.from(weeks.values()).map((week) => ({
         ...week,
-        congestion: week.congestion / week.count, // Average congestion
+        congestion: week.congestion / week.count,
         congestionLevel: week.maxCongestionLevel,
-        date: week.dates[0], // First date in week for reference
+        date: week.dates[0],
       }));
     } else {
-      // Monthly view: Show each day in the month with date labels
       return rawData.map((item) => {
         const date = new Date(item.date);
         const dayOfMonth = date.getDate();
         const monthName = date.toLocaleString("default", { month: "short" });
 
         return {
-          period: `${monthName} ${dayOfMonth}`, // Jan 24, Jan 25, etc.
+          period: `${monthName} ${dayOfMonth}`,
           fullPeriod: `${monthName} ${dayOfMonth}, ${date.getFullYear()}`,
           date: item.date,
           footfall: item.totalCount,
@@ -831,7 +766,6 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
     }
   }, [weeklyPeakQueue.data, periodFilter]);
 
-  // UPDATED: Helper functions for metric selection
   const getMetricKey = () => {
     switch (selectedMetric) {
       case "footfall":
@@ -887,27 +821,36 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
   }, [counterComparison.data]);
 
   const individualMetrics = useMemo(() => {
-    if (!counterTrends.data) return null;
-    const stats = roundStatistics(counterTrends.data.statistics);
-    const trends = counterTrends.data.trends;
+    if (!footfallVsWaitTime.data) return null;
+
+    const dailySummary = footfallVsWaitTime.data.dailySummary;
+    const peakAnalysis = footfallVsWaitTime.data.peakAnalysis;
+    const hourlyBreakdown = footfallVsWaitTime.data.hourlyBreakdown;
+
+    // Find peak occupancy from hourly breakdown (using footfall as proxy)
+    let maxOccupancy = "—";
+    let peakOccupancySession = "—";
     let peakTimeWindow = "—";
-    if (trends && trends.length > 0) {
-      const peak = trends.reduce((max, item) =>
-        item.totalQueueLength > max.totalQueueLength ? item : max,
+
+    if (hourlyBreakdown && hourlyBreakdown.length > 0) {
+      const peakHour = hourlyBreakdown.reduce((max, item) =>
+        item.totalFootfall > max.totalFootfall ? item : max,
       );
-      const peakDate = new Date(peak.timestamp);
-      const startHour = peakDate.getHours();
-      const endHour = (startHour + 1) % 24;
-      peakTimeWindow = `${startHour.toString().padStart(2, "0")}:00 - ${endHour.toString().padStart(2, "0")}:00`;
+      maxOccupancy = formatOneDecimal(peakHour.peakFootfall);
+      peakTimeWindow = peakHour.hourLabel;
+
+      const today = new Date();
+      peakOccupancySession = `${today.toLocaleDateString()} ${peakHour.hourLabel.split(" - ")[0]}`;
     }
+
     return {
-      avgTotal: formatOneDecimal(stats.averageTotalQueue),
-      maxTotal: formatOneDecimal(stats.maxTotalQueue),
+      maxOccupancy,
       peakTimeWindow,
-      efficiency: formatOneDecimal(stats.efficiency),
-      trend: stats.trend || "stable",
+      peakOccupancySession,
+      peakWaitTime: formatOneDecimal(dailySummary.maxWaitTime),
+      peakWaitTimeHour: peakAnalysis.peakWaitTimeHour.hourLabel,
     };
-  }, [counterTrends.data]);
+  }, [footfallVsWaitTime.data]);
 
   const comparisonChartData = useMemo(() => {
     if (!counterComparison.data?.comparisons) return [];
@@ -943,18 +886,33 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
 
   const occupancyChartData = useMemo(() => {
     if (!occupancyTrends.data?.trends) return [];
-    return occupancyTrends.data.trends.map((item) => {
-      const date = new Date(item.timestamp);
-      const time = `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
-      return {
-        time,
-        Total: roundToOneDecimal(item.totalOccupancy),
-        Average: roundToOneDecimal(item.averageOccupancy),
-        Max: roundToOneDecimal(item.maxOccupancy),
-        Min: roundToOneDecimal(item.minOccupancy),
-      };
-    });
+    return occupancyTrends.data.trends
+      .filter((item) => {
+        const date = new Date(item.timestamp);
+        const hour = date.getHours();
+        // Filter only 7:00 AM (7) to 7:00 PM (19) inclusive
+        return hour >= 7 && hour <= 19;
+      })
+      .map((item) => {
+        const date = new Date(item.timestamp);
+        const time = `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
+        return {
+          time,
+          Occupancy: roundToOneDecimal(item.totalOccupancy),
+        };
+      });
   }, [occupancyTrends.data]);
+
+  // NEW: Footfall vs Wait Time chart data
+  const footfallVsWaitTimeChartData = useMemo(() => {
+    if (!footfallVsWaitTime.data?.hourlyBreakdown) return [];
+    return footfallVsWaitTime.data.hourlyBreakdown.map((item) => ({
+      hour: item.hourLabel,
+      Footfall: item.totalFootfall,
+      "Avg Wait Time": roundToOneDecimal(item.averageWaitTime),
+      "Max Wait Time": roundToOneDecimal(item.maxWaitTime),
+    }));
+  }, [footfallVsWaitTime.data]);
 
   const handleRefresh = () => {
     liveCounterStatus.fetchLiveStatus();
@@ -988,28 +946,28 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
         endTime,
       });
 
-      // UPDATED: Refresh peak queue data based on period
       const today = new Date();
+      footfallVsWaitTime.fetchFootfallVsWaitTime(selectedCounter, {
+        date: today.toISOString().split("T")[0],
+      });
+
       let startDate: string;
       let endDate: string = today.toISOString().split("T")[0];
 
       switch (periodFilter) {
         case "daily":
-          // Get last 7 days for daily view
           const sevenDaysAgo = new Date(today);
           sevenDaysAgo.setDate(today.getDate() - 6);
           startDate = sevenDaysAgo.toISOString().split("T")[0];
           break;
 
         case "weekly":
-          // Get last 28 days for weekly view (4 weeks)
           const fourWeeksAgo = new Date(today);
           fourWeeksAgo.setDate(today.getDate() - 27);
           startDate = fourWeeksAgo.toISOString().split("T")[0];
           break;
 
         case "monthly":
-          // Get current month data for monthly view
           const firstDayOfMonth = new Date(
             today.getFullYear(),
             today.getMonth(),
@@ -1029,7 +987,6 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
         endDate,
       });
 
-      // FIXED: Also refresh footfall summary on refresh
       footfallSummary.fetchFootfallSummary(selectedCounter);
     }
   };
@@ -1137,35 +1094,6 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
               </p>
             </div>
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <DateRangeFilter
-                selectedRange={dateRange}
-                onRangeChange={(range) => {
-                  setDateRange(range);
-                  if (activeTab === "individual" && selectedCounter) {
-                    const { startTime, endTime } = calculateDateRange(
-                      range,
-                      customStartDate,
-                      customEndDate,
-                    );
-                    counterTrends.fetchTrends(selectedCounter, {
-                      interval: "1hour",
-                      startTime,
-                      endTime,
-                    });
-                    occupancyTrends.fetchOccupancyTrends(selectedCounter, {
-                      interval: "1hour",
-                      startTime,
-                      endTime,
-                    });
-                  }
-                }}
-                customStart={customStartDate}
-                customEnd={customEndDate}
-                onCustomChange={(start, end) => {
-                  setCustomStartDate(start);
-                  setCustomEndDate(end);
-                }}
-              />
               <button
                 onClick={handleRefresh}
                 disabled={
@@ -1256,7 +1184,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                     letterSpacing: "-0.2px",
                   }}
                 >
-                  Live Counter Statistics
+                  Live Counter Stats
                 </h3>
                 <div
                   style={{
@@ -1497,10 +1425,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                                   marginTop: 4,
                                 }}
                               >
-                                avg:{" "}
-                                {formatOneDecimal(
-                                  (counter.occuopancy || 0) * 0.8,
-                                )}
+                                People
                               </div>
                             </div>
                             <div style={{ textAlign: "center" }}>
@@ -1826,13 +1751,6 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                   </option>
                 ))}
               </select>
-              <div style={{ marginLeft: "auto" }}>
-                <CounterMultiSelect
-                  counters={liveCounterStatus.data?.counters || []}
-                  selectedCounters={footfallCounters}
-                  onSelectionChange={setFootfallCounters}
-                />
-              </div>
             </div>
             <div
               style={{
@@ -1842,7 +1760,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                 marginBottom: 16,
               }}
             >
-              {counterTrends.loading && !individualMetrics ? (
+              {footfallVsWaitTime.loading && !individualMetrics ? (
                 <>
                   <LoadingMetricCard delay={0} />
                   <LoadingMetricCard delay={100} />
@@ -1851,27 +1769,29 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
               ) : (
                 <>
                   <MetricCard
-                    label="Average Queue Length"
-                    subtitle="average_cumulative"
-                    value={individualMetrics?.avgTotal || "—"}
+                    label="Peak Occupancy"
+                    subtitle={
+                      individualMetrics?.peakOccupancySession || "today"
+                    }
+                    value={individualMetrics?.maxOccupancy || "—"}
                     icon={Users}
-                    color="#3B82F6"
+                    color="#10B981"
                     delay={0}
                   />
                   <MetricCard
-                    label="Peak Queue Length"
-                    subtitle="maximum_observed"
-                    value={individualMetrics?.maxTotal || "—"}
-                    icon={TrendingUp}
-                    color="#10B981"
+                    label="Peak Wait Time"
+                    subtitle={individualMetrics?.peakWaitTimeHour || "today"}
+                    value={`${individualMetrics?.peakWaitTime || "—"} min`}
+                    icon={Timer}
+                    color="#F59E0B"
                     delay={100}
                   />
                   <MetricCard
                     label="Peak Hour Time Window"
-                    subtitle="busiest_period"
+                    subtitle="busiest_period_today"
                     value={individualMetrics?.peakTimeWindow || "—"}
                     icon={Clock}
-                    color="#F59E0B"
+                    color="#3B82F6"
                     delay={200}
                   />
                 </>
@@ -1889,8 +1809,8 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
             >
               {/* Left: Cumulative Queue Trend Chart */}
               <ChartContainer
-                title="Cumulative Queue Trend"
-                subtitle="total_queue_over_time"
+                title="Occupancy Trend"
+                subtitle="7:00 AM to 7:00 PM"
                 icon={Activity}
                 delay={500}
               >
@@ -1907,19 +1827,19 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                     onTypeChange={setQueueChartType}
                   />
                 </div>
-                {counterTrends.loading ? (
+                {occupancyTrends.loading ? (
                   <SkeletonLoader />
                 ) : (
                   <DynamicChart
-                    data={trendChartData}
+                    data={occupancyChartData}
                     chartType={queueChartType}
-                    dataKeys={["Total", "Max", "Min"]}
-                    colors={["#3B82F6", "#10B981", "#EF4444"]}
+                    dataKeys={["Occupancy"]}
+                    colors={["#0588f0"]}
                   />
                 )}
               </ChartContainer>
 
-              {/* Right: Footfall Summary - Always visible */}
+              {/* FIXED: Footfall Summary with correct data structure */}
               <EnterpriseCard delay={300}>
                 <div
                   style={{
@@ -1940,9 +1860,11 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                   >
                     Footfall Summary
                   </h3>
-                  {footfallCounters.length > 0 && (
+                  {footfallSummary.data?.scope && (
                     <div style={{ fontSize: 11, color: "#94A3B8" }}>
-                      {footfallCounters.length} counter(s)
+                      {footfallSummary.data.scope === "single"
+                        ? "Single Counter"
+                        : "Multiple Counters"}
                     </div>
                   )}
                 </div>
@@ -1977,7 +1899,9 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                               padding: "12px 0",
                               paddingRight: 24,
                             }}
-                          ></th>
+                          >
+                            Period
+                          </th>
                           <th
                             style={{
                               textAlign: "right",
@@ -1998,11 +1922,12 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                               padding: "12px 0",
                             }}
                           >
-                            Percentage
+                            Change
                           </th>
                         </tr>
                       </thead>
                       <tbody>
+                        {/* TODAY */}
                         <tr style={{ borderBottom: "1px solid #F1F5F9" }}>
                           <td style={{ padding: "16px 0", paddingRight: 24 }}>
                             <div
@@ -2010,19 +1935,12 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                                 fontSize: 13,
                                 fontWeight: 500,
                                 color: "#0F172A",
-                                marginBottom: 2,
                               }}
                             >
                               Today
                             </div>
-                            <div
-                              style={{
-                                fontSize: 11,
-                                color: "#94A3B8",
-                                fontWeight: 400,
-                              }}
-                            >
-                              {footfallSummary.data.today?.date || "No data"}
+                            <div style={{ fontSize: 11, color: "#94A3B8" }}>
+                              {formatDate(footfallSummary.data.today.startTime)}
                             </div>
                           </td>
                           <td
@@ -2030,89 +1948,254 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                               textAlign: "right",
                               fontSize: 15,
                               fontWeight: 600,
-                              color: "#0F172A",
                               padding: "16px 24px 16px 0",
                             }}
                           >
-                            {footfallSummary.data.today?.count || 0}
+                            {footfallSummary.data.today.totalFootfall.toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: "right", padding: "16px 0" }}>
+                            -
+                          </td>
+                        </tr>
+
+                        {/* YESTERDAY */}
+                        <tr style={{ borderBottom: "1px solid #F1F5F9" }}>
+                          <td style={{ padding: "16px 0", paddingRight: 24 }}>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 500,
+                                color: "#0F172A",
+                              }}
+                            >
+                              Yesterday
+                            </div>
+                            <div style={{ fontSize: 11, color: "#94A3B8" }}>
+                              {formatDate(
+                                footfallSummary.data.yesterday.startTime,
+                              )}
+                            </div>
                           </td>
                           <td
-                            style={{ textAlign: "right", padding: "16px 0" }}
-                          ></td>
-                        </tr>
-                        {footfallSummary.data.yesterday && (
-                          <tr style={{ borderBottom: "1px solid #F1F5F9" }}>
-                            <td style={{ padding: "16px 0", paddingRight: 24 }}>
-                              <div
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 500,
-                                  color: "#0F172A",
-                                  marginBottom: 2,
-                                }}
-                              >
-                                Yesterday
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: "#94A3B8",
-                                  fontWeight: 400,
-                                }}
-                              >
-                                {footfallSummary.data.yesterday.date}
-                              </div>
-                            </td>
-                            <td
-                              style={{
-                                textAlign: "right",
-                                fontSize: 15,
-                                fontWeight: 600,
-                                color: "#0F172A",
-                                padding: "16px 24px 16px 0",
-                              }}
-                            >
-                              {footfallSummary.data.yesterday.count}
-                            </td>
-                            <td
-                              style={{
-                                textAlign: "right",
-                                padding: "16px 0",
-                              }}
-                            >
-                              {footfallSummary.data.yesterday.percentage !==
-                                null && (
+                            style={{
+                              textAlign: "right",
+                              fontSize: 15,
+                              fontWeight: 600,
+                              padding: "16px 24px 16px 0",
+                            }}
+                          >
+                            {footfallSummary.data.yesterday.totalFootfall.toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: "right", padding: "16px 0" }}>
+                            {(() => {
+                              const change = calculatePercentageChange(
+                                footfallSummary.data.today.totalFootfall,
+                                footfallSummary.data.yesterday.totalFootfall,
+                              );
+                              if (change === null) return "-";
+                              return (
                                 <span
                                   style={{
                                     fontSize: 13,
                                     fontWeight: 600,
-                                    color:
-                                      footfallSummary.data.yesterday
-                                        .percentage >= 0
-                                        ? "#10B981"
-                                        : "#EF4444",
+                                    color: change >= 0 ? "#10B981" : "#EF4444",
                                     display: "flex",
-                                    alignItems: "center",
                                     justifyContent: "flex-end",
+                                    alignItems: "center",
                                     gap: 4,
                                   }}
                                 >
-                                  {footfallSummary.data.yesterday.percentage >=
-                                  0 ? (
+                                  {change >= 0 ? (
                                     <TrendingUp size={14} />
                                   ) : (
                                     <TrendingDown size={14} />
                                   )}
-                                  {formatPercentage(
-                                    Math.abs(
-                                      footfallSummary.data.yesterday.percentage,
-                                    ),
-                                  )}
+                                  {formatPercentage(Math.abs(change))}
                                 </span>
+                              );
+                            })()}
+                          </td>
+                        </tr>
+
+                        {/* LAST WEEK (SAME DAY) */}
+                        <tr style={{ borderBottom: "1px solid #F1F5F9" }}>
+                          <td style={{ padding: "16px 0", paddingRight: 24 }}>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 500,
+                                color: "#0F172A",
+                              }}
+                            >
+                              Last Week
+                            </div>
+                            <div style={{ fontSize: 11, color: "#94A3B8" }}>
+                              {formatDate(
+                                footfallSummary.data.lastWeekSameDay.startTime,
                               )}
-                            </td>
-                          </tr>
-                        )}
+                            </div>
+                          </td>
+                          <td
+                            style={{
+                              textAlign: "right",
+                              fontSize: 15,
+                              fontWeight: 600,
+                              padding: "16px 24px 16px 0",
+                            }}
+                          >
+                            {footfallSummary.data.lastWeekSameDay.totalFootfall.toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: "right", padding: "16px 0" }}>
+                            {(() => {
+                              const change = calculatePercentageChange(
+                                footfallSummary.data.today.totalFootfall,
+                                footfallSummary.data.lastWeekSameDay
+                                  .totalFootfall,
+                              );
+                              if (change === null) return "-";
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: change >= 0 ? "#10B981" : "#EF4444",
+                                    display: "flex",
+                                    justifyContent: "flex-end",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  {change >= 0 ? (
+                                    <TrendingUp size={14} />
+                                  ) : (
+                                    <TrendingDown size={14} />
+                                  )}
+                                  {formatPercentage(Math.abs(change))}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                        </tr>
+
+                        {/* LAST MONTH (SAME DAY) */}
+                        <tr style={{ borderBottom: "1px solid #F1F5F9" }}>
+                          <td style={{ padding: "16px 0", paddingRight: 24 }}>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 500,
+                                color: "#0F172A",
+                              }}
+                            >
+                              Last Month
+                            </div>
+                            <div style={{ fontSize: 11, color: "#94A3B8" }}>
+                              {formatDate(
+                                footfallSummary.data.lastMonthSameDay.startTime,
+                              )}
+                            </div>
+                          </td>
+                          <td
+                            style={{
+                              textAlign: "right",
+                              fontSize: 15,
+                              fontWeight: 600,
+                              padding: "16px 24px 16px 0",
+                            }}
+                          >
+                            {footfallSummary.data.lastMonthSameDay.totalFootfall.toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: "right", padding: "16px 0" }}>
+                            {(() => {
+                              const change = calculatePercentageChange(
+                                footfallSummary.data.today.totalFootfall,
+                                footfallSummary.data.lastMonthSameDay
+                                  .totalFootfall,
+                              );
+                              if (change === null) return "-";
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: change >= 0 ? "#10B981" : "#EF4444",
+                                    display: "flex",
+                                    justifyContent: "flex-end",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  {change >= 0 ? (
+                                    <TrendingUp size={14} />
+                                  ) : (
+                                    <TrendingDown size={14} />
+                                  )}
+                                  {formatPercentage(Math.abs(change))}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                        </tr>
+
+                        {/* LAST YEAR (SAME DAY) */}
+                        <tr>
+                          <td style={{ padding: "16px 0", paddingRight: 24 }}>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 500,
+                                color: "#0F172A",
+                              }}
+                            >
+                              Last Year
+                            </div>
+                            <div style={{ fontSize: 11, color: "#94A3B8" }}>
+                              {formatDate(
+                                footfallSummary.data.lastYearSameDay.startTime,
+                              )}
+                            </div>
+                          </td>
+                          <td
+                            style={{
+                              textAlign: "right",
+                              fontSize: 15,
+                              fontWeight: 600,
+                              padding: "16px 24px 16px 0",
+                            }}
+                          >
+                            {footfallSummary.data.lastYearSameDay.totalFootfall.toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: "right", padding: "16px 0" }}>
+                            {(() => {
+                              const change = calculatePercentageChange(
+                                footfallSummary.data.today.totalFootfall,
+                                footfallSummary.data.lastYearSameDay
+                                  .totalFootfall,
+                              );
+                              if (change === null) return "-";
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: change >= 0 ? "#10B981" : "#EF4444",
+                                    display: "flex",
+                                    justifyContent: "flex-end",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  {change >= 0 ? (
+                                    <TrendingUp size={14} />
+                                  ) : (
+                                    <TrendingDown size={14} />
+                                  )}
+                                  {formatPercentage(Math.abs(change))}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -2131,7 +2214,139 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
               </EnterpriseCard>
             </div>
 
-            {/* UPDATED: Historical Data Analysis Chart with Period Filter and Metric Toggles */}
+            {/* NEW: Footfall vs Wait Time Chart */}
+            <div style={{ marginBottom: 16 }}>
+              <ChartContainer
+                title="Footfall vs Wait Time Analysis"
+                subtitle="Today's hourly breakdown"
+                icon={BarChart3}
+                delay={600}
+              >
+                {footfallVsWaitTime.loading ? (
+                  <SkeletonLoader />
+                ) : (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <ComposedChart
+                      data={footfallVsWaitTimeChartData}
+                      margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="footfallGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#3B82F6"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#3B82F6"
+                            stopOpacity={0.3}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#E2E8F0"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="hour"
+                        stroke="#94A3B8"
+                        style={{ fontSize: 11, fontWeight: 500 }}
+                        tickLine={false}
+                        label={{
+                          value: "Hour",
+                          position: "insideBottom",
+                          offset: -5,
+                          style: {
+                            fontSize: 12,
+                            fill: "#64748B",
+                            fontWeight: 500,
+                          },
+                        }}
+                      />
+                      <YAxis
+                        yAxisId="left"
+                        stroke="#3B82F6"
+                        style={{ fontSize: 11, fontWeight: 500 }}
+                        tickLine={false}
+                        label={{
+                          value: "Footfall",
+                          angle: -90,
+                          position: "insideLeft",
+                          style: {
+                            fontSize: 12,
+                            fill: "#3B82F6",
+                            fontWeight: 500,
+                          },
+                        }}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        stroke="#F59E0B"
+                        style={{ fontSize: 11, fontWeight: 500 }}
+                        tickLine={false}
+                        label={{
+                          value: "Wait Time (min)",
+                          angle: 90,
+                          position: "insideRight",
+                          style: {
+                            fontSize: 12,
+                            fill: "#F59E0B",
+                            fontWeight: 500,
+                          },
+                        }}
+                      />
+                      <Tooltip
+                        content={<CustomTooltip />}
+                        cursor={{ fill: "rgba(59, 130, 246, 0.1)" }}
+                      />
+                      <Legend
+                        wrapperStyle={{
+                          fontSize: 12,
+                          fontWeight: 500,
+                          paddingTop: 16,
+                        }}
+                      />
+                      <Bar
+                        yAxisId="left"
+                        dataKey="Footfall"
+                        fill="url(#footfallGradient)"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={50}
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="Avg Wait Time"
+                        stroke="#F59E0B"
+                        strokeWidth={3}
+                        dot={{ r: 4, fill: "#F59E0B" }}
+                        activeDot={{ r: 6 }}
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="Max Wait Time"
+                        stroke="#EF4444"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{ r: 3, fill: "#EF4444" }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartContainer>
+            </div>
+
+            {/* Historical Data Analysis Chart */}
             <div style={{ marginBottom: 16 }}>
               <ChartContainer
                 title="Historical Data Analysis"
@@ -2153,7 +2368,7 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                         background: "#FFFFFF",
                         fontSize: 11,
                         fontWeight: 500,
-                        color: "#0F172A",
+                        color: "#0588f0",
                         cursor: "pointer",
                         outline: "none",
                       }}
@@ -2186,8 +2401,8 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                               : "#64748B",
                           background:
                             selectedMetric === "footfall"
-                              ? "#3B82F6"
-                              : "#F1F5F9",
+                              ? "#0588F0"
+                              : "#FFFFFF",
                           cursor: "pointer",
                         }}
                       >
@@ -2208,8 +2423,8 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                               : "#64748B",
                           background:
                             selectedMetric === "congestion"
-                              ? "#EF4444"
-                              : "#F1F5F9",
+                              ? "#0588F0"
+                              : "#FFFFFF",
                           cursor: "pointer",
                         }}
                       >
@@ -2230,8 +2445,8 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                               : "#64748B",
                           background:
                             selectedMetric === "peakQueue"
-                              ? "#10B981"
-                              : "#F1F5F9",
+                              ? "#0588F0"
+                              : "#FFFFFF",
                           cursor: "pointer",
                         }}
                       >
@@ -2252,8 +2467,8 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                               : "#64748B",
                           background:
                             selectedMetric === "peakWaitTime"
-                              ? "#F59E0B"
-                              : "#F1F5F9",
+                              ? "#0588F0"
+                              : "#FFFFFF",
                           cursor: "pointer",
                         }}
                       >
@@ -2281,13 +2496,13 @@ export const AllCountersAnalyticsDashboard: React.FC = () => {
                         >
                           <stop
                             offset="0%"
-                            stopColor="#1e4620"
-                            stopOpacity={0.9}
+                            stopColor="#93C5FD"
+                            stopOpacity={0.95}
                           />
                           <stop
                             offset="100%"
-                            stopColor="#0f3818"
-                            stopOpacity={0.7}
+                            stopColor="#3B82F6"
+                            stopOpacity={0.85}
                           />
                         </linearGradient>
                       </defs>

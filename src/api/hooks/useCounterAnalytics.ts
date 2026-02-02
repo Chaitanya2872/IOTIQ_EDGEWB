@@ -75,9 +75,9 @@ export interface CounterSummaryDTO {
   counterName: string;
   counterType: string;
   deviceCount: number;
-  averageQueueLength: number;
-  maxQueueLength: number;
-  minQueueLength: number;
+  averageOccupancy: number;
+  maxOccupancy: number;
+  minOccupancy: number;
   totalReadings: number;
   efficiency: number;
 }
@@ -107,10 +107,16 @@ export interface LiveCounterStatusDTO {
 }
 
 // Footfall Summary Types
+export interface FootfallTrendPoint {
+  time: string;
+  value: number;
+}
+
 export interface FootfallPeriodData {
-  date: string;
-  count: number;
-  percentage: number | null;
+  totalFootfall: number;
+  trendPoints: FootfallTrendPoint[];
+  startTime: string;
+  endTime: string;
 }
 
 export interface FootfallSummaryDTO {
@@ -154,6 +160,117 @@ export interface WeeklyPeakQueueDTO {
   endDate: string;
   data: WeeklyPeakQueueDataDTO[];
 }
+
+// ==================== NEW: Footfall vs Wait Time Types ====================
+
+/**
+ * Hourly breakdown of footfall and wait time metrics
+ */
+export interface HourlyFootfallWaitTimeDTO {
+  hour: number;
+  hourLabel: string; // e.g., "09:00 - 10:00"
+  totalFootfall: number;
+  averageFootfall: number;
+  peakFootfall: number;
+  minFootfall: number;
+  averageWaitTime: number;
+  maxWaitTime: number;
+  minWaitTime: number;
+  footfallWaitRatio: number; // Wait time per person (lower is better)
+  dataPointCount: number;
+  activeDevices: number;
+}
+
+/**
+ * Daily summary statistics for footfall vs wait time
+ */
+export interface DailyFootfallWaitTimeSummaryDTO {
+  totalFootfall: number;
+  averageFootfall: number;
+  peakFootfall: number;
+  footfallReadings: number;
+  averageWaitTime: number;
+  maxWaitTime: number;
+  minWaitTime: number;
+  waitTimeReadings: number;
+  serviceLevel: number; // Percentage of readings with acceptable wait time
+  acceptableWaitThreshold: number; // Threshold used (e.g., 5.0 minutes)
+  overallFootfallWaitRatio: number;
+}
+
+/**
+ * Peak period analysis
+ */
+export interface PeakFootfallWaitTimeAnalysisDTO {
+  peakFootfallHour: {
+    hour: number;
+    hourLabel: string;
+    footfall: number;
+    waitTime: number;
+  };
+  peakWaitTimeHour: {
+    hour: number;
+    hourLabel: string;
+    waitTime: number;
+    footfall: number;
+  };
+  bestPerformingHour: {
+    hour: number;
+    hourLabel: string;
+    footfall: number;
+    waitTime: number;
+    ratio: number;
+  };
+  worstPerformingHour: {
+    hour: number;
+    hourLabel: string;
+    footfall: number;
+    waitTime: number;
+    ratio: number;
+  };
+}
+
+/**
+ * Complete daily footfall vs wait time response
+ */
+export interface DailyFootfallVsWaitTimeDTO {
+  counterCode: string;
+  counterName: string;
+  counterType: string;
+  date: string;
+  deviceCount: number;
+  totalDataPoints: number;
+  hourlyBreakdown: HourlyFootfallWaitTimeDTO[];
+  dailySummary: DailyFootfallWaitTimeSummaryDTO;
+  peakAnalysis: PeakFootfallWaitTimeAnalysisDTO;
+}
+
+/**
+ * Aggregated summary for date range
+ */
+export interface AggregatedFootfallWaitTimeSummaryDTO {
+  totalFootfallAllDays: number;
+  averageDailyFootfall: number;
+  averageWaitTimeAllDays: number;
+  averageServiceLevel: number;
+  overallPeakFootfall: number;
+  overallMaxWaitTime: number;
+  daysAnalyzed: number;
+}
+
+/**
+ * Date range response (multiple days)
+ */
+export interface FootfallVsWaitTimeRangeDTO {
+  counterCode: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  dailyBreakdown: DailyFootfallVsWaitTimeDTO[];
+  aggregatedSummary: AggregatedFootfallWaitTimeSummaryDTO;
+}
+
+// ==================== END: Footfall vs Wait Time Types ====================
 
 // Generic API hook for counter analytics
 function useCounterApi<T>() {
@@ -219,9 +336,9 @@ export function useCounterQueueTrends() {
     dataPoints: number;
     trends: CounterTrendDTO[];
     statistics: {
-      averageQueueLength: number;
-      maxQueueLength: number;
-      minQueueLength: number;
+      averageOccupancy: number;
+      maxOccupancy: number;
+      minOccupancy: number;
       totalReadings: number;
       trend: string;
     };
@@ -347,6 +464,86 @@ export function useWeeklyPeakQueue() {
 
   return { ...api, fetchWeeklyPeakQueue };
 }
+
+// ==================== NEW: Footfall vs Wait Time Hooks ====================
+
+/**
+ * Daily Footfall vs Wait Time Hook
+ * Fetches footfall and wait time analysis for a single day
+ *
+ * @example
+ * const { data, loading, error, fetchFootfallVsWaitTime } = useDailyFootfallVsWaitTime();
+ *
+ * // Get today's data
+ * await fetchFootfallVsWaitTime('CNT001');
+ *
+ * // Get specific date
+ * await fetchFootfallVsWaitTime('CNT001', { date: '2024-02-01' });
+ */
+export function useDailyFootfallVsWaitTime() {
+  const api = useCounterApi<DailyFootfallVsWaitTimeDTO>();
+
+  const fetchFootfallVsWaitTime = useCallback(
+    async (
+      counterCode: string,
+      options?: {
+        date?: string; // Format: YYYY-MM-DD (defaults to today)
+      },
+    ) => {
+      const params = new URLSearchParams();
+      if (options?.date) params.append("date", options.date);
+
+      const queryString = params.toString();
+      const url = `/counter-analytics/${counterCode}/footfall-vs-waittime${queryString ? `?${queryString}` : ""}`;
+
+      return await api.execute(url);
+    },
+    [api],
+  );
+
+  return { ...api, fetchFootfallVsWaitTime };
+}
+
+/**
+ * Footfall vs Wait Time Range Hook
+ * Fetches footfall and wait time analysis for multiple days (date range)
+ * Maximum 31 days allowed
+ *
+ * @example
+ * const { data, loading, error, fetchFootfallVsWaitTimeRange } = useFootfallVsWaitTimeRange();
+ *
+ * // Get last 7 days
+ * await fetchFootfallVsWaitTimeRange('CNT001', {
+ *   startDate: '2024-02-01',
+ *   endDate: '2024-02-07'
+ * });
+ */
+export function useFootfallVsWaitTimeRange() {
+  const api = useCounterApi<FootfallVsWaitTimeRangeDTO>();
+
+  const fetchFootfallVsWaitTimeRange = useCallback(
+    async (
+      counterCode: string,
+      options: {
+        startDate: string; // Format: YYYY-MM-DD (required)
+        endDate: string; // Format: YYYY-MM-DD (required)
+      },
+    ) => {
+      const params = new URLSearchParams();
+      params.append("startDate", options.startDate);
+      params.append("endDate", options.endDate);
+
+      const url = `/counter-analytics/${counterCode}/footfall-vs-waittime/range?${params.toString()}`;
+
+      return await api.execute(url);
+    },
+    [api],
+  );
+
+  return { ...api, fetchFootfallVsWaitTimeRange };
+}
+
+// ==================== END: Footfall vs Wait Time Hooks ====================
 
 // Counter Comparison Hook
 export function useCounterComparison() {
